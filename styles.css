@@ -218,6 +218,27 @@ a.button {
   font-weight: 700;
 }
 
+
+.quick-nav [data-logout] {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.services-grid .service-card,
+.pros-grid .pro-card {
+  border-radius: 1.1rem !important;
+  min-height: 9.25rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: linear-gradient(180deg, rgba(13, 23, 48, 0.92), rgba(9, 18, 40, 0.9)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.services-grid .service-card.active,
+.pros-grid .pro-card.active {
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 74%, #ffffff 6%) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #d4a24f) 30%, transparent), 0 10px 24px rgba(0, 0, 0, 0.28) !important;
+}
+
 .admin-tile,
 .client-action-card {
   transition: transform var(--fx-medium) var(--fx-ease), border-color var(--fx-medium) var(--fx-ease), box-shadow var(--fx-medium) var(--fx-ease);
@@ -277,6 +298,10 @@ img#client-brand-logo,
 
   .quick-nav .button {
     width: 100%;
+  }
+
+  .quick-nav [data-logout] {
+    width: 100% !important;
   }
 
   .services-grid,
