@@ -8,15 +8,43 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: {
+              xl: '1rem',
+              '2xl': '1.25rem'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(0,0,0,0.24)'
+            }
+          }
+        }
+      }
+    </script>
   </head>
   <body>
-    <main class="page booking-page">
-      <section class="booking-card">
-        <a class="back-link" href="admin-home.html">← Dashboard</a>
+    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="admin-home.html">← Dashboard</a>
         <h1>Configurações da barbearia</h1>
-        <p class="subtitle">Defina nome, cor predominante e logo para identificar seus clientes.</p>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Defina nome, cor predominante e logo para identificar seus clientes.</p>
 
-        <form id="admin-settings-form" class="auth-form">
+        <form id="admin-settings-form" class="auth-form grid gap-3">
           <label for="shop-name">Nome da barbearia</label>
           <input id="shop-name" type="text" placeholder="Ex.: Barbearia X" required />
 
@@ -29,7 +57,7 @@
           <label for="shop-logo-file">Ou enviar arquivo da logo</label>
           <input id="shop-logo-file" type="file" accept="image/*" />
 
-          <div class="brand-preview" id="brand-preview">
+          <div class="brand-preview flex items-center gap-3 rounded-xl border border-borderc bg-slate-900/40 p-3" id="brand-preview">
             <img id="brand-preview-logo" alt="Prévia da logo" />
             <div>
               <strong id="brand-preview-name">BarberPro</strong>
@@ -37,7 +65,7 @@
             </div>
           </div>
 
-          <button class="button button-primary" type="submit">Salvar configurações</button>
+          <button class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" type="submit">Salvar configurações</button>
         </form>
       </section>
     </main>

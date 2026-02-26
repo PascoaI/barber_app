@@ -8,15 +8,43 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: {
+              xl: '1rem',
+              '2xl': '1.25rem'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(0,0,0,0.24)'
+            }
+          }
+        }
+      }
+    </script>
   </head>
   <body>
-    <main class="page booking-page">
-      <section class="booking-card">
-        <a class="back-link" href="admin-home.html">← Dashboard</a>
+    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="admin-home.html">← Dashboard</a>
         <h1>Gerenciar barbeiros</h1>
-        <p class="subtitle">CRUD de barbeiros com comissão e status ativo/inativo.</p>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">CRUD de barbeiros com comissão e status ativo/inativo.</p>
 
-        <form id="barber-form" class="auth-form">
+        <form id="barber-form" class="auth-form grid gap-3">
           <input id="barber-id" type="hidden" />
 
           <label for="barber-name">Nome do barbeiro</label>
@@ -31,18 +59,18 @@
           <label for="barber-commission">Comissão (%)</label>
           <input id="barber-commission" type="number" min="0" max="100" step="0.5" value="40" required />
 
-          <label class="checkbox-wrap">
+          <label class="checkbox-wrap inline-flex items-center gap-2 text-sm text-text-secondary">
             <input id="barber-active" type="checkbox" checked />
             <span>Barbeiro ativo</span>
           </label>
 
-          <div class="form-row">
-            <button class="button button-primary" type="submit">Salvar barbeiro</button>
-            <button id="barber-cancel" class="button button-secondary" type="button">Cancelar edição</button>
+          <div class="form-row flex flex-wrap items-center justify-between gap-2">
+            <button class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" type="submit">Salvar barbeiro</button>
+            <button id="barber-cancel" class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" type="button">Cancelar edição</button>
           </div>
         </form>
 
-        <div id="barbers-list" class="admin-schedules-list"></div>
+        <div id="barbers-list" class="admin-schedules-list grid gap-3 mt-4"></div>
       </section>
     </main>
 
