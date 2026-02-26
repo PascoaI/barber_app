@@ -459,7 +459,6 @@ textarea:focus {
   color: #8dffd0;
 }
 
-.status-no_show,
 .status-canceled {
   background: rgba(255, 107, 107, 0.2);
   color: #ffb0b0;
@@ -475,4 +474,72 @@ textarea:focus {
   display: flex;
   opacity: 1;
   pointer-events: auto;
+}
+
+
+.button-primary {
+  border: 1px solid color-mix(in srgb, var(--primary, #d4a24f) 82%, #000 6%);
+  box-shadow: 0 6px 18px rgba(212, 162, 79, 0.22);
+}
+
+.button-secondary {
+  border: 1px solid rgba(138, 157, 204, 0.45) !important;
+  background: rgba(14, 22, 44, 0.78);
+  color: #e5ecff;
+}
+
+.button-secondary:hover {
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 45%, #9fb0d9 35%) !important;
+  background: rgba(18, 27, 52, 0.9);
+}
+
+.time-slot {
+  border: 1px solid rgba(137, 155, 201, 0.4);
+  border-radius: 0.86rem;
+  background: rgba(13, 22, 44, 0.75);
+  color: #e7edff;
+  min-height: 2.7rem;
+  padding: 0.5rem 0.72rem;
+  transition: border-color var(--fx-fast) var(--fx-ease), background-color var(--fx-fast) var(--fx-ease), transform var(--fx-fast) var(--fx-ease), box-shadow var(--fx-fast) var(--fx-ease);
+}
+
+.time-slot:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 48%, #9db1e0 28%);
+  background: rgba(19, 30, 58, 0.95);
+  transform: translateY(-1px);
+}
+
+.time-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.time-slot.active {
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 80%, #fff 10%);
+  background: color-mix(in srgb, var(--primary, #d4a24f) 26%, rgba(13, 22, 44, 0.92));
+  color: #fff4d6;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #d4a24f) 34%, transparent), 0 10px 20px rgba(0,0,0,0.2);
+}
+
+
+.admin-section {
+  border: 1px solid rgba(151, 168, 212, 0.16);
+  border-radius: 1rem;
+  padding: 0.95rem;
+  background: linear-gradient(180deg, rgba(11, 18, 36, 0.76), rgba(9, 16, 34, 0.62));
+}
+
+.admin-section + .admin-section {
+  margin-top: 0.9rem;
+}
+
+.admin-section-head h2 {
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+}
+
+.form-row .button,
+.admin-schedules-list .button,
+#admin-schedules-list .button {
+  border: 1px solid rgba(138, 157, 204, 0.5);
 }

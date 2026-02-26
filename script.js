@@ -79,7 +79,7 @@ const STORAGE_KEYS = {
   clientProfiles: 'barberpro_client_profiles'
 };
 
-const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed', 'no_show'];
+const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed'];
 
 const DEFAULT_BRAND = { shopName: 'Barbearia X', primaryColor: '#d4a24f', logoUrl: '' };
 const DEFAULT_UNIT_SETTINGS = {
@@ -90,7 +90,6 @@ const DEFAULT_UNIT_SETTINGS = {
   cancellation_limit_hours: 3,
   loyalty_enabled: true,
   prepayment_enabled: true,
-  no_show_block_days: 2,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
 };
@@ -147,6 +146,7 @@ function ensureBookingConsistency() {
 const DB_CONFIG = { supabaseUrl: '', supabaseAnonKey: '', table: 'appointments' };
 const SESSION_TTL_MINUTES = 60;
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
+const TEST_MODE_ALLOW_ANY_CANCELLATION = true;
 const nowIso = () => new Date().toISOString();
 const asCurrency = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
@@ -440,8 +440,7 @@ function getBookingStatusLabel(status) {
     pending: 'Pendente',
     confirmed: 'Confirmado',
     canceled: 'Cancelado',
-    completed: 'Concluído',
-    no_show: 'Não compareceu'
+    completed: 'Concluído'
   };
   return map[status] || status;
 }
@@ -700,10 +699,6 @@ function updateAppointmentStatus(id, status) {
     invalidateDashboardCache('appointment_completed');
   }
 
-  if (status === 'no_show') {
-    applyNoShowPolicy(rows[idx]);
-  }
-
 }
 
 function finalizeAppointmentTransaction(appointment) {
@@ -777,17 +772,6 @@ function registerLoyalty(appointment) {
   setJson(STORAGE_KEYS.loyaltyTx, tx);
 }
 
-function applyNoShowPolicy(appointment) {
-  const points = getJson(STORAGE_KEYS.loyaltyPoints, {});
-  const current = points[appointment.client_email] || 0;
-  points[appointment.client_email] = Math.max(0, current - 20);
-  setJson(STORAGE_KEYS.loyaltyPoints, points);
-
-  const settings = getUnitSettings();
-  const blockUntil = addMinutes(new Date(), (settings.no_show_block_days || 2) * 24 * 60).toISOString();
-  setUserBlockedUntil(appointment.client_email, blockUntil);
-  logAudit('no_show_policy_applied', { appointment_id: appointment.id, client_email: appointment.client_email, blocked_until: blockUntil });
-}
 
 function consumeStockForService(appointment) {
   const map = BASE_DATA.serviceProducts.filter((r) => r.service_id === appointment.service_id);
@@ -862,7 +846,6 @@ function getDashboardMetrics() {
   const todayAppointments = appointments.filter((a) => a.appointment_date === today);
   const todayPayments = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today);
 
-  const noShows = todayAppointments.filter((a) => a.status === 'no_show').length;
   const byHour = {};
   todayAppointments.forEach((a) => {
     byHour[a.start_time] = (byHour[a.start_time] || 0) + 1;
@@ -877,8 +860,7 @@ function getDashboardMetrics() {
     totalToday: todayAppointments.length,
     revenueToday: todayPayments.reduce((s, p) => s + Number(p.amount || 0), 0),
     busiestHour: Object.entries(byHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
-    topService: Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
-    noShowRate: `${todayAppointments.length ? ((noShows / todayAppointments.length) * 100).toFixed(1) : '0.0'}%`
+    topService: Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
   };
   });
 }
@@ -889,7 +871,6 @@ function renderMetrics(container, metrics) {
     <article class="schedule-item"><h3>Faturamento do dia</h3><p>${asCurrency(metrics.revenueToday)}</p></article>
     <article class="schedule-item"><h3>Horário mais movimentado</h3><p>${metrics.busiestHour}</p></article>
     <article class="schedule-item"><h3>Serviço mais vendido</h3><p>${metrics.topService}</p></article>
-    <article class="schedule-item"><h3>Taxa de no-show</h3><p>${metrics.noShowRate}</p></article>
   `;
 }
 
@@ -1130,7 +1111,7 @@ function initBookingReviewPage() {
   const session = getSession();
   if (!session) action.textContent = 'Efetuar login para continuar';
   else if (!hasRole('client')) action.textContent = 'Perfil administrativo não agenda por esta tela';
-  else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente por no-show';
+  else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente';
   else action.textContent = 'Confirmar agendamento';
 
   const successModal = document.getElementById('booking-success-modal');
@@ -1192,6 +1173,7 @@ function initBookingReviewPage() {
 }
 
 function canCancelAppointment(appointment) {
+  if (TEST_MODE_ALLOW_ANY_CANCELLATION) return true;
   const settings = getUnitSettings();
   const diffHours = (new Date(appointment.start_datetime) - new Date()) / 3600000;
   return diffHours >= Number(settings.cancellation_limit_hours || 3);
@@ -1252,7 +1234,7 @@ function initMySchedulesPage() {
 
 function renderAppointmentCard(a, canManage = false) {
   const actionButtons = canManage
-    ? `<div class="form-row"><button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button><button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button><button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button><button class="button button-secondary" data-status="no_show" data-id="${a.id}">No-show</button></div>`
+    ? `<div class="form-row"><button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button><button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button><button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button></div>`
     : '';
   return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.client_name || 'Cliente'} · <span class="status-badge status-${a.status}">${a.status}</span></p><small>${a.branch} - ${a.city}</small>${actionButtons}</article>`;
 }
@@ -1678,8 +1660,7 @@ function initUnitSettingsPage() {
     slot_interval_minutes: document.getElementById('us-slot-interval'),
     cancellation_limit_hours: document.getElementById('us-cancel-limit'),
     loyalty_enabled: document.getElementById('us-loyalty-enabled'),
-    prepayment_enabled: document.getElementById('us-prepayment-enabled'),
-    no_show_block_days: document.getElementById('us-no-show-block-days')
+    prepayment_enabled: document.getElementById('us-prepayment-enabled')
   };
 
   const current = getUnitSettings();
@@ -1697,8 +1678,7 @@ function initUnitSettingsPage() {
       slot_interval_minutes: Number(fields.slot_interval_minutes.value),
       cancellation_limit_hours: Number(fields.cancellation_limit_hours.value),
       loyalty_enabled: fields.loyalty_enabled.checked,
-      prepayment_enabled: fields.prepayment_enabled.checked,
-      no_show_block_days: Number(fields.no_show_block_days.value)
+      prepayment_enabled: fields.prepayment_enabled.checked
     });
   });
 }
