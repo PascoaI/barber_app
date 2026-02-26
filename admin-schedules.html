@@ -14,10 +14,20 @@
       <section class="booking-card">
         <a class="back-link" href="admin-home.html">← Dashboard</a>
         <h1>Agendamentos</h1>
-        <p class="subtitle">Visualize e filtre a agenda por barbeiro.</p>
+        <p class="subtitle">Agenda com status, filtro por barbeiro e ações operacionais.</p>
 
         <label for="admin-professional-filter">Filtrar por profissional</label>
         <select id="admin-professional-filter"></select>
+
+        <label for="admin-status-filter">Filtrar por status</label>
+        <select id="admin-status-filter">
+          <option value="all">Todos</option>
+          <option value="pending">pending</option>
+          <option value="confirmed">confirmed</option>
+          <option value="canceled">canceled</option>
+          <option value="completed">completed</option>
+          <option value="no_show">no_show</option>
+        </select>
 
         <div id="admin-schedules-list" class="admin-schedules-list"></div>
       </section>
