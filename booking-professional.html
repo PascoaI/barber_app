@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamento · Profissional | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <a class="back-link" href="booking-service.html">← Voltar</a>
+        <p class="step-label">Etapa 3 de 4</p>
+        <h1>Escolha o profissional</h1>
+        <p class="subtitle">Selecione por foto (ou sem preferência).</p>
+
+        <div id="professionals-grid" class="pros-grid" aria-live="polite"></div>
+
+        <div class="sticky-actions">
+          <button id="professional-next" class="button button-primary" type="button" disabled>
+            Continuar para data e horário
+          </button>
+        </div>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
