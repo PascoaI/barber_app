@@ -1,12 +1,20 @@
 const DEFAULT_UNIT_ID = 'unit_bom_fim';
+const DEFAULT_TENANT_ID = 'tenant_barberpro_demo';
 
 const APP_CONFIG = {
-  unitId: DEFAULT_UNIT_ID
+  unitId: DEFAULT_UNIT_ID,
+  tenantId: DEFAULT_TENANT_ID
 };
 
 const BASE_DATA = {
   units: [
-    { id: DEFAULT_UNIT_ID, name: 'Barbearia X', city: 'Porto Alegre', address: 'Rua Fernandes Vieira, 631 - Bom Fim, Porto Alegre, RS' }
+    {
+      id: DEFAULT_UNIT_ID,
+      tenant_id: DEFAULT_TENANT_ID,
+      name: 'Barbearia X',
+      city: 'Porto Alegre',
+      address: 'Rua Fernandes Vieira, 631 - Bom Fim, Porto Alegre, RS'
+    }
   ],
   cities: [
     {
@@ -16,9 +24,13 @@ const BASE_DATA = {
     }
   ],
   services: [
-    { id: 'corte', name: 'Corte', duration_minutes: 30, price: 72, barber_id: null, unit_id: DEFAULT_UNIT_ID, emoji: '✂️' },
-    { id: 'corte-sobrancelha', name: 'Corte + Sobrancelha', duration_minutes: 45, price: 89, barber_id: null, unit_id: DEFAULT_UNIT_ID, emoji: '🧔' },
-    { id: 'hidratacao', name: 'Hidratação', duration_minutes: 60, price: 58, barber_id: null, unit_id: DEFAULT_UNIT_ID, emoji: '💧' }
+    { id: 'corte', name: 'Corte', duration_minutes: 30, price: 72, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '✂️' },
+    { id: 'corte-sobrancelha', name: 'Corte + Sobrancelha', duration_minutes: 45, price: 89, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: true, emoji: '🧔' },
+    { id: 'hidratacao', name: 'Hidratação', duration_minutes: 60, price: 58, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '💧' }
+  ],
+  serviceProducts: [
+    { service_id: 'corte', product_id: 'pomada', quantity: 1 },
+    { service_id: 'hidratacao', product_id: 'mascara', quantity: 1 }
   ]
 };
 
@@ -33,6 +45,11 @@ const DEFAULT_BARBERS = [
   { id: 'nataniel', name: 'Nataniel', email: 'nataniel@barber.com', password: '123456', commission_percentage: 45, active: true, unit_id: DEFAULT_UNIT_ID, avatar: '👨🏾' }
 ];
 
+const DEFAULT_PLATFORM_PLANS = [
+  { id: 'starter', name: 'Starter', max_units: 1, max_barbers: 5, analytics_enabled: true, loyalty_enabled: true, stock_enabled: true, subscription_enabled: true },
+  { id: 'growth', name: 'Growth', max_units: 3, max_barbers: 20, analytics_enabled: true, loyalty_enabled: true, stock_enabled: true, subscription_enabled: true }
+];
+
 const STORAGE_KEYS = {
   session: 'barberpro_session',
   booking: 'barberpro_booking',
@@ -44,22 +61,38 @@ const STORAGE_KEYS = {
   loyaltyPoints: 'barberpro_loyalty_points',
   loyaltyTx: 'barberpro_loyalty_transactions',
   reviews: 'barberpro_reviews',
+  products: 'barberpro_products',
+  productMovements: 'barberpro_product_movements',
+  subscriptionPlans: 'barberpro_subscription_plans',
+  subscriptions: 'barberpro_subscriptions',
+  notifications: 'barberpro_notifications',
+  tenants: 'barberpro_tenants',
+  platformPlans: 'barberpro_platform_plans',
+  unitSettings: 'barberpro_unit_settings',
+  userPolicies: 'barberpro_user_policies',
   brand: 'barberpro_brand',
   audit: 'barberpro_audit'
 };
 
-const APPOINTMENT_STATUS = ['pending', 'confirmed', 'canceled', 'completed', 'no_show'];
+const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed', 'no_show'];
 
-const DEFAULT_BRAND = {
-  shopName: 'Barbearia X',
-  primaryColor: '#d4a24f',
-  logoUrl: ''
+const DEFAULT_BRAND = { shopName: 'Barbearia X', primaryColor: '#d4a24f', logoUrl: '' };
+const DEFAULT_UNIT_SETTINGS = {
+  unit_id: DEFAULT_UNIT_ID,
+  opening_time: '09:00',
+  closing_time: '19:00',
+  slot_interval_minutes: 30,
+  cancellation_limit_hours: 3,
+  loyalty_enabled: true,
+  prepayment_enabled: true,
+  no_show_block_days: 2,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
 };
-
-const DB_CONFIG = { supabaseUrl: '', supabaseAnonKey: '', table: 'appointments' };
 
 const BOOKING_DEFAULT = { city: '', branch: '', service: '', professional: '', date: '', time: '' };
 
+const DB_CONFIG = { supabaseUrl: '', supabaseAnonKey: '', table: 'appointments' };
 const nowIso = () => new Date().toISOString();
 const asCurrency = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
@@ -88,13 +121,31 @@ function slugify(text) {
 function ensureSeed() {
   if (!getJson(STORAGE_KEYS.barbers, []).length) setJson(STORAGE_KEYS.barbers, DEFAULT_BARBERS);
   if (!getJson(STORAGE_KEYS.brand, null)) setJson(STORAGE_KEYS.brand, DEFAULT_BRAND);
+  if (!getJson(STORAGE_KEYS.unitSettings, null)) setJson(STORAGE_KEYS.unitSettings, DEFAULT_UNIT_SETTINGS);
+  if (!getJson(STORAGE_KEYS.products, []).length) {
+    setJson(STORAGE_KEYS.products, [
+      { id: 'pomada', unit_id: APP_CONFIG.unitId, name: 'Pomada Modeladora', quantity: 20, minimum_stock: 5, created_at: nowIso(), updated_at: nowIso() },
+      { id: 'mascara', unit_id: APP_CONFIG.unitId, name: 'Máscara de Hidratação', quantity: 10, minimum_stock: 3, created_at: nowIso(), updated_at: nowIso() }
+    ]);
+  }
+  if (!getJson(STORAGE_KEYS.subscriptionPlans, []).length) {
+    setJson(STORAGE_KEYS.subscriptionPlans, [
+      { id: 'plano-basic', unit_id: APP_CONFIG.unitId, name: 'Plano Básico', price: 99, sessions_per_month: 2, duration_days: 30, created_at: nowIso(), updated_at: nowIso() }
+    ]);
+  }
+  if (!getJson(STORAGE_KEYS.platformPlans, []).length) setJson(STORAGE_KEYS.platformPlans, DEFAULT_PLATFORM_PLANS);
+  if (!getJson(STORAGE_KEYS.tenants, []).length) {
+    setJson(STORAGE_KEYS.tenants, [
+      { id: DEFAULT_TENANT_ID, name: 'BarberPro Demo', subscription_plan_id: 'growth', subscription_status: 'active', created_at: nowIso(), updated_at: nowIso() }
+    ]);
+  }
 }
 
 function logAudit(action, details = {}) {
   const audit = getJson(STORAGE_KEYS.audit, []);
   const session = getSession();
-  audit.unshift({ action, details, by: session?.email || 'system', at: nowIso() });
-  setJson(STORAGE_KEYS.audit, audit.slice(0, 1000));
+  audit.unshift({ action, details, by: session?.email || 'system', at: nowIso(), unit_id: session?.unit_id || APP_CONFIG.unitId, tenant_id: APP_CONFIG.tenantId });
+  setJson(STORAGE_KEYS.audit, audit.slice(0, 1500));
 }
 
 function getSession() {
@@ -112,8 +163,27 @@ function setSession(user) {
 }
 
 function hasRole(...roles) {
-  const role = getSession()?.role;
-  return roles.includes(role);
+  return roles.includes(getSession()?.role);
+}
+
+function getUserPolicies() {
+  return getJson(STORAGE_KEYS.userPolicies, {});
+}
+
+function getUserBlockedUntil(email) {
+  return getUserPolicies()[email]?.blocked_until || null;
+}
+
+function setUserBlockedUntil(email, isoDate) {
+  const policies = getUserPolicies();
+  policies[email] = { ...(policies[email] || {}), blocked_until: isoDate, updated_at: nowIso() };
+  setJson(STORAGE_KEYS.userPolicies, policies);
+}
+
+function canClientBook(email) {
+  const blocked = getUserBlockedUntil(email);
+  if (!blocked) return true;
+  return new Date(blocked) <= new Date();
 }
 
 function requireRole(roles, redirect = 'login.html') {
@@ -123,7 +193,7 @@ function requireRole(roles, redirect = 'login.html') {
     return false;
   }
   if (!roles.includes(session.role)) {
-    window.location.href = session.role === 'client' ? 'client-home.html' : session.role === 'barber' ? 'barber-home.html' : 'admin-home.html';
+    window.location.href = session.role === 'client' ? 'client-home.html' : session.role === 'barber' ? 'barber-home.html' : session.role === 'super_admin' ? 'super-admin-tenants.html' : 'admin-home.html';
     return false;
   }
   return true;
@@ -142,13 +212,23 @@ function applyBrandTheme() {
   document.documentElement.style.setProperty('--primary', brand.primaryColor || DEFAULT_BRAND.primaryColor);
 }
 
+function getUnitSettings() {
+  return { ...DEFAULT_UNIT_SETTINGS, ...getJson(STORAGE_KEYS.unitSettings, {}) };
+}
+
+function saveUnitSettings(settings) {
+  setJson(STORAGE_KEYS.unitSettings, { ...getUnitSettings(), ...settings, updated_at: nowIso() });
+  logAudit('unit_settings_updated', settings);
+}
+
 function getBarbers(activeOnly = false) {
   const list = getJson(STORAGE_KEYS.barbers, DEFAULT_BARBERS).filter((b) => b.unit_id === APP_CONFIG.unitId);
   return activeOnly ? list.filter((b) => b.active) : list;
 }
 
-function saveBarbers(barbers) {
-  setJson(STORAGE_KEYS.barbers, barbers);
+function saveBarbers(rows) {
+  const keep = getJson(STORAGE_KEYS.barbers, []).filter((b) => b.unit_id !== APP_CONFIG.unitId);
+  setJson(STORAGE_KEYS.barbers, [...rows, ...keep]);
 }
 
 function getServices() {
@@ -164,8 +244,8 @@ function getAppointments() {
 }
 
 function saveAppointments(rows) {
-  const keepOther = getJson(STORAGE_KEYS.appointments, []).filter((a) => a.unit_id !== APP_CONFIG.unitId || a.deleted_at);
-  setJson(STORAGE_KEYS.appointments, [...rows, ...keepOther]);
+  const keep = getJson(STORAGE_KEYS.appointments, []).filter((a) => a.unit_id !== APP_CONFIG.unitId || a.deleted_at);
+  setJson(STORAGE_KEYS.appointments, [...rows, ...keep]);
 }
 
 function getBlockedSlots() {
@@ -173,8 +253,44 @@ function getBlockedSlots() {
 }
 
 function saveBlockedSlots(rows) {
-  const keepOther = getJson(STORAGE_KEYS.blockedSlots, []).filter((b) => b.unit_id !== APP_CONFIG.unitId || b.deleted_at);
-  setJson(STORAGE_KEYS.blockedSlots, [...rows, ...keepOther]);
+  const keep = getJson(STORAGE_KEYS.blockedSlots, []).filter((b) => b.unit_id !== APP_CONFIG.unitId || b.deleted_at);
+  setJson(STORAGE_KEYS.blockedSlots, [...rows, ...keep]);
+}
+
+function getProducts() {
+  return getJson(STORAGE_KEYS.products, []).filter((p) => p.unit_id === APP_CONFIG.unitId && !p.deleted_at);
+}
+
+function saveProducts(rows) {
+  const keep = getJson(STORAGE_KEYS.products, []).filter((p) => p.unit_id !== APP_CONFIG.unitId || p.deleted_at);
+  setJson(STORAGE_KEYS.products, [...rows, ...keep]);
+}
+
+function getProductMovements() {
+  return getJson(STORAGE_KEYS.productMovements, []).filter((m) => m.unit_id === APP_CONFIG.unitId);
+}
+
+function saveProductMovements(rows) {
+  const keep = getJson(STORAGE_KEYS.productMovements, []).filter((m) => m.unit_id !== APP_CONFIG.unitId);
+  setJson(STORAGE_KEYS.productMovements, [...rows, ...keep]);
+}
+
+function getSubscriptions() {
+  return getJson(STORAGE_KEYS.subscriptions, []).filter((s) => s.unit_id === APP_CONFIG.unitId && !s.deleted_at);
+}
+
+function saveSubscriptions(rows) {
+  const keep = getJson(STORAGE_KEYS.subscriptions, []).filter((s) => s.unit_id !== APP_CONFIG.unitId || s.deleted_at);
+  setJson(STORAGE_KEYS.subscriptions, [...rows, ...keep]);
+}
+
+function getSubscriptionPlans() {
+  return getJson(STORAGE_KEYS.subscriptionPlans, []).filter((p) => p.unit_id === APP_CONFIG.unitId);
+}
+
+function saveSubscriptionPlans(rows) {
+  const keep = getJson(STORAGE_KEYS.subscriptionPlans, []).filter((p) => p.unit_id !== APP_CONFIG.unitId);
+  setJson(STORAGE_KEYS.subscriptionPlans, [...rows, ...keep]);
 }
 
 function getBooking() {
@@ -185,12 +301,27 @@ function saveBooking(partial) {
   setJson(STORAGE_KEYS.booking, { ...getBooking(), ...partial });
 }
 
+function getNotifications() {
+  return getJson(STORAGE_KEYS.notifications, []).filter((n) => n.unit_id === APP_CONFIG.unitId);
+}
+
+function saveNotifications(rows) {
+  const keep = getJson(STORAGE_KEYS.notifications, []).filter((n) => n.unit_id !== APP_CONFIG.unitId);
+  setJson(STORAGE_KEYS.notifications, [...rows, ...keep]);
+}
+
+function scheduleNotification(payload) {
+  const all = getNotifications();
+  all.unshift({ id: `ntf_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`, unit_id: APP_CONFIG.unitId, status: 'pending', created_at: nowIso(), ...payload });
+  saveNotifications(all);
+}
+
 function populateSelect(select, options, placeholder) {
   select.innerHTML = `<option value="">${placeholder}</option>`;
-  options.forEach((option) => {
+  options.forEach((o) => {
     const el = document.createElement('option');
-    el.value = option.id || option.value;
-    el.textContent = option.name || option.label;
+    el.value = o.id || o.value;
+    el.textContent = o.name || o.label;
     select.appendChild(el);
   });
 }
@@ -205,12 +336,17 @@ function getNextDays(count = 7) {
 }
 
 function getTimeslots() {
+  const settings = getUnitSettings();
   const slots = [];
-  for (let h = 9; h <= 18; h += 1) {
-    slots.push(`${String(h).padStart(2, '0')}:00`);
-    slots.push(`${String(h).padStart(2, '0')}:30`);
+  const [oh, om] = settings.opening_time.split(':').map(Number);
+  const [ch, cm] = settings.closing_time.split(':').map(Number);
+  const openM = oh * 60 + om;
+  const closeM = ch * 60 + cm;
+  for (let m = openM; m <= closeM; m += Number(settings.slot_interval_minutes || 30)) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    slots.push(`${hh}:${mm}`);
   }
-  slots.push('19:00');
   return slots;
 }
 
@@ -226,34 +362,48 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
-function calcEndTime(date, time, durationMinutes) {
-  const end = addMinutes(toDate(date, time), durationMinutes);
-  return end.toTimeString().slice(0, 5);
-}
-
 function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppointmentId = null }) {
   const start = toDate(date, time);
   const end = addMinutes(start, serviceDuration);
-
-  // limite expediente
-  const close = toDate(date, '19:00');
+  const settings = getUnitSettings();
+  const close = toDate(date, settings.closing_time);
   if (end > close) return false;
 
-  const blocked = getBlockedSlots().filter((b) => b.barber_id === barberId);
-  const blockedConflict = blocked.some((b) => overlaps(start, end, new Date(b.start_datetime), new Date(b.end_datetime)));
+  const blockedConflict = getBlockedSlots()
+    .filter((b) => b.barber_id === barberId)
+    .some((b) => overlaps(start, end, new Date(b.start_datetime), new Date(b.end_datetime)));
   if (blockedConflict) return false;
 
-  const activeStatuses = ['pending', 'confirmed'];
-  const appointments = getAppointments().filter((a) => a.barber_id === barberId && activeStatuses.includes(a.status));
+  const busy = getAppointments()
+    .filter((a) => a.barber_id === barberId && ['awaiting_payment', 'pending', 'confirmed'].includes(a.status))
+    .some((a) => {
+      if (editingAppointmentId && a.id === editingAppointmentId) return false;
+      return overlaps(start, end, new Date(a.start_datetime), new Date(a.end_datetime));
+    });
 
-  const conflict = appointments.some((a) => {
-    if (editingAppointmentId && a.id === editingAppointmentId) return false;
-    const aStart = new Date(a.start_datetime);
-    const aEnd = new Date(a.end_datetime);
-    return overlaps(start, end, aStart, aEnd);
+  return !busy;
+}
+
+function formatBookingDateTime(date, time) {
+  const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T00:00:00`));
+  return `${formattedDate} - ${time}`;
+}
+
+function checkOverduePrepayments() {
+  const now = new Date();
+  const rows = getAppointments();
+  let changed = false;
+  rows.forEach((a) => {
+    if (a.status === 'awaiting_payment' && a.payment_due_at && new Date(a.payment_due_at) < now) {
+      a.status = 'canceled';
+      a.updated_at = nowIso();
+      a.updated_by = 'system_auto';
+      changed = true;
+      scheduleNotification({ user_id: a.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: null, related_appointment_id: a.id });
+      logAudit('appointment_auto_canceled_due_payment_timeout', { appointment_id: a.id });
+    }
   });
-
-  return !conflict;
+  if (changed) saveAppointments(rows);
 }
 
 function createAppointmentFromBooking() {
@@ -264,25 +414,25 @@ function createAppointmentFromBooking() {
 
   let barberId = booking.professional;
   if (barberId === 'sem-preferencia') {
-    const found = barbers.find((b) => isSlotAvailable({ barberId: b.id, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes }));
-    barberId = found?.id;
+    const candidate = barbers.find((b) => isSlotAvailable({ barberId: b.id, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes }));
+    barberId = candidate?.id;
   }
-
   if (!barberId) return null;
 
-  if (!isSlotAvailable({ barberId, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes })) {
-    return null;
-  }
+  if (!isSlotAvailable({ barberId, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes })) return null;
 
   const start = toDate(booking.date, booking.time);
   const end = addMinutes(start, service.duration_minutes);
   const city = BASE_DATA.cities.find((c) => c.id === booking.city);
   const branch = city?.branches.find((b) => b.id === booking.branch);
   const barber = barbers.find((b) => b.id === barberId);
+  const settings = getUnitSettings();
+  const prepaymentOn = settings.prepayment_enabled && service.requires_pre_payment;
 
   return {
     id: `apt_${Date.now()}`,
     unit_id: APP_CONFIG.unitId,
+    tenant_id: APP_CONFIG.tenantId,
     client_email: session?.email,
     client_name: session?.name,
     service_id: service.id,
@@ -299,60 +449,62 @@ function createAppointmentFromBooking() {
     end_time: end.toTimeString().slice(0, 5),
     start_datetime: start.toISOString(),
     end_datetime: end.toISOString(),
-    status: 'pending',
+    status: prepaymentOn ? 'awaiting_payment' : 'pending',
+    requires_pre_payment: prepaymentOn,
+    payment_due_at: prepaymentOn ? addMinutes(new Date(), 30).toISOString() : null,
     created_at: nowIso(),
-    created_by: session?.email || 'system'
+    updated_at: nowIso(),
+    created_by: session?.email || 'system',
+    updated_by: session?.email || 'system'
   };
 }
 
 function updateAppointmentStatus(id, status) {
   if (!APPOINTMENT_STATUS.includes(status)) return;
-
-  const appointments = getAppointments();
-  const idx = appointments.findIndex((a) => a.id === id);
+  const rows = getAppointments();
+  const idx = rows.findIndex((a) => a.id === id);
   if (idx < 0) return;
 
-  appointments[idx].status = status;
-  appointments[idx].updated_at = nowIso();
-  appointments[idx].updated_by = getSession()?.email;
-  saveAppointments(appointments);
+  rows[idx].status = status;
+  rows[idx].updated_at = nowIso();
+  rows[idx].updated_by = getSession()?.email || 'system';
+  saveAppointments(rows);
+  logAudit('appointment_status_changed', { appointment_id: id, status });
 
-  logAudit('appointment_status_changed', { id, status });
+  if (status === 'confirmed') {
+    scheduleNotification({ user_id: rows[idx].client_email, type: 'confirmation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: id });
+    scheduleNotification({ user_id: rows[idx].client_email, type: 'reminder', scheduled_for: addMinutes(new Date(rows[idx].start_datetime), -60).toISOString(), sent_at: null, related_appointment_id: id });
+  }
 
   if (status === 'completed') {
-    registerPaymentAndCommission(appointments[idx]);
-    registerLoyalty(appointments[idx]);
+    finalizeAppointmentTransaction(rows[idx]);
   }
+
+  if (status === 'no_show') {
+    applyNoShowPolicy(rows[idx]);
+  }
+}
+
+function finalizeAppointmentTransaction(appointment) {
+  registerPaymentAndCommission(appointment);
+  registerLoyalty(appointment);
+  consumeStockForService(appointment);
 }
 
 function registerPaymentAndCommission(appointment) {
   const payments = getJson(STORAGE_KEYS.payments, []);
   const commissions = getJson(STORAGE_KEYS.commissions, []);
+
   if (!payments.some((p) => p.appointment_id === appointment.id)) {
-    payments.unshift({
-      id: `pay_${Date.now()}`,
-      appointment_id: appointment.id,
-      unit_id: appointment.unit_id,
-      payment_method: 'pix',
-      amount: appointment.service_price,
-      paid_at: nowIso(),
-      status: 'paid'
-    });
+    payments.unshift({ id: `pay_${Date.now()}`, unit_id: appointment.unit_id, appointment_id: appointment.id, payment_method: 'pix', amount: appointment.service_price, paid_at: nowIso(), status: 'paid', created_at: nowIso(), updated_at: nowIso() });
   }
 
   const barber = getBarbers().find((b) => b.id === appointment.barber_id);
-  const percentage = barber?.commission_percentage || 0;
-  const commissionAmount = (appointment.service_price * percentage) / 100;
+  const pct = barber?.commission_percentage || 0;
+  const commissionAmount = Number(((appointment.service_price * pct) / 100).toFixed(2));
 
   if (!commissions.some((c) => c.appointment_id === appointment.id)) {
-    commissions.unshift({
-      id: `com_${Date.now()}`,
-      barber_id: appointment.barber_id,
-      appointment_id: appointment.id,
-      unit_id: appointment.unit_id,
-      commission_amount: Number(commissionAmount.toFixed(2)),
-      calculated_at: nowIso()
-    });
+    commissions.unshift({ id: `com_${Date.now()}`, unit_id: appointment.unit_id, barber_id: appointment.barber_id, appointment_id: appointment.id, commission_amount: commissionAmount, calculated_at: nowIso(), created_at: nowIso(), updated_at: nowIso() });
   }
 
   setJson(STORAGE_KEYS.payments, payments);
@@ -360,56 +512,121 @@ function registerPaymentAndCommission(appointment) {
 }
 
 function registerLoyalty(appointment) {
+  const settings = getUnitSettings();
+  if (!settings.loyalty_enabled) return;
+
   const points = getJson(STORAGE_KEYS.loyaltyPoints, {});
   const tx = getJson(STORAGE_KEYS.loyaltyTx, []);
   const user = appointment.client_email;
   const earned = Math.floor(appointment.service_price);
 
   points[user] = (points[user] || 0) + earned;
-
-  tx.unshift({
-    id: `loy_${Date.now()}`,
-    user_id: user,
-    appointment_id: appointment.id,
-    points_earned: earned,
-    points_used: 0,
-    created_at: nowIso(),
-    unit_id: appointment.unit_id
-  });
+  tx.unshift({ id: `loy_${Date.now()}`, unit_id: appointment.unit_id, user_id: user, appointment_id: appointment.id, points_earned: earned, points_used: 0, created_at: nowIso(), updated_at: nowIso() });
 
   setJson(STORAGE_KEYS.loyaltyPoints, points);
   setJson(STORAGE_KEYS.loyaltyTx, tx);
 }
 
+function applyNoShowPolicy(appointment) {
+  const points = getJson(STORAGE_KEYS.loyaltyPoints, {});
+  const current = points[appointment.client_email] || 0;
+  points[appointment.client_email] = Math.max(0, current - 20);
+  setJson(STORAGE_KEYS.loyaltyPoints, points);
+
+  const settings = getUnitSettings();
+  const blockUntil = addMinutes(new Date(), (settings.no_show_block_days || 2) * 24 * 60).toISOString();
+  setUserBlockedUntil(appointment.client_email, blockUntil);
+  logAudit('no_show_policy_applied', { appointment_id: appointment.id, client_email: appointment.client_email, blocked_until: blockUntil });
+}
+
+function consumeStockForService(appointment) {
+  const map = BASE_DATA.serviceProducts.filter((r) => r.service_id === appointment.service_id);
+  if (!map.length) return;
+
+  const products = getProducts();
+  const movements = getProductMovements();
+
+  map.forEach((item) => {
+    const product = products.find((p) => p.id === item.product_id);
+    if (!product) return;
+    product.quantity = Math.max(0, Number(product.quantity) - Number(item.quantity));
+    product.updated_at = nowIso();
+    movements.unshift({ id: `mov_${Date.now()}_${item.product_id}`, unit_id: APP_CONFIG.unitId, product_id: item.product_id, type: 'out', quantity: item.quantity, reason: 'service_consumption', related_appointment_id: appointment.id, created_at: nowIso(), updated_at: nowIso() });
+  });
+
+  saveProducts(products);
+  saveProductMovements(movements);
+}
+
+function getAnalytics() {
+  const appointments = getAppointments();
+  const completed = appointments.filter((a) => a.status === 'completed');
+  const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
+
+  const heatmap = {};
+  appointments.forEach((a) => {
+    const day = new Date(a.start_datetime).toLocaleDateString('pt-BR', { weekday: 'short' });
+    const key = `${day} ${a.start_time}`;
+    heatmap[key] = (heatmap[key] || 0) + 1;
+  });
+
+  const byHourRevenue = {};
+  completed.forEach((a) => {
+    byHourRevenue[a.start_time] = (byHourRevenue[a.start_time] || 0) + Number(a.service_price || 0);
+  });
+
+  const byWeekDayRevenue = {};
+  completed.forEach((a) => {
+    const day = new Date(a.start_datetime).toLocaleDateString('pt-BR', { weekday: 'long' });
+    byWeekDayRevenue[day] = (byWeekDayRevenue[day] || 0) + Number(a.service_price || 0);
+  });
+
+  const byClientFreq = {};
+  appointments.forEach((a) => {
+    byClientFreq[a.client_email] = (byClientFreq[a.client_email] || 0) + 1;
+  });
+
+  const byBarberOccupancy = {};
+  const today = '2026-02-26';
+  getBarbers(true).forEach((b) => {
+    const count = appointments.filter((a) => a.barber_id === b.id && a.appointment_date === today).length;
+    byBarberOccupancy[b.name] = count;
+  });
+
+  return {
+    heatmap,
+    profitableHour: Object.entries(byHourRevenue).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+    bestWeekDay: Object.entries(byWeekDayRevenue).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+    topClient: Object.entries(byClientFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+    occupancyByBarber: byBarberOccupancy,
+    paidTotal: payments.reduce((s, p) => s + Number(p.amount || 0), 0)
+  };
+}
+
 function getDashboardMetrics() {
   const appointments = getAppointments();
-  const payments = getJson(STORAGE_KEYS.payments, []);
+  const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
   const today = '2026-02-26';
-
   const todayAppointments = appointments.filter((a) => a.appointment_date === today);
-  const todayPayments = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today && p.status === 'paid');
+  const todayPayments = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today);
 
   const noShows = todayAppointments.filter((a) => a.status === 'no_show').length;
-  const total = todayAppointments.length || 1;
-
   const byHour = {};
   todayAppointments.forEach((a) => {
     byHour[a.start_time] = (byHour[a.start_time] || 0) + 1;
   });
-  const busiestHour = Object.entries(byHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
   const byService = {};
   appointments.filter((a) => a.status === 'completed').forEach((a) => {
     byService[a.service_name] = (byService[a.service_name] || 0) + 1;
   });
-  const topService = Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
   return {
     totalToday: todayAppointments.length,
     revenueToday: todayPayments.reduce((s, p) => s + Number(p.amount || 0), 0),
-    busiestHour,
-    topService,
-    noShowRate: `${((noShows / total) * 100).toFixed(1)}%`
+    busiestHour: Object.entries(byHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+    topService: Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+    noShowRate: `${todayAppointments.length ? ((noShows / todayAppointments.length) * 100).toFixed(1) : '0.0'}%`
   };
 }
 
@@ -423,18 +640,13 @@ function renderMetrics(container, metrics) {
   `;
 }
 
-function formatBookingDateTime(date, time) {
-  const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T00:00:00`));
-  return `${formattedDate} - ${time}`;
-}
-
 function initLoginPage() {
   const form = document.querySelector('form.auth-form');
   if (!form || !document.title.includes('Login')) return;
   const feedback = document.getElementById('login-feedback');
 
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
     const email = document.getElementById('email')?.value || '';
     const password = document.getElementById('password')?.value || '';
 
@@ -450,13 +662,11 @@ function initLoginPage() {
 
     setSession(user);
     const redirect = new URLSearchParams(window.location.search).get('redirect');
-    if (redirect) {
-      window.location.href = redirect;
-      return;
-    }
+    if (redirect) return (window.location.href = redirect);
 
     if (user.role === 'client') window.location.href = 'client-home.html';
     else if (user.role === 'barber') window.location.href = 'barber-home.html';
+    else if (user.role === 'super_admin') window.location.href = 'super-admin-tenants.html';
     else window.location.href = 'admin-home.html';
   });
 }
@@ -466,23 +676,22 @@ function initLocationPage() {
   if (!form) return;
   const cityEl = document.getElementById('city');
   const branchEl = document.getElementById('branch');
-  const current = getBooking();
+  const b = getBooking();
 
   populateSelect(cityEl, BASE_DATA.cities, 'Selecione a cidade');
 
   cityEl.addEventListener('change', () => {
-    const city = BASE_DATA.cities.find((item) => item.id === cityEl.value);
+    const city = BASE_DATA.cities.find((c) => c.id === cityEl.value);
     branchEl.disabled = !city;
     populateSelect(branchEl, city ? city.branches : [], 'Selecione a unidade');
     saveBooking({ city: cityEl.value, branch: '', service: '', professional: '', date: '', time: '' });
   });
-
   branchEl.addEventListener('change', () => saveBooking({ branch: branchEl.value, service: '', professional: '', date: '', time: '' }));
 
-  if (current.city) {
-    cityEl.value = current.city;
+  if (b.city) {
+    cityEl.value = b.city;
     cityEl.dispatchEvent(new Event('change'));
-    if (current.branch) branchEl.value = current.branch;
+    if (b.branch) branchEl.value = b.branch;
   }
 
   form.addEventListener('submit', (e) => {
@@ -497,25 +706,24 @@ function initServicePage() {
   const grid = document.getElementById('services-grid');
   const nextBtn = document.getElementById('service-next');
   if (!grid || !nextBtn) return;
+  const b = getBooking();
+  if (!b.city || !b.branch) return (window.location.href = 'booking-location.html');
 
-  const booking = getBooking();
-  if (!booking.city || !booking.branch) return (window.location.href = 'booking-location.html');
-
-  getServices().forEach((service) => {
+  getServices().forEach((s) => {
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = `service-card ${booking.service === service.id ? 'active' : ''}`;
-    card.innerHTML = `<span class="service-bg">${service.emoji}</span><span class="service-title">${service.name}</span><span class="service-price">${asCurrency(service.price)} · ${service.duration_minutes} min</span>`;
+    card.className = `service-card ${b.service === s.id ? 'active' : ''}`;
+    card.innerHTML = `<span class="service-bg">${s.emoji}</span><span class="service-title">${s.name}</span><span class="service-price">${asCurrency(s.price)} · ${s.duration_minutes} min</span>`;
     card.addEventListener('click', () => {
-      saveBooking({ service: service.id, professional: '', date: '', time: '' });
-      [...grid.querySelectorAll('.service-card')].forEach((e) => e.classList.remove('active'));
+      saveBooking({ service: s.id, professional: '', date: '', time: '' });
+      [...grid.querySelectorAll('.service-card')].forEach((x) => x.classList.remove('active'));
       card.classList.add('active');
       nextBtn.disabled = false;
     });
     grid.appendChild(card);
   });
 
-  nextBtn.disabled = !booking.service;
+  nextBtn.disabled = !b.service;
   nextBtn.addEventListener('click', () => {
     if (!getBooking().service) return;
     window.location.href = 'booking-professional.html';
@@ -526,27 +734,25 @@ function initProfessionalPage() {
   const grid = document.getElementById('professionals-grid');
   const nextBtn = document.getElementById('professional-next');
   if (!grid || !nextBtn) return;
+  const b = getBooking();
+  if (!b.service) return (window.location.href = 'booking-service.html');
 
-  const booking = getBooking();
-  if (!booking.service) return (window.location.href = 'booking-service.html');
-
-  const professionals = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência', avatar: '⭐' }];
-
-  professionals.forEach((p) => {
+  const pros = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência', avatar: '⭐' }];
+  pros.forEach((p) => {
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = `pro-card ${booking.professional === p.id ? 'active' : ''}`;
+    card.className = `pro-card ${b.professional === p.id ? 'active' : ''}`;
     card.innerHTML = `<span class="pro-avatar">${p.avatar}</span><span class="pro-name">${p.name}</span>`;
     card.addEventListener('click', () => {
       saveBooking({ professional: p.id, date: '', time: '' });
-      [...grid.querySelectorAll('.pro-card')].forEach((e) => e.classList.remove('active'));
+      [...grid.querySelectorAll('.pro-card')].forEach((x) => x.classList.remove('active'));
       card.classList.add('active');
       nextBtn.disabled = false;
     });
     grid.appendChild(card);
   });
 
-  nextBtn.disabled = !booking.professional;
+  nextBtn.disabled = !b.professional;
   nextBtn.addEventListener('click', () => {
     if (!getBooking().professional) return;
     window.location.href = 'booking-datetime.html';
@@ -557,51 +763,50 @@ function initDatetimePage() {
   const form = document.getElementById('datetime-form');
   if (!form) return;
   const dateEl = document.getElementById('date');
-  const timeGrid = document.getElementById('time-grid');
-  const btn = document.getElementById('confirm-booking');
+  const grid = document.getElementById('time-grid');
+  const button = document.getElementById('confirm-booking');
 
-  const booking = getBooking();
-  if (!booking.professional || !booking.service) return (window.location.href = 'booking-professional.html');
+  const b = getBooking();
+  if (!b.professional || !b.service) return (window.location.href = 'booking-professional.html');
+  const service = getServiceById(b.service);
 
   populateSelect(dateEl, getNextDays(), 'Selecione uma data');
-  if (booking.date) dateEl.value = booking.date;
+  if (b.date) dateEl.value = b.date;
 
   function render() {
-    const b = getBooking();
-    const service = getServiceById(b.service);
-    timeGrid.innerHTML = '';
+    const cur = getBooking();
+    grid.innerHTML = '';
 
     getTimeslots().forEach((time) => {
-      const slot = document.createElement('button');
-      slot.type = 'button';
-      slot.className = `time-slot ${b.time === time ? 'active' : ''}`;
-      slot.textContent = `${time}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `time-slot ${cur.time === time ? 'active' : ''}`;
+      btn.textContent = time;
 
       let available = false;
-      if (b.date) {
-        if (b.professional === 'sem-preferencia') {
-          available = getBarbers(true).some((barber) => isSlotAvailable({ barberId: barber.id, date: b.date, time, serviceDuration: service.duration_minutes }));
+      if (cur.date) {
+        if (cur.professional === 'sem-preferencia') {
+          available = getBarbers(true).some((barber) => isSlotAvailable({ barberId: barber.id, date: cur.date, time, serviceDuration: service.duration_minutes }));
         } else {
-          available = isSlotAvailable({ barberId: b.professional, date: b.date, time, serviceDuration: service.duration_minutes });
+          available = isSlotAvailable({ barberId: cur.professional, date: cur.date, time, serviceDuration: service.duration_minutes });
         }
       }
 
-      slot.disabled = !available;
-
-      slot.addEventListener('click', () => {
+      btn.disabled = !available;
+      btn.addEventListener('click', () => {
         saveBooking({ time });
         render();
-        btn.disabled = !(getBooking().date && getBooking().time);
+        button.disabled = !(getBooking().date && getBooking().time);
       });
 
-      timeGrid.appendChild(slot);
+      grid.appendChild(btn);
     });
   }
 
   dateEl.addEventListener('change', () => {
     saveBooking({ date: dateEl.value, time: '' });
     render();
-    btn.disabled = true;
+    button.disabled = true;
   });
 
   form.addEventListener('submit', (e) => {
@@ -611,108 +816,130 @@ function initDatetimePage() {
   });
 
   render();
-  btn.disabled = !(getBooking().date && getBooking().time);
+  button.disabled = !(getBooking().date && getBooking().time);
 }
 
 function initBookingReviewPage() {
   const list = document.getElementById('review-list');
   const action = document.getElementById('review-action');
   if (!list || !action) return;
-
   const b = getBooking();
   if (!(b.city && b.branch && b.service && b.professional && b.date && b.time)) return (window.location.href = 'booking-location.html');
 
   const city = BASE_DATA.cities.find((c) => c.id === b.city);
-  const branch = city?.branches.find((br) => br.id === b.branch);
+  const branch = city?.branches.find((x) => x.id === b.branch);
   const service = getServiceById(b.service);
-  const pro = [...getBarbers(), { id: 'sem-preferencia', name: 'Sem preferência' }].find((p) => p.id === b.professional);
+  const barber = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência' }].find((x) => x.id === b.professional);
 
   list.innerHTML = [
     ['🌍', city?.name, 'Região', 'booking-location.html'],
     ['📍', branch?.name, 'Unidade', 'booking-location.html'],
     ['💈', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html'],
-    ['👤', pro?.name, 'Profissional', 'booking-professional.html'],
+    ['👤', barber?.name, 'Profissional', 'booking-professional.html'],
     ['📅', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html']
   ]
-    .map(([icon, value, label, href]) => `<article class="review-item"><div class="review-icon">${icon}</div><div><h3>${value || '-'}</h3><p>${label}</p></div><a class="review-edit" href="${href}">Alterar</a></article>`)
+    .map((row) => `<article class="review-item"><div class="review-icon">${row[0]}</div><div><h3>${row[1] || '-'}</h3><p>${row[2]}</p></div><a class="review-edit" href="${row[3]}">Alterar</a></article>`)
     .join('');
 
   document.getElementById('review-price').textContent = `A partir de ${asCurrency(service?.price || 0)}`;
   document.getElementById('review-address').textContent = branch?.address || '-';
 
-  action.textContent = !getSession() ? 'Efetuar login para continuar' : hasRole('client') ? 'Confirmar agendamento' : 'Perfil administrativo não agenda por esta tela';
+  const session = getSession();
+  if (!session) action.textContent = 'Efetuar login para continuar';
+  else if (!hasRole('client')) action.textContent = 'Perfil administrativo não agenda por esta tela';
+  else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente por no-show';
+  else action.textContent = 'Confirmar agendamento';
 
   action.addEventListener('click', () => {
-    if (!getSession()) return (window.location.href = 'login.html?redirect=booking-review.html');
+    const currentSession = getSession();
+    if (!currentSession) return (window.location.href = 'login.html?redirect=booking-review.html');
     if (!hasRole('client')) return;
+    if (!canClientBook(currentSession.email)) return;
 
     const apt = createAppointmentFromBooking();
     if (!apt) {
-      action.textContent = 'Horário ficou indisponível. Escolha outro.';
+      action.textContent = 'Horário indisponível. Escolha outro.';
       return;
     }
 
-    const all = getAppointments();
-    all.unshift(apt);
-    saveAppointments(all);
-    logAudit('appointment_created', { appointment_id: apt.id });
+    const rows = getAppointments();
+    rows.unshift(apt);
+    saveAppointments(rows);
+    logAudit('appointment_created', { appointment_id: apt.id, status: apt.status });
+
+    if (apt.status === 'awaiting_payment') {
+      action.textContent = 'Aguardando pagamento antecipado';
+      // simula pagamento imediato para demo
+      updateAppointmentStatus(apt.id, 'confirmed');
+    } else {
+      updateAppointmentStatus(apt.id, 'confirmed');
+    }
+
     window.location.href = 'my-schedules.html';
   });
+}
+
+function canCancelAppointment(appointment) {
+  const settings = getUnitSettings();
+  const diffHours = (new Date(appointment.start_datetime) - new Date()) / 3600000;
+  return diffHours >= Number(settings.cancellation_limit_hours || 3);
 }
 
 function initMySchedulesPage() {
   const root = document.getElementById('my-schedules-content');
   if (!root) return;
 
-  if (!getSession()) {
+  const session = getSession();
+  if (!session) {
     root.innerHTML = '<div class="empty-state"><h2>Faça login para ver seus horários</h2><p>Você precisa entrar com sua conta para acessar os horários agendados.</p><a class="button button-primary" href="login.html?redirect=my-schedules.html">Efetuar login</a></div>';
     return;
   }
+
   if (!hasRole('client')) {
     root.innerHTML = '<div class="empty-state"><h2>Área exclusiva de clientes</h2></div>';
     return;
   }
 
-  const session = getSession();
-  const rows = getAppointments().filter((a) => a.client_email === session.email);
-
-  if (!rows.length) {
+  const appointments = getAppointments().filter((a) => a.client_email === session.email);
+  if (!appointments.length) {
     root.innerHTML = '<div class="empty-state"><h2>Você não tem horários agendados</h2><p>Quando confirmar um agendamento ele aparecerá aqui.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></div>';
     return;
   }
 
-  root.innerHTML = rows
-    .map((a) => `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>Status: <strong>${a.status}</strong></p><small>${a.barber_name} · ${a.branch}</small>${a.status !== 'completed' ? `<div class="form-row"><button class="button button-secondary" data-reschedule="${a.id}">Remarcar</button></div>` : ''}</article>`)
+  root.innerHTML = appointments
+    .map((a) => `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>Status: <strong>${a.status}</strong></p><small>${a.barber_name} · ${a.branch}</small>${!['completed', 'canceled'].includes(a.status) ? `<div class="form-row"><button class="button button-secondary" data-reschedule="${a.id}">Remarcar</button><button class="button button-secondary" data-cancel="${a.id}">Cancelar</button></div>` : ''}</article>`)
     .join('');
 
   root.querySelectorAll('[data-reschedule]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const apt = rows.find((r) => r.id === btn.dataset.reschedule);
+      const apt = appointments.find((a) => a.id === btn.dataset.reschedule);
       if (!apt || apt.status === 'completed') return;
-      saveBooking({
-        city: BASE_DATA.cities[0].id,
-        branch: BASE_DATA.cities[0].branches[0].id,
-        service: apt.service_id,
-        professional: apt.barber_id,
-        date: apt.appointment_date,
-        time: apt.start_time
-      });
+      saveBooking({ city: 'poa', branch: 'bom-fim', service: apt.service_id, professional: apt.barber_id, date: apt.appointment_date, time: apt.start_time });
       window.location.href = 'booking-datetime.html';
+    });
+  });
+
+  root.querySelectorAll('[data-cancel]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const apt = appointments.find((a) => a.id === btn.dataset.cancel);
+      if (!apt) return;
+      const allowed = canCancelAppointment(apt);
+      if (!allowed) {
+        alert('Cancelamento fora da política: prazo mínimo não respeitado.');
+        return;
+      }
+      updateAppointmentStatus(apt.id, 'canceled');
+      scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
+      initMySchedulesPage();
     });
   });
 }
 
 function renderAppointmentCard(a, canManage = false) {
-  const actions = canManage
-    ? `<div class="form-row">
-      <button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button>
-      <button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button>
-      <button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button>
-      <button class="button button-secondary" data-status="no_show" data-id="${a.id}">No-show</button>
-    </div>`
+  const actionButtons = canManage
+    ? `<div class="form-row"><button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button><button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button><button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button><button class="button button-secondary" data-status="no_show" data-id="${a.id}">No-show</button></div>`
     : '';
-
-  return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.client_name || 'Cliente'} · ${a.status}</p><small>${a.branch} - ${a.city}</small>${actions}</article>`;
+  return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.client_name || 'Cliente'} · ${a.status}</p><small>${a.branch} - ${a.city}</small>${actionButtons}</article>`;
 }
 
 function initAdminSchedulesPage() {
@@ -720,40 +947,34 @@ function initAdminSchedulesPage() {
   const barberFilter = document.getElementById('admin-professional-filter');
   const statusFilter = document.getElementById('admin-status-filter');
   if (!list || !barberFilter || !statusFilter) return;
-
   if (!requireRole(['admin', 'barber', 'super_admin'], 'login.html')) return;
 
   const session = getSession();
-  const barbers = getBarbers();
-  const options = [{ id: 'all', name: 'Todos os barbeiros' }, ...barbers];
+  const options = [{ id: 'all', name: 'Todos os barbeiros' }, ...getBarbers()];
   populateSelect(barberFilter, options, 'Todos os barbeiros');
   barberFilter.value = 'all';
 
-  function getFiltered() {
+  function filteredRows() {
     let rows = getAppointments();
-
     if (hasRole('barber')) {
       barberFilter.disabled = true;
       rows = rows.filter((a) => a.barber_id === session.barberId);
     } else {
       barberFilter.disabled = false;
-      if (barberFilter.value && barberFilter.value !== 'all') rows = rows.filter((a) => a.barber_id === barberFilter.value);
+      if (barberFilter.value !== 'all' && barberFilter.value) rows = rows.filter((a) => a.barber_id === barberFilter.value);
     }
-
     if (statusFilter.value !== 'all') rows = rows.filter((a) => a.status === statusFilter.value);
     return rows;
   }
 
   function render() {
-    const rows = getFiltered();
+    const rows = filteredRows();
     if (!rows.length) {
       list.innerHTML = '<div class="empty-state"><h2>Sem agendamentos neste filtro</h2></div>';
       return;
     }
-
     const canManage = hasRole('admin', 'super_admin');
     list.innerHTML = rows.map((a) => renderAppointmentCard(a, canManage)).join('');
-
     if (canManage) {
       list.querySelectorAll('[data-status]').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -783,7 +1004,7 @@ function initAdminBarbersPage() {
   const cancelEl = document.getElementById('barber-cancel');
   const listEl = document.getElementById('barbers-list');
 
-  function resetForm() {
+  function reset() {
     idEl.value = '';
     nameEl.value = '';
     emailEl.value = '';
@@ -795,9 +1016,7 @@ function initAdminBarbersPage() {
   function render() {
     const rows = getBarbers();
     listEl.innerHTML = rows
-      .map(
-        (b) => `<article class="schedule-item"><h3>${b.name}</h3><p>${b.email} · comissão ${b.commission_percentage}% · ${b.active ? 'ativo' : 'inativo'}</p><div class="form-row"><button class="button button-secondary" type="button" data-edit="${b.id}">Editar</button><button class="button button-secondary" type="button" data-delete="${b.id}">Excluir</button></div></article>`
-      )
+      .map((b) => `<article class="schedule-item"><h3>${b.name}</h3><p>${b.email} · comissão ${b.commission_percentage}% · ${b.active ? 'ativo' : 'inativo'}</p><div class="form-row"><button class="button button-secondary" type="button" data-edit="${b.id}">Editar</button><button class="button button-secondary" type="button" data-delete="${b.id}">Excluir</button></div></article>`)
       .join('');
 
     listEl.querySelectorAll('[data-edit]').forEach((btn) => {
@@ -808,15 +1027,15 @@ function initAdminBarbersPage() {
         nameEl.value = b.name;
         emailEl.value = b.email;
         passwordEl.value = b.password;
-        commissionEl.value = String(b.commission_percentage ?? 40);
+        commissionEl.value = String(b.commission_percentage);
         activeEl.checked = !!b.active;
       });
     });
 
     listEl.querySelectorAll('[data-delete]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const next = rows.map((r) => (r.id === btn.dataset.delete ? { ...r, active: false, deleted_at: nowIso() } : r));
-        saveBarbers(next.filter((b) => !b.deleted_at));
+        const next = rows.filter((b) => b.id !== btn.dataset.delete);
+        saveBarbers(next);
         logAudit('barber_deleted', { barber_id: btn.dataset.delete });
         render();
       });
@@ -834,23 +1053,24 @@ function initAdminBarbersPage() {
       commission_percentage: Number(commissionEl.value || 0),
       active: activeEl.checked,
       unit_id: APP_CONFIG.unitId,
-      avatar: '💈'
+      avatar: '💈',
+      updated_at: nowIso()
     };
 
-    const emailConflict = rows.some((r) => r.email.toLowerCase() === payload.email.toLowerCase() && r.id !== payload.id);
-    if (emailConflict) return;
+    const duplicate = rows.some((r) => r.email.toLowerCase() === payload.email.toLowerCase() && r.id !== payload.id);
+    if (duplicate) return;
 
     const idx = rows.findIndex((r) => r.id === payload.id);
     if (idx >= 0) rows[idx] = { ...rows[idx], ...payload };
-    else rows.push(payload);
+    else rows.push({ ...payload, created_at: nowIso() });
 
     saveBarbers(rows);
     logAudit('barber_saved', { barber_id: payload.id });
-    resetForm();
+    reset();
     render();
   });
 
-  cancelEl.addEventListener('click', resetForm);
+  cancelEl.addEventListener('click', reset);
   render();
 }
 
@@ -873,15 +1093,13 @@ function initBlockedSlotsPage() {
       listEl.innerHTML = '<div class="empty-state"><h2>Sem bloqueios cadastrados</h2></div>';
       return;
     }
-
     listEl.innerHTML = rows
       .map((b) => `<article class="schedule-item"><h3>${b.barber_name}</h3><p>${new Date(b.start_datetime).toLocaleString('pt-BR')} até ${new Date(b.end_datetime).toLocaleString('pt-BR')}</p><small>${b.reason}</small><div class="form-row"><button class="button button-secondary" data-delete="${b.id}" type="button">Excluir bloqueio</button></div></article>`)
       .join('');
 
     listEl.querySelectorAll('[data-delete]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const next = getBlockedSlots().filter((b) => b.id !== btn.dataset.delete);
-        saveBlockedSlots(next);
+        saveBlockedSlots(getBlockedSlots().filter((b) => b.id !== btn.dataset.delete));
         logAudit('blocked_slot_deleted', { id: btn.dataset.delete });
         render();
       });
@@ -898,16 +1116,7 @@ function initBlockedSlotsPage() {
     if (!(start < end)) return;
 
     const rows = getBlockedSlots();
-    rows.unshift({
-      id: `blk_${Date.now()}`,
-      unit_id: APP_CONFIG.unitId,
-      barber_id: barber.id,
-      barber_name: barber.name,
-      start_datetime: start.toISOString(),
-      end_datetime: end.toISOString(),
-      reason: reasonEl.value.trim(),
-      created_at: nowIso()
-    });
+    rows.unshift({ id: `blk_${Date.now()}`, unit_id: APP_CONFIG.unitId, barber_id: barber.id, barber_name: barber.name, start_datetime: start.toISOString(), end_datetime: end.toISOString(), reason: reasonEl.value.trim(), created_at: nowIso(), updated_at: nowIso() });
     saveBlockedSlots(rows);
     logAudit('blocked_slot_created', { barber_id: barber.id });
     form.reset();
@@ -919,50 +1128,54 @@ function initBlockedSlotsPage() {
 
 function initAdminFinancePage() {
   const metricsEl = document.getElementById('finance-metrics');
-  const byBarberEl = document.getElementById('finance-by-barber');
-  if (!metricsEl || !byBarberEl) return;
+  const detailsEl = document.getElementById('finance-by-barber');
+  if (!metricsEl || !detailsEl) return;
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
-  const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
-  const appointments = getAppointments();
+  const analytics = getAnalytics();
+  const metrics = getDashboardMetrics();
+  renderMetrics(metricsEl, metrics);
 
-  const today = '2026-02-26';
-  const daily = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today).reduce((s, p) => s + Number(p.amount || 0), 0);
-  const monthly = payments.filter((p) => (p.paid_at || '').slice(0, 7) === '2026-02').reduce((s, p) => s + Number(p.amount || 0), 0);
-  const completed = appointments.filter((a) => a.status === 'completed');
-  const avgTicket = completed.length ? completed.reduce((s, a) => s + Number(a.service_price || 0), 0) / completed.length : 0;
-
-  renderMetrics(metricsEl, {
-    totalToday: appointments.filter((a) => a.appointment_date === today).length,
-    revenueToday: daily,
-    busiestHour: getDashboardMetrics().busiestHour,
-    topService: getDashboardMetrics().topService,
-    noShowRate: getDashboardMetrics().noShowRate
-  });
-
+  const completed = getAppointments().filter((a) => a.status === 'completed');
   const byBarber = {};
   completed.forEach((a) => {
     byBarber[a.barber_name] = (byBarber[a.barber_name] || 0) + Number(a.service_price || 0);
   });
 
-  const cards = Object.entries(byBarber)
-    .map(([name, amount]) => `<article class="schedule-item"><h3>Receita · ${name}</h3><p>${asCurrency(amount)}</p></article>`)
-    .join('');
+  const monthly = getJson(STORAGE_KEYS.payments, [])
+    .filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid' && (p.paid_at || '').slice(0, 7) === '2026-02')
+    .reduce((s, p) => s + Number(p.amount || 0), 0);
 
-  byBarberEl.innerHTML = `
-    <article class="schedule-item"><h3>Faturamento diário</h3><p>${asCurrency(daily)}</p></article>
+  const avgTicket = completed.length ? completed.reduce((s, a) => s + Number(a.service_price || 0), 0) / completed.length : 0;
+
+  detailsEl.innerHTML = `
     <article class="schedule-item"><h3>Faturamento mensal</h3><p>${asCurrency(monthly)}</p></article>
     <article class="schedule-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
-    <article class="schedule-item"><h3>Receita da unidade</h3><p>${asCurrency(monthly)}</p></article>
-    ${cards || '<article class="schedule-item"><h3>Receita por barbeiro</h3><p>Sem dados ainda</p></article>'}
+    <article class="schedule-item"><h3>Horário mais lucrativo</h3><p>${analytics.profitableHour}</p></article>
+    <article class="schedule-item"><h3>Dia com maior faturamento</h3><p>${analytics.bestWeekDay}</p></article>
+    <article class="schedule-item"><h3>Cliente com maior frequência</h3><p>${analytics.topClient}</p></article>
+    ${Object.entries(byBarber)
+      .map(([name, amount]) => `<article class="schedule-item"><h3>Receita por barbeiro · ${name}</h3><p>${asCurrency(amount)}</p></article>`)
+      .join('') || '<article class="schedule-item"><h3>Receita por barbeiro</h3><p>Sem dados</p></article>'}
   `;
 }
 
 function initAdminDashboard() {
-  const container = document.getElementById('admin-metrics');
-  if (!container) return;
+  const wrap = document.getElementById('admin-metrics');
+  if (!wrap) return;
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
-  renderMetrics(container, getDashboardMetrics());
+
+  const metrics = getDashboardMetrics();
+  renderMetrics(wrap, metrics);
+
+  const lowStock = getProducts().filter((p) => Number(p.quantity) <= Number(p.minimum_stock));
+  if (lowStock.length) {
+    const alerts = lowStock.map((p) => `${p.name} (${p.quantity})`).join(', ');
+    const alertCard = document.createElement('article');
+    alertCard.className = 'schedule-item';
+    alertCard.innerHTML = `<h3>⚠️ Alerta de estoque baixo</h3><p>${alerts}</p>`;
+    wrap.appendChild(alertCard);
+  }
 }
 
 function initClientHomePage() {
@@ -976,9 +1189,7 @@ function initClientHomePage() {
     if (brand.logoUrl) {
       logoEl.src = brand.logoUrl;
       logoEl.style.display = 'block';
-    } else {
-      logoEl.style.display = 'none';
-    }
+    } else logoEl.style.display = 'none';
   }
 }
 
@@ -1011,42 +1222,190 @@ function initAdminSettingsPage() {
   nameEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
   logoUrlEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
   logoFileEl.addEventListener('change', () => {
-    const f = logoFileEl.files?.[0];
-    if (!f) return;
+    const file = logoFileEl.files?.[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       logoUrlEl.value = String(reader.result || '');
       updatePreview(logoUrlEl.value);
     };
-    reader.readAsDataURL(f);
+    reader.readAsDataURL(file);
   });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     saveBrandSettings({ shopName: nameEl.value.trim() || 'BarberPro', primaryColor: colorEl.value, logoUrl: logoUrlEl.value.trim() });
     applyBrandTheme();
-    logAudit('brand_updated', { by: getSession()?.email });
-    updatePreview(logoUrlEl.value.trim());
+    logAudit('brand_updated', { shopName: nameEl.value.trim() });
   });
 }
 
-function initBarberHomePage() {
-  const page = document.title.includes('Painel Barbeiro');
-  if (!page) return;
-  requireRole(['barber'], 'login.html');
+function initUnitSettingsPage() {
+  const form = document.getElementById('unit-settings-form');
+  if (!form) return;
+  if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
+
+  const fields = {
+    opening_time: document.getElementById('us-opening-time'),
+    closing_time: document.getElementById('us-closing-time'),
+    slot_interval_minutes: document.getElementById('us-slot-interval'),
+    cancellation_limit_hours: document.getElementById('us-cancel-limit'),
+    loyalty_enabled: document.getElementById('us-loyalty-enabled'),
+    prepayment_enabled: document.getElementById('us-prepayment-enabled'),
+    no_show_block_days: document.getElementById('us-no-show-block-days')
+  };
+
+  const current = getUnitSettings();
+  Object.entries(fields).forEach(([k, el]) => {
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!current[k];
+    else el.value = current[k];
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveUnitSettings({
+      opening_time: fields.opening_time.value,
+      closing_time: fields.closing_time.value,
+      slot_interval_minutes: Number(fields.slot_interval_minutes.value),
+      cancellation_limit_hours: Number(fields.cancellation_limit_hours.value),
+      loyalty_enabled: fields.loyalty_enabled.checked,
+      prepayment_enabled: fields.prepayment_enabled.checked,
+      no_show_block_days: Number(fields.no_show_block_days.value)
+    });
+  });
 }
 
-function ensureDbSchemaNote() {
-  if (dbEnabled()) {
-    // placeholder para integração real
+function initStockPage() {
+  const form = document.getElementById('product-form');
+  const listEl = document.getElementById('products-list');
+  if (!form || !listEl) return;
+  if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
+
+  const idEl = document.getElementById('product-id');
+  const nameEl = document.getElementById('product-name');
+  const qtyEl = document.getElementById('product-quantity');
+  const minEl = document.getElementById('product-minimum');
+
+  function reset() {
+    idEl.value = '';
+    nameEl.value = '';
+    qtyEl.value = '0';
+    minEl.value = '0';
   }
+
+  function render() {
+    const rows = getProducts();
+    listEl.innerHTML = rows
+      .map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>Quantidade: ${p.quantity} · Mínimo: ${p.minimum_stock}</p><div class="form-row"><button type="button" class="button button-secondary" data-edit="${p.id}">Editar</button><button type="button" class="button button-secondary" data-delete="${p.id}">Excluir</button></div></article>`)
+      .join('');
+
+    listEl.querySelectorAll('[data-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = rows.find((x) => x.id === btn.dataset.edit);
+        if (!p) return;
+        idEl.value = p.id;
+        nameEl.value = p.name;
+        qtyEl.value = String(p.quantity);
+        minEl.value = String(p.minimum_stock);
+      });
+    });
+
+    listEl.querySelectorAll('[data-delete]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = rows.filter((x) => x.id !== btn.dataset.delete);
+        saveProducts(next);
+        logAudit('product_deleted', { product_id: btn.dataset.delete });
+        render();
+      });
+    });
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rows = getProducts();
+    const payload = {
+      id: idEl.value || slugify(nameEl.value),
+      unit_id: APP_CONFIG.unitId,
+      name: nameEl.value.trim(),
+      quantity: Number(qtyEl.value || 0),
+      minimum_stock: Number(minEl.value || 0),
+      created_at: nowIso(),
+      updated_at: nowIso()
+    };
+
+    const idx = rows.findIndex((x) => x.id === payload.id);
+    if (idx >= 0) rows[idx] = { ...rows[idx], ...payload, updated_at: nowIso() };
+    else rows.push(payload);
+
+    saveProducts(rows);
+    logAudit('product_saved', { product_id: payload.id });
+    reset();
+    render();
+  });
+
+  render();
+}
+
+function initSubscriptionsPage() {
+  const root = document.getElementById('subscriptions-root');
+  if (!root) return;
+  if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
+
+  const plans = getSubscriptionPlans();
+  const subs = getSubscriptions();
+
+  root.innerHTML = `
+    <article class="schedule-item"><h3>Planos ativos</h3><p>${plans.map((p) => `${p.name} (${asCurrency(p.price)} / ${p.sessions_per_month} sessões)`).join(' · ') || 'Sem planos'}</p></article>
+    <article class="schedule-item"><h3>Assinaturas</h3><p>${subs.length ? subs.map((s) => `${s.user_id} - ${s.status} (${s.remaining_sessions} sessões)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
+    <article class="schedule-item"><h3>Regra</h3><p>Ao usar serviço, debita remaining_sessions se assinatura estiver ativa.</p></article>
+  `;
+}
+
+function initSuperAdminTenantsPage() {
+  const root = document.getElementById('tenants-root');
+  if (!root) return;
+  if (!requireRole(['super_admin'], 'login.html')) return;
+
+  const tenants = getJson(STORAGE_KEYS.tenants, []);
+  const plans = getJson(STORAGE_KEYS.platformPlans, []);
+
+  root.innerHTML = tenants
+    .map((t) => {
+      const plan = plans.find((p) => p.id === t.subscription_plan_id);
+      return `<article class="schedule-item"><h3>${t.name}</h3><p>Plano: ${plan?.name || '-'} · Status: ${t.subscription_status}</p><small>Recursos: analytics=${plan?.analytics_enabled ? 'on' : 'off'}, loyalty=${plan?.loyalty_enabled ? 'on' : 'off'}, estoque=${plan?.stock_enabled ? 'on' : 'off'}, assinatura=${plan?.subscription_enabled ? 'on' : 'off'}</small></article>`;
+    })
+    .join('');
+}
+
+function initAdminFinanceModuleCards() {
+  const cardWrap = document.getElementById('finance-by-barber');
+  if (!cardWrap) return;
+  const occupancy = getAnalytics().occupancyByBarber;
+  if (Object.keys(occupancy).length) {
+    cardWrap.innerHTML += Object.entries(occupancy)
+      .map(([name, count]) => `<article class="schedule-item"><h3>Ocupação média (hoje) · ${name}</h3><p>${count} slots</p></article>`)
+      .join('');
+  }
+}
+
+function initBarberHomePage() {
+  if (!document.title.includes('Painel Barbeiro')) return;
+  requireRole(['barber'], 'login.html');
 }
 
 function dbEnabled() {
   return Boolean(DB_CONFIG.supabaseUrl && DB_CONFIG.supabaseAnonKey);
 }
 
+function ensureDbSchemaNote() {
+  if (dbEnabled()) {
+    // placeholder para integração backend real / transações
+  }
+}
+
 ensureSeed();
+checkOverduePrepayments();
 applyBrandTheme();
 ensureDbSchemaNote();
 
@@ -1064,4 +1423,9 @@ initAdminFinancePage();
 initAdminDashboard();
 initClientHomePage();
 initAdminSettingsPage();
+initUnitSettingsPage();
+initStockPage();
+initSubscriptionsPage();
+initSuperAdminTenantsPage();
+initAdminFinanceModuleCards();
 initBarberHomePage();
