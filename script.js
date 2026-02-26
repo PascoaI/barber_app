@@ -182,13 +182,7 @@ function ensureSeed() {
       { id: 'mascara', unit_id: APP_CONFIG.unitId, name: 'Máscara de Hidratação', quantity: 10, minimum_stock: 3, created_at: nowIso(), updated_at: nowIso() }
     ]);
   }
-  if (!getJson(STORAGE_KEYS.subscriptionPlans, []).length) {
-    setJson(STORAGE_KEYS.subscriptionPlans, [
-      { id: 'plano-lite', unit_id: APP_CONFIG.unitId, name: 'Plano Lite', price: 50, sessions_per_month: 2, duration_days: 30, created_at: nowIso(), updated_at: nowIso() },
-      { id: 'plano-pro', unit_id: APP_CONFIG.unitId, name: 'Plano Pro', price: 99, sessions_per_month: 4, duration_days: 30, created_at: nowIso(), updated_at: nowIso() },
-      { id: 'plano-unlimited', unit_id: APP_CONFIG.unitId, name: 'Plano Unlimited', price: 179, sessions_per_month: 9999, duration_days: 30, created_at: nowIso(), updated_at: nowIso() }
-    ]);
-  }
+  ensureDefaultSubscriptionPlans();
   if (!getJson(STORAGE_KEYS.platformPlans, []).length) setJson(STORAGE_KEYS.platformPlans, DEFAULT_PLATFORM_PLANS);
   if (!getJson(STORAGE_KEYS.tenants, []).length) {
     setJson(STORAGE_KEYS.tenants, [
@@ -211,6 +205,33 @@ function ensureSeed() {
   if (!getJson(STORAGE_KEYS.clientFavorites, null)) setJson(STORAGE_KEYS.clientFavorites, {});
 }
 
+
+
+
+function ensureDefaultSubscriptionPlans() {
+  const defaults = [
+    { id: 'plano-bronze', unit_id: APP_CONFIG.unitId, name: '🥉 Plano Bronze', price: 59, sessions_per_month: 2, duration_days: 30, is_active: true, benefits: ['2 cortes por mês', 'Suporte padrão'], created_at: nowIso(), updated_at: nowIso() },
+    { id: 'plano-prata', unit_id: APP_CONFIG.unitId, name: '🥈 Plano Prata', price: 99, sessions_per_month: 4, duration_days: 30, is_active: true, benefits: ['4 cortes por mês', 'Prioridade de agendamento'], created_at: nowIso(), updated_at: nowIso() },
+    { id: 'plano-ouro', unit_id: APP_CONFIG.unitId, name: '🥇 Plano Ouro', price: 149, sessions_per_month: 6, duration_days: 30, is_active: true, benefits: ['6 cortes por mês', 'Prioridade máxima', 'Benefícios extras'], created_at: nowIso(), updated_at: nowIso() }
+  ];
+
+  const all = getJson(STORAGE_KEYS.subscriptionPlans, []);
+  const current = all.filter((p) => p.unit_id === APP_CONFIG.unitId);
+  const keep = all.filter((p) => p.unit_id !== APP_CONFIG.unitId);
+
+  const merged = [...current];
+  defaults.forEach((d) => {
+    const idx = merged.findIndex((x) => x.id === d.id);
+    if (idx >= 0) merged[idx] = { ...d, ...merged[idx], benefits: merged[idx].benefits || d.benefits, updated_at: nowIso() };
+    else merged.push(d);
+  });
+
+  setJson(STORAGE_KEYS.subscriptionPlans, [...merged, ...keep].map((plan) => ({ ...plan, is_active: plan.is_active !== false })));
+}
+
+function confirmAction(message) {
+  return window.confirm(message);
+}
 
 function logAudit(action, details = {}) {
   const audit = getJson(STORAGE_KEYS.audit, []);
@@ -760,15 +781,32 @@ function registerLoyalty(appointment) {
   const settings = getUnitSettings();
   if (!settings.loyalty_enabled) return;
 
-  const points = getJson(STORAGE_KEYS.loyaltyPoints, {});
+  const cuts = getJson(STORAGE_KEYS.loyaltyPoints, {});
   const tx = getJson(STORAGE_KEYS.loyaltyTx, []);
   const user = appointment.client_email;
-  const earned = Math.floor(appointment.service_price);
 
-  points[user] = (points[user] || 0) + earned;
-  tx.unshift({ id: `loy_${Date.now()}`, unit_id: appointment.unit_id, user_id: user, appointment_id: appointment.id, points_earned: earned, points_used: 0, created_at: nowIso(), updated_at: nowIso() });
+  cuts[user] = (cuts[user] || 0) + 1;
+  tx.unshift({ id: `loy_${Date.now()}`, unit_id: appointment.unit_id, user_id: user, appointment_id: appointment.id, points_earned: 1, points_used: 0, created_at: nowIso(), updated_at: nowIso() });
 
-  setJson(STORAGE_KEYS.loyaltyPoints, points);
+  if (cuts[user] % 10 === 0) {
+    const activeSub = getClientSubscription(user);
+    if (activeSub) {
+      const subs = getSubscriptions();
+      const idx = subs.findIndex((s) => s.id === activeSub.id);
+      if (idx >= 0) {
+        subs[idx].remaining_sessions = Number(subs[idx].remaining_sessions || 0) + 1;
+        subs[idx].updated_at = nowIso();
+        saveSubscriptions(subs);
+      }
+      logAudit('loyalty_reward_applied_to_subscription', { user_id: user, reward_sessions: 1, subscription_id: activeSub.id });
+    } else {
+      const profile = getClientProfile(user);
+      saveClientProfile(user, { free_cuts_balance: Number(profile.free_cuts_balance || 0) + 1 });
+      logAudit('loyalty_reward_stored_in_profile', { user_id: user, reward_sessions: 1 });
+    }
+  }
+
+  setJson(STORAGE_KEYS.loyaltyPoints, cuts);
   setJson(STORAGE_KEYS.loyaltyTx, tx);
 }
 
@@ -1227,6 +1265,7 @@ function initMySchedulesPage() {
         alert('Cancelamento fora da política: prazo mínimo não respeitado.');
         return;
       }
+      if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
       updateAppointmentStatus(apt.id, 'canceled');
       scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
       initMySchedulesPage();
@@ -1582,6 +1621,7 @@ function initClientHomePage() {
         window.location.href = 'booking-datetime.html?edit=datetime';
       });
       nextWrap.querySelector('[data-client-cancel]')?.addEventListener('click', () => {
+        if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
         updateAppointmentStatus(next.id, 'canceled');
         initClientHomePage();
       });
@@ -1766,20 +1806,25 @@ function initClientSubscriptionsPage() {
     return;
   }
 
-  const plans = getSubscriptionPlans();
+  ensureDefaultSubscriptionPlans();
+  const planOrder = ['plano-bronze', 'plano-prata', 'plano-ouro'];
+  const plans = getSubscriptionPlans()
+    .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
+    .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subscriptions = getSubscriptions();
   const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
+  const profile = getClientProfile(session.email);
+  const freeCuts = Number(profile.free_cuts_balance || 0);
 
   root.innerHTML = `
-    ${active ? `<article class="schedule-item"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : ''}
-    <article class="schedule-item"><h3>Planos disponíveis</h3><p>Escolha o plano mensal ideal para você.</p></article>
-    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><button class="button button-primary" data-subscribe="${p.id}">Assinar plano</button></article>`).join('')}
+    ${active ? `<article class=\"schedule-item\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : ''}\n    <article class=\"schedule-item\"><h3>Fidelidade</h3><p>Cortes grátis acumulados: <strong>${freeCuts}</strong></p><small>A cada 10 cortes, você ganha 1 corte grátis.</small></article>\n    <article class=\"schedule-item\"><h3>Planos disponíveis</h3><p>Escolha o plano mensal ideal para você.</p></article>\n    ${plans.map((p) => `<article class=\"schedule-item\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Assinar plano</button></article>`).join('')}
   `;
 
   root.querySelectorAll('[data-subscribe]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const plan = plans.find((x) => x.id === btn.dataset.subscribe);
       if (!plan) return;
+      if (!confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mês?`)) return;
       const rows = getSubscriptions().filter((s) => s.user_id !== session.email);
       rows.unshift({
         id: `sub_${Date.now()}`,
@@ -1787,19 +1832,16 @@ function initClientSubscriptionsPage() {
         user_id: session.email,
         plan_id: plan.id,
         plan_name: plan.name,
-        remaining_sessions: Number(plan.sessions_per_month || 0),
+        remaining_sessions: Number(plan.sessions_per_month || 0) + Number(getClientProfile(session.email).free_cuts_balance || 0),
         expires_at: addMinutes(new Date(), Number(plan.duration_days || 30) * 24 * 60).toISOString(),
         status: 'active',
         created_at: nowIso(),
         updated_at: nowIso()
       });
       saveSubscriptions(rows);
+      saveClientProfile(session.email, { free_cuts_balance: 0 });
       logAudit('client_subscription_created', { user_id: session.email, plan_id: plan.id });
       initClientSubscriptionsPage();
-initClientHistoryPage();
-initClientLoyaltyPage();
-initClientProfilePage();
-initClientNotificationsPage();
     });
   });
 }
@@ -1842,13 +1884,18 @@ function initClientLoyaltyPage() {
   if (!root) return;
   const session = getSession();
   if (!session || !hasRole('client')) return;
-  const points = getJson(STORAGE_KEYS.loyaltyPoints, {})[session.email] || 0;
-  const tx = getJson(STORAGE_KEYS.loyaltyTx, []).filter((t) => t.user_id === session.email).slice(0, 20);
-  const saved = Math.floor(points / 100) * 20;
+
+  const cuts = getJson(STORAGE_KEYS.loyaltyPoints, {})[session.email] || 0;
+  const progress = cuts % 10;
+  const missing = progress === 0 ? 10 : 10 - progress;
+  const rewards = Math.floor(cuts / 10);
+  const profile = getClientProfile(session.email);
+  const freeCuts = Number(profile.free_cuts_balance || 0);
+
   root.innerHTML = `
-    <article class="schedule-item"><h3>Pontos atuais</h3><p>${points}</p><small>Meta próxima recompensa: ${Math.max(0, 100 - (points % 100))} pontos</small></article>
-    <article class="schedule-item"><h3>Você já economizou</h3><p>${asCurrency(saved)}</p><button class="button button-secondary" ${points < 100 ? 'disabled' : ''}>Resgatar recompensa</button></article>
-    ${tx.map((t) => `<article class="schedule-item"><h3>${new Date(t.created_at).toLocaleDateString('pt-BR')}</h3><small>+${t.points_earned} / -${t.points_used}</small></article>`).join('')}
+    <article class="schedule-item"><h3>Cartela fidelidade</h3><p>${progress}/10 cortes no ciclo atual</p><small>Faltam ${missing} corte(s) para o próximo prêmio.</small></article>
+    <article class="schedule-item"><h3>Prêmios conquistados</h3><p>${rewards}</p><small>Cada 10 cortes = +1 corte grátis.</small></article>
+    <article class="schedule-item"><h3>Cortes grátis disponíveis</h3><p>${freeCuts}</p><small>Esse saldo é somado ao seu plano quando você assina/renova.</small></article>
   `;
 }
 
@@ -1890,13 +1937,23 @@ function initSubscriptionsPage() {
   if (!root) return;
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
-  const plans = getSubscriptionPlans();
+  ensureDefaultSubscriptionPlans();
+  const planOrder = ['plano-bronze', 'plano-prata', 'plano-ouro'];
+  const plans = getSubscriptionPlans()
+    .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
+    .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subs = getSubscriptions();
+  const activeSubs = subs.filter((s) => s.status === 'active');
+
+  const byPlan = {};
+  activeSubs.forEach((s) => {
+    byPlan[s.plan_id] = (byPlan[s.plan_id] || 0) + 1;
+  });
 
   root.innerHTML = `
-    <article class="schedule-item"><h3>Planos ativos</h3><p>${plans.map((p) => `${p.name} (${asCurrency(p.price)} / ${p.sessions_per_month} sessões)`).join(' · ') || 'Sem planos'}</p></article>
-    <article class="schedule-item"><h3>Assinaturas</h3><p>${subs.length ? subs.map((s) => `${s.user_id} - ${s.status} (${s.remaining_sessions} sessões)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
-    <article class="schedule-item"><h3>Regra</h3><p>Ao usar serviço, debita remaining_sessions se assinatura estiver ativa.</p></article>
+    <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Exibindo apenas planos ativos implementáveis.</small></article>
+    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês • ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' • ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
+    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} — Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
   `;
 }
 
@@ -1963,18 +2020,21 @@ function initGlobalNavigation() {
 
 
   if (session && ['admin', 'super_admin', 'barber'].includes(session.role)) {
-    if (!document.querySelector('[data-logout]')) {
+    if (!document.querySelector('[data-logout]') && !document.querySelector('.admin-logout-btn')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'admin-inline-actions';
+      const logoutBtn = document.createElement('button');
+      logoutBtn.type = 'button';
+      logoutBtn.className = 'button button-secondary admin-logout-btn';
+      logoutBtn.textContent = 'Sair';
+      logoutBtn.addEventListener('click', handleLogout);
+      wrap.appendChild(logoutBtn);
+
       const backLink = document.querySelector('.back-link');
-      if (backLink && backLink.parentElement) {
-        const wrap = document.createElement('div');
-        wrap.className = 'admin-inline-actions';
-        const logoutBtn = document.createElement('button');
-        logoutBtn.type = 'button';
-        logoutBtn.className = 'button button-secondary admin-logout-btn';
-        logoutBtn.textContent = 'Sair';
-        logoutBtn.addEventListener('click', handleLogout);
-        wrap.appendChild(logoutBtn);
-        backLink.parentElement.insertBefore(wrap, backLink.nextSibling);
+      if (backLink && backLink.parentElement) backLink.parentElement.insertBefore(wrap, backLink.nextSibling);
+      else {
+        const card = document.querySelector('.booking-card, .hero-card, .form-card');
+        if (card) card.insertBefore(wrap, card.firstChild);
       }
     }
   }
