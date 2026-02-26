@@ -1,6 +1,136 @@
-/* Tailwind-first project: legacy stylesheet kept as minimal compatibility layer. */
+/* Compatibility + motion layer for pages that use semantic class names. */
 
-/* Status color helpers used by existing JS-generated classes */
+:root {
+  --fx-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fx-fast: 180ms;
+  --fx-medium: 280ms;
+  --fx-slow: 480ms;
+  --glass-bg: rgba(17, 22, 36, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #edf2ff;
+  --text-secondary: #9da8c3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page,
+  .page-landing,
+  .page-auth,
+  .page-booking,
+  .page-admin,
+  .page-client,
+  .page-barber {
+    animation: page-enter var(--fx-slow) var(--fx-ease) both;
+  }
+
+  .hero-card,
+  .auth-card,
+  .booking-card,
+  .schedule-item,
+  .admin-card,
+  .client-card,
+  .metric-card,
+  .service-card,
+  .pro-card {
+    animation: card-enter var(--fx-medium) var(--fx-ease) both;
+  }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hero-card,
+.auth-card,
+.booking-card,
+.schedule-item,
+.admin-card,
+.client-card,
+.metric-card,
+.service-card,
+.pro-card {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(5px);
+  transition:
+    transform var(--fx-medium) var(--fx-ease),
+    box-shadow var(--fx-medium) var(--fx-ease),
+    border-color var(--fx-medium) var(--fx-ease),
+    background-color var(--fx-medium) var(--fx-ease);
+}
+
+.hero-card:hover,
+.auth-card:hover,
+.booking-card:hover,
+.schedule-item:hover,
+.admin-card:hover,
+.client-card:hover,
+.metric-card:hover,
+.service-card:hover,
+.pro-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 55%, #ffffff 10%);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.26);
+}
+
+.button,
+button,
+a.button {
+  transition:
+    transform var(--fx-fast) var(--fx-ease),
+    filter var(--fx-fast) var(--fx-ease),
+    box-shadow var(--fx-fast) var(--fx-ease);
+}
+
+.button:hover,
+button:hover,
+a.button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.button:active,
+button:active,
+a.button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color var(--fx-fast) var(--fx-ease),
+    box-shadow var(--fx-fast) var(--fx-ease),
+    background-color var(--fx-fast) var(--fx-ease);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #d4a24f) 30%, transparent);
+}
+
+.service-card.active,
+.pro-card.active {
+  border-color: var(--primary, #d4a24f);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #d4a24f) 28%, transparent);
+}
+
+.feature-list {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+}
+
+.feature-list li + li {
+  margin-top: 0.4rem;
+}
+
 .status-pending,
 .status-awaiting_payment {
   background: rgba(243, 179, 62, 0.2);
@@ -19,6 +149,14 @@
   color: #ffb0b0;
 }
 
+.modal-overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--fx-medium) var(--fx-ease);
+}
+
 .modal-overlay.is-open {
   display: flex;
+  opacity: 1;
+  pointer-events: auto;
 }
