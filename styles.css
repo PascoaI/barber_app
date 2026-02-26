@@ -1,0 +1,24 @@
+/* Tailwind-first project: legacy stylesheet kept as minimal compatibility layer. */
+
+/* Status color helpers used by existing JS-generated classes */
+.status-pending,
+.status-awaiting_payment {
+  background: rgba(243, 179, 62, 0.2);
+  color: #ffd88b;
+}
+
+.status-confirmed,
+.status-completed {
+  background: rgba(24, 192, 122, 0.2);
+  color: #8dffd0;
+}
+
+.status-no_show,
+.status-canceled {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ffb0b0;
+}
+
+.modal-overlay.is-open {
+  display: flex;
+}
