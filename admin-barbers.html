@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · Gerenciar barbeiros | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <a class="back-link" href="admin-home.html">← Dashboard</a>
+        <h1>Gerenciar barbeiros</h1>
+        <p class="subtitle">CRUD de barbeiros com comissão e status ativo/inativo.</p>
+
+        <form id="barber-form" class="auth-form">
+          <input id="barber-id" type="hidden" />
+
+          <label for="barber-name">Nome do barbeiro</label>
+          <input id="barber-name" type="text" required />
+
+          <label for="barber-email">E-mail de login</label>
+          <input id="barber-email" type="email" required />
+
+          <label for="barber-password">Senha</label>
+          <input id="barber-password" type="text" required />
+
+          <label for="barber-commission">Comissão (%)</label>
+          <input id="barber-commission" type="number" min="0" max="100" step="0.5" value="40" required />
+
+          <label class="checkbox-wrap">
+            <input id="barber-active" type="checkbox" checked />
+            <span>Barbeiro ativo</span>
+          </label>
+
+          <div class="form-row">
+            <button class="button button-primary" type="submit">Salvar barbeiro</button>
+            <button id="barber-cancel" class="button button-secondary" type="button">Cancelar edição</button>
+          </div>
+        </form>
+
+        <div id="barbers-list" class="admin-schedules-list"></div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

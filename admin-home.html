@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Admin | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <h1>Dashboard da barbearia</h1>
+        <p class="subtitle">Gestão de agenda, barbeiros, bloqueios, financeiro e branding.</p>
+
+        <div id="admin-metrics" class="admin-metrics"></div>
+
+        <div class="admin-grid">
+          <a class="admin-tile" href="admin-schedules.html">
+            <strong>Agendamentos</strong>
+            <span>Visualizar e alterar status por barbeiro</span>
+          </a>
+          <a class="admin-tile" href="admin-barbers.html">
+            <strong>Gerenciar barbeiros</strong>
+            <span>Incluir, editar e excluir barbeiros</span>
+          </a>
+          <a class="admin-tile" href="admin-blocked-slots.html">
+            <strong>Bloquear horários</strong>
+            <span>Bloqueios manuais da agenda por barbeiro</span>
+          </a>
+          <a class="admin-tile" href="admin-finance.html">
+            <strong>Financeiro</strong>
+            <span>Faturamento, ticket médio e receitas</span>
+          </a>
+          <a class="admin-tile" href="admin-unit-settings.html">
+            <strong>Configurações de agenda</strong>
+            <span>Horário, intervalos, pré-pagamento e política de cancelamento</span>
+          </a>
+          <a class="admin-tile" href="admin-stock.html">
+            <strong>Estoque</strong>
+            <span>Produtos, mínimo e alertas de baixa</span>
+          </a>
+          <a class="admin-tile" href="admin-subscriptions.html">
+            <strong>Assinaturas de clientes</strong>
+            <span>Planos recorrentes e sessões mensais</span>
+          </a>
+          <a class="admin-tile" href="admin-settings.html">
+            <strong>Configurações</strong>
+            <span>Cor predominante, logo e identidade da barbearia</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

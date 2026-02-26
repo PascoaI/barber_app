@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamento · Local | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <nav class="quick-nav" aria-label="Atalhos">
+          <a class="button button-secondary" href="client-home.html" data-home>Home</a>
+          <button class="button button-secondary" type="button" data-back>Voltar</button>
+          <button class="button button-danger" type="button" data-logout>Sair</button>
+        </nav>
+
+        <a class="back-link" href="index.html">← Início</a>
+        <p class="step-label">Etapa 1 de 4</p>
+        <h1>Escolha a região e unidade</h1>
+        <p class="subtitle">Primeiro selecione a cidade e depois a unidade da barbearia.</p>
+
+        <form class="auth-form" id="location-form">
+          <label for="city">Cidade</label>
+          <select id="city" required></select>
+
+          <label for="branch">Unidade / Bairro</label>
+          <select id="branch" required disabled></select>
+
+          <button class="button button-primary" type="submit">Continuar para serviços</button>
+        </form>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
