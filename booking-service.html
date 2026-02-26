@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agendamento · Revisão | BarberPro</title>
+    <title>Agendamento · Serviço | BarberPro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -39,34 +39,27 @@
   </head>
   <body>
     <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
-      <section class="booking-card booking-review-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8 bg-gradient-to-b from-amber-900/20 to-surface">
+      <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
         <nav class="quick-nav flex flex-wrap justify-end gap-2 mb-4" aria-label="Atalhos">
           <a class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" href="client-home.html" data-home>Home</a>
           <button class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" type="button" data-back>Voltar</button>
           <button class="button button-danger inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark w-full" type="button" data-logout>Sair</button>
         </nav>
 
-        <div id="review-list" class="review-list grid gap-3"></div>
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="booking-location.html">← Voltar</a>
+        <p class="step-label text-xs font-semibold uppercase tracking-wider text-primary mb-2">Etapa 2 de 4</p>
+        <h1>Escolha o serviço</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Toque em um card para escolher o atendimento desejado.</p>
 
-        <div class="review-footer mt-4 space-y-2">
-          <p id="review-price" class="review-price text-right text-3xl font-bold text-text-primary">A partir de -</p>
-          <p id="review-address" class="review-address text-right text-text-secondary mb-3">-</p>
-          <p id="review-no-preference" class="notice text-xs text-text-secondary">Você não indicou preferência de profissional quando escolher “Sem preferência”.</p>
-          <p class="notice text-xs text-text-secondary">O tempo de execução pode variar de acordo com o profissional disponível no momento.</p>
-          <p id="review-feedback" class="subtitle text-text-secondary leading-relaxed mt-2 mb-5" aria-live="polite"></p>
-          <button id="review-action" class="button button-danger inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark w-full" type="button">Efetuar login para continuar</button>
+        <div id="services-grid" class="services-grid grid grid-cols-2 md:grid-cols-3 gap-3" aria-live="polite"></div>
+
+        <div class="sticky-actions mt-4">
+          <button id="service-next" class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" type="button" disabled>
+            Continuar para profissional
+          </button>
         </div>
       </section>
     </main>
-
-    <div id="booking-success-modal" class="modal-overlay fixed inset-0 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 z-50" aria-hidden="true">
-      <div class="modal-card w-full max-w-md rounded-2xl border border-borderc bg-surface p-6 shadow-soft grid gap-3" role="dialog" aria-modal="true" aria-labelledby="booking-success-title">
-        <h2 id="booking-success-title">Agendamento concluído ✅</h2>
-        <p>Seu horário foi registrado com sucesso. Você pode acompanhar seus horários quando quiser.</p>
-        <button id="booking-success-home" class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" type="button">Voltar para página inicial</button>
-      </div>
-    </div>
-
     <script src="script.js"></script>
   </body>
 </html>

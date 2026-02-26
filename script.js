@@ -97,6 +97,53 @@ const DEFAULT_UNIT_SETTINGS = {
 
 const BOOKING_DEFAULT = { city: '', branch: '', service: '', professional: '', date: '', time: '', edit_appointment_id: null };
 
+
+function ensureBookingConsistency() {
+  const booking = getBooking();
+  const city = BASE_DATA.cities.find((c) => c.id === booking.city);
+  const branch = city?.branches.find((b) => b.id === booking.branch);
+  const service = getServiceById(booking.service);
+  const professionalValid = booking.professional === 'sem-preferencia' || getBarbers(true).some((b) => b.id === booking.professional);
+
+  const next = { ...booking };
+  if (!city) {
+    next.city = '';
+    next.branch = '';
+    next.service = '';
+    next.professional = '';
+    next.date = '';
+    next.time = '';
+  } else if (!branch) {
+    next.branch = '';
+    next.service = '';
+    next.professional = '';
+    next.date = '';
+    next.time = '';
+  }
+
+  if (!service) {
+    next.service = '';
+    next.professional = '';
+    next.date = '';
+    next.time = '';
+  }
+
+  if (next.professional && !professionalValid) {
+    next.professional = '';
+    next.date = '';
+    next.time = '';
+  }
+
+  const validDates = new Set(getNextDays().map((d) => d.value));
+  if (next.date && !validDates.has(next.date)) {
+    next.date = '';
+    next.time = '';
+  }
+
+  if (JSON.stringify(next) !== JSON.stringify(booking)) saveBooking(next);
+  return next;
+}
+
 const DB_CONFIG = { supabaseUrl: '', supabaseAnonKey: '', table: 'appointments' };
 const SESSION_TTL_MINUTES = 60;
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -883,7 +930,7 @@ function initLocationPage() {
   if (!form) return;
   const cityEl = document.getElementById('city');
   const branchEl = document.getElementById('branch');
-  const b = getBooking();
+  const b = ensureBookingConsistency();
 
   populateSelect(cityEl, BASE_DATA.cities, 'Selecione a cidade');
 
@@ -919,7 +966,7 @@ function initServicePage() {
   const grid = document.getElementById('services-grid');
   const nextBtn = document.getElementById('service-next');
   if (!grid || !nextBtn) return;
-  const b = getBooking();
+  const b = ensureBookingConsistency();
   if (!b.city || !b.branch) return (window.location.href = 'booking-location.html');
   const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'service';
 
@@ -949,7 +996,7 @@ function initProfessionalPage() {
   const grid = document.getElementById('professionals-grid');
   const nextBtn = document.getElementById('professional-next');
   if (!grid || !nextBtn) return;
-  const b = getBooking();
+  const b = ensureBookingConsistency();
   if (!b.service) return (window.location.href = 'booking-service.html');
   const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'professional';
 
@@ -983,7 +1030,7 @@ function initDatetimePage() {
   const grid = document.getElementById('time-grid');
   const button = document.getElementById('confirm-booking');
 
-  const b = getBooking();
+  const b = ensureBookingConsistency();
   if (!b.professional || !b.service) return (window.location.href = 'booking-professional.html');
   const service = getServiceById(b.service);
   const summaryServiceEl = document.getElementById('summary-service');
@@ -1539,7 +1586,6 @@ function initClientHomePage() {
     .filter((a) => ['pending', 'confirmed', 'awaiting_payment'].includes(a.status))
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
   const loyalty = getJson(STORAGE_KEYS.loyaltyPoints, {})[session.email] || 0;
-  const sub = getClientSubscription(session.email);
   const favId = getClientFavorite(session.email) || getClientProfile(session.email).favorite_barber_id;
   const favBarber = getBarbers().find((b) => b.id === favId);
 
@@ -1548,7 +1594,6 @@ function initClientHomePage() {
     metrics.innerHTML = `
       <article class="schedule-item"><h3>Cortes no mês</h3><p>${completedMonth.length}</p></article>
       <article class="schedule-item"><h3>Pontos acumulados</h3><p>${loyalty}</p></article>
-      <article class="schedule-item"><h3>Plano ativo</h3><p>${sub ? sub.plan_name || sub.plan_id : 'Sem plano'}</p></article>
       <article class="schedule-item"><h3>Profissional favorito</h3><p>${favBarber?.name || 'Não definido'}</p></article>
     `;
   }
@@ -1578,28 +1623,22 @@ function initClientHomePage() {
     completed.forEach((a) => (byBarber[a.barber_name] = (byBarber[a.barber_name] || 0) + 1));
     const most = Object.entries(byBarber).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
     const totalSpent = getJson(STORAGE_KEYS.payments, []).filter((p) => p.status === 'paid').filter((p) => appointments.some((a) => a.id === p.appointment_id)).reduce((s, p) => s + Number(p.amount || 0), 0);
-    const usage = getSubscriptionUsage().filter((u) => u.client_id === session.email).length;
     const avgDays = completed.length > 1 ? Math.round((new Date(completed[0].start_datetime) - new Date(completed[completed.length - 1].start_datetime)) / 86400000 / (completed.length - 1)) : 0;
     stats.innerHTML = `
       <article class="schedule-item"><h3>Total de cortes</h3><p>${completed.length}</p></article>
       <article class="schedule-item"><h3>Profissional mais atendido</h3><p>${most}</p></article>
       <article class="schedule-item"><h3>Valor investido</h3><p>${asCurrency(totalSpent)}</p></article>
-      <article class="schedule-item"><h3>Economia com assinatura</h3><p>${asCurrency(usage * 20)}</p></article>
       <article class="schedule-item"><h3>Tempo médio entre cortes</h3><p>${avgDays || '-'} dias</p></article>
     `;
   }
 
   const quickBtn = document.getElementById('client-quick-booking');
   if (quickBtn) {
-    const last = completed.sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime))[0];
-    if (sub && favId && last) {
-      quickBtn.style.display = 'inline-flex';
-      quickBtn.onclick = () => {
-        const nextDate = getNextDays(7)[1]?.value || getNextDays(7)[0]?.value;
-        saveBooking({ city: 'poa', branch: 'bom-fim', service: last.service_id, professional: favId, date: nextDate, time: '' });
-        window.location.href = 'booking-datetime.html';
-      };
-    } else quickBtn.style.display = 'none';
+    quickBtn.style.display = 'inline-flex';
+    quickBtn.onclick = () => {
+      resetBooking();
+      window.location.href = 'booking-location.html';
+    };
   }
 
   const notif = document.getElementById('client-notifications');
