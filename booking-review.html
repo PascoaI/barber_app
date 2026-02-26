@@ -12,18 +12,14 @@
   <body>
     <main class="page booking-page">
       <section class="booking-card booking-review-card">
-        <nav class="booking-tabs" aria-label="Navegação do cliente">
-          <a class="booking-tab is-active" href="booking-review.html">Agendar</a>
-          <a class="booking-tab" href="my-schedules.html">Meus horários</a>
-        </nav>
-
         <div id="review-list" class="review-list"></div>
 
         <div class="review-footer">
           <p id="review-price" class="review-price">A partir de -</p>
           <p id="review-address" class="review-address">-</p>
-          <p class="notice">Você não indicou preferência de profissional quando escolher “Sem preferência”.</p>
+          <p id="review-no-preference" class="notice">Você não indicou preferência de profissional quando escolher “Sem preferência”.</p>
           <p class="notice">O tempo de execução pode variar de acordo com o profissional disponível no momento.</p>
+          <p id="review-feedback" class="subtitle" aria-live="polite"></p>
           <button id="review-action" class="button button-danger" type="button">Efetuar login para continuar</button>
         </div>
       </section>

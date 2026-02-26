@@ -92,7 +92,7 @@ const DEFAULT_UNIT_SETTINGS = {
   updated_at: new Date().toISOString()
 };
 
-const BOOKING_DEFAULT = { city: '', branch: '', service: '', professional: '', date: '', time: '' };
+const BOOKING_DEFAULT = { city: '', branch: '', service: '', professional: '', date: '', time: '', edit_appointment_id: null };
 
 const DB_CONFIG = { supabaseUrl: '', supabaseAnonKey: '', table: 'appointments' };
 const SESSION_TTL_MINUTES = 60;
@@ -501,7 +501,7 @@ function createAppointmentFromBooking() {
   if (!acquireLock(lockName)) return null;
 
   try {
-    if (!isSlotAvailable({ barberId, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes })) return null;
+    if (!isSlotAvailable({ barberId, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes, editingAppointmentId: booking.edit_appointment_id || null })) return null;
 
     const start = toDate(booking.date, booking.time);
     const end = addMinutes(start, service.duration_minutes);
@@ -512,7 +512,7 @@ function createAppointmentFromBooking() {
     const prepaymentOn = settings.prepayment_enabled && service.requires_pre_payment;
 
     return {
-      id: `apt_${Date.now()}`,
+      id: booking.edit_appointment_id || `apt_${Date.now()}`,
       unit_id: APP_CONFIG.unitId,
       tenant_id: APP_CONFIG.tenantId,
       client_email: session?.email,
@@ -806,11 +806,11 @@ function initLocationPage() {
     branchEl.disabled = !city;
     populateSelect(branchEl, city ? city.branches : [], 'Selecione a unidade');
     if (isEditMode) saveBooking({ city: cityEl.value, branch: '' });
-    else saveBooking({ city: cityEl.value, branch: '', service: '', professional: '', date: '', time: '' });
+    else saveBooking({ city: cityEl.value, branch: '', service: '', professional: '', date: '', time: '', edit_appointment_id: null });
   });
   branchEl.addEventListener('change', () => {
     if (isEditMode) saveBooking({ branch: branchEl.value });
-    else saveBooking({ branch: branchEl.value, service: '', professional: '', date: '', time: '' });
+    else saveBooking({ branch: branchEl.value, service: '', professional: '', date: '', time: '', edit_appointment_id: null });
   });
 
   if (b.city) {
@@ -989,6 +989,9 @@ function initBookingReviewPage() {
 
   document.getElementById('review-price').textContent = `A partir de ${asCurrency(service?.price || 0)}`;
   document.getElementById('review-address').textContent = branch?.address || '-';
+  const noPrefNotice = document.getElementById('review-no-preference');
+  const feedback = document.getElementById('review-feedback');
+  if (noPrefNotice) noPrefNotice.style.display = b.professional === 'sem-preferencia' ? 'block' : 'none';
 
   const session = getSession();
   if (!session) action.textContent = 'Efetuar login para continuar';
@@ -1009,20 +1012,43 @@ function initBookingReviewPage() {
     }
 
     const rows = getAppointments();
-    rows.unshift(apt);
-    saveAppointments(rows);
-    logAudit('appointment_created', { appointment_id: apt.id, status: apt.status });
+    const editId = getBooking().edit_appointment_id;
+    const existingIdx = editId ? rows.findIndex((r) => r.id === editId) : -1;
 
-    if (apt.status === 'awaiting_payment') {
-      action.textContent = 'Aguardando pagamento antecipado';
-      // simula pagamento imediato para demo
-      updateAppointmentStatus(apt.id, 'confirmed');
+    if (existingIdx >= 0) {
+      rows[existingIdx] = {
+        ...rows[existingIdx],
+        ...apt,
+        id: rows[existingIdx].id,
+        status: 'confirmed',
+        updated_at: nowIso(),
+        updated_by: currentSession.email
+      };
+      saveAppointments(rows);
+      logAudit('appointment_rescheduled', { appointment_id: rows[existingIdx].id });
     } else {
+      rows.unshift(apt);
+      saveAppointments(rows);
+      logAudit('appointment_created', { appointment_id: apt.id, status: apt.status });
+
+      if (apt.status === 'awaiting_payment') {
+        action.textContent = 'Aguardando pagamento antecipado';
+      }
       updateAppointmentStatus(apt.id, 'confirmed');
     }
 
-    resetBooking();
-    window.location.href = 'my-schedules.html';
+    action.disabled = true;
+    let countdown = 5;
+    if (feedback) feedback.textContent = `Agendamento concluído com sucesso! Redirecionando para a página inicial em ${countdown}s...`;
+    const timer = setInterval(() => {
+      countdown -= 1;
+      if (feedback) feedback.textContent = `Agendamento concluído com sucesso! Redirecionando para a página inicial em ${countdown}s...`;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        resetBooking();
+        window.location.href = 'client-home.html';
+      }
+    }, 1000);
   });
 }
 
@@ -1038,13 +1064,6 @@ function initMySchedulesPage() {
 
   const session = getSession();
 
-  document.querySelectorAll(".booking-tab[href='booking-review.html']").forEach((tab) => {
-    tab.addEventListener('click', (e) => {
-      e.preventDefault();
-      resetBooking();
-      window.location.href = 'booking-location.html';
-    });
-  });
   if (!session) {
     root.innerHTML = '<div class="empty-state"><h2>Faça login para ver seus horários</h2><p>Você precisa entrar com sua conta para acessar os horários agendados.</p><a class="button button-primary" href="login.html?redirect=my-schedules.html">Efetuar login</a></div>';
     return;
@@ -1069,8 +1088,10 @@ function initMySchedulesPage() {
     btn.addEventListener('click', () => {
       const apt = appointments.find((a) => a.id === btn.dataset.reschedule);
       if (!apt || apt.status === 'completed') return;
-      saveBooking({ city: 'poa', branch: 'bom-fim', service: apt.service_id, professional: apt.barber_id, date: apt.appointment_date, time: apt.start_time });
-      window.location.href = 'booking-datetime.html';
+      const city = BASE_DATA.cities.find((c) => c.name === apt.city);
+      const branch = city?.branches.find((x) => x.name === apt.branch);
+      saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: apt.service_id, professional: apt.barber_id, date: apt.appointment_date, time: apt.start_time, edit_appointment_id: apt.id });
+      window.location.href = 'booking-datetime.html?edit=datetime';
     });
   });
 
