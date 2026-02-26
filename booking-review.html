@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamento · Revisão | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card booking-review-card">
+        <nav class="quick-nav" aria-label="Atalhos">
+          <a class="button button-secondary" href="client-home.html" data-home>Home</a>
+          <button class="button button-secondary" type="button" data-back>Voltar</button>
+          <button class="button button-danger" type="button" data-logout>Sair</button>
+        </nav>
+
+        <div id="review-list" class="review-list"></div>
+
+        <div class="review-footer">
+          <p id="review-price" class="review-price">A partir de -</p>
+          <p id="review-address" class="review-address">-</p>
+          <p id="review-no-preference" class="notice">Você não indicou preferência de profissional quando escolher “Sem preferência”.</p>
+          <p class="notice">O tempo de execução pode variar de acordo com o profissional disponível no momento.</p>
+          <p id="review-feedback" class="subtitle" aria-live="polite"></p>
+          <button id="review-action" class="button button-danger" type="button">Efetuar login para continuar</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="booking-success-modal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="booking-success-title">
+        <h2 id="booking-success-title">Agendamento concluído ✅</h2>
+        <p>Seu horário foi registrado com sucesso. Você pode acompanhar seus horários quando quiser.</p>
+        <button id="booking-success-home" class="button button-primary" type="button">Voltar para página inicial</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
