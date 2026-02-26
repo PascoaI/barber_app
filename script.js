@@ -48,7 +48,8 @@ const STORAGE_KEYS = {
   session: 'barberpro_session',
   booking: 'barberpro_booking',
   schedules: 'barberpro_schedules',
-  barbers: 'barberpro_barbers'
+  barbers: 'barberpro_barbers',
+  brand: 'barberpro_brand'
 };
 
 const DB_CONFIG = {
@@ -58,6 +59,30 @@ const DB_CONFIG = {
 };
 
 const BOOKING_DEFAULT = { city: '', branch: '', service: '', professional: '', date: '', time: '' };
+
+const DEFAULT_BRAND = {
+  shopName: 'BarberPro',
+  primaryColor: '#d4a24f',
+  logoUrl: ''
+};
+
+function getBrandSettings() {
+  try {
+    return { ...DEFAULT_BRAND, ...JSON.parse(localStorage.getItem(STORAGE_KEYS.brand) || '{}') };
+  } catch {
+    return { ...DEFAULT_BRAND };
+  }
+}
+
+function saveBrandSettings(brand) {
+  localStorage.setItem(STORAGE_KEYS.brand, JSON.stringify({ ...getBrandSettings(), ...brand }));
+}
+
+function applyBrandTheme() {
+  const brand = getBrandSettings();
+  document.documentElement.style.setProperty('--primary', brand.primaryColor || DEFAULT_BRAND.primaryColor);
+}
+
 
 function slugify(text) {
   return text
@@ -585,6 +610,91 @@ async function initMySchedulesPage() {
     .join('');
 }
 
+
+function initClientHomePage() {
+  const wrap = document.getElementById('client-branding');
+  if (!wrap) return;
+
+  const brand = getBrandSettings();
+  const nameEl = document.getElementById('client-brand-name');
+  const logoEl = document.getElementById('client-brand-logo');
+
+  if (nameEl) nameEl.textContent = brand.shopName || 'BarberPro';
+
+  if (logoEl) {
+    if (brand.logoUrl) {
+      logoEl.src = brand.logoUrl;
+      logoEl.style.display = 'block';
+    } else {
+      logoEl.style.display = 'none';
+    }
+  }
+}
+
+function initAdminSettingsPage() {
+  const form = document.getElementById('admin-settings-form');
+  if (!form) return;
+
+  if (!isLoggedIn()) {
+    window.location.href = 'login.html?redirect=admin-settings.html';
+    return;
+  }
+
+  if (!isAdminRole()) {
+    window.location.href = isBarberRole() ? 'barber-home.html' : 'client-home.html';
+    return;
+  }
+
+  const nameEl = document.getElementById('shop-name');
+  const colorEl = document.getElementById('shop-color');
+  const logoUrlEl = document.getElementById('shop-logo-url');
+  const logoFileEl = document.getElementById('shop-logo-file');
+  const previewName = document.getElementById('brand-preview-name');
+  const previewLogo = document.getElementById('brand-preview-logo');
+
+  const brand = getBrandSettings();
+  nameEl.value = brand.shopName || '';
+  colorEl.value = brand.primaryColor || '#d4a24f';
+  logoUrlEl.value = brand.logoUrl || '';
+
+  function updatePreview(logoUrl) {
+    previewName.textContent = nameEl.value || 'BarberPro';
+    if (logoUrl) {
+      previewLogo.src = logoUrl;
+      previewLogo.style.display = 'block';
+    } else {
+      previewLogo.style.display = 'none';
+    }
+  }
+
+  updatePreview(brand.logoUrl);
+
+  nameEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
+  logoUrlEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
+
+  logoFileEl.addEventListener('change', () => {
+    const file = logoFileEl.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoUrlEl.value = String(reader.result || '');
+      updatePreview(logoUrlEl.value);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveBrandSettings({
+      shopName: nameEl.value.trim() || 'BarberPro',
+      primaryColor: colorEl.value || '#d4a24f',
+      logoUrl: logoUrlEl.value.trim()
+    });
+    applyBrandTheme();
+    updatePreview(logoUrlEl.value.trim());
+  });
+}
+
 async function initAdminSchedulesPage() {
   const list = document.getElementById('admin-schedules-list');
   const filter = document.getElementById('admin-professional-filter');
@@ -737,5 +847,7 @@ initProfessionalPage();
 initDatetimePage();
 initBookingReviewPage();
 initMySchedulesPage();
+initClientHomePage();
 initAdminSchedulesPage();
 initAdminBarbersPage();
+initAdminSettingsPage();

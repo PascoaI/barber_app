@@ -552,3 +552,43 @@ p {
   display: grid;
   gap: 0.65rem;
 }
+
+.client-branding {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: #131620;
+}
+
+.client-branding img,
+.brand-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  display: none;
+}
+
+.client-branding h2 {
+  margin: 0.1rem 0 0;
+  font-size: 1.1rem;
+}
+
+.brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: #131620;
+}
+
+.brand-preview p {
+  margin: 0.2rem 0 0;
+}

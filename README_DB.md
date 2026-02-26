@@ -42,3 +42,11 @@ Com isso:
 - Admin: visualiza todos os agendamentos e filtra por barbeiro.
 - Barbeiro: visualiza apenas agendamentos vinculados ao seu nome/ID.
 - Cliente: visualiza apenas seus próprios horários.
+
+
+## Configurações da barbearia (layout)
+- No painel Admin > Configurações, o administrador define:
+  - nome da barbearia
+  - cor predominante
+  - logo (URL ou arquivo)
+- Esses dados são aplicados ao cliente após login para identificar a barbearia.
