@@ -143,6 +143,81 @@ input[type='checkbox'] {
   gap: 0.72rem;
 }
 
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.form-row > .button,
+.form-row > button,
+.form-row > a.button {
+  flex: 1 1 180px;
+}
+
+.button,
+button,
+a.button {
+  border-radius: 0.82rem;
+}
+
+.service-card,
+.pro-card {
+  width: 100%;
+  min-height: 9rem;
+  border-radius: 1rem;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.service-bg {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.06);
+  font-size: 1.2rem;
+}
+
+.service-title,
+.pro-name {
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.service-price {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.pro-avatar {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.06);
+  font-size: 1.2rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .admin-tile,
 .client-action-card {
   transition: transform var(--fx-medium) var(--fx-ease), border-color var(--fx-medium) var(--fx-ease), box-shadow var(--fx-medium) var(--fx-ease);
@@ -202,6 +277,28 @@ img#client-brand-logo,
 
   .quick-nav .button {
     width: 100%;
+  }
+
+  .services-grid,
+  .pros-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-card,
+  .pro-card {
+    min-height: 8.1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-row > .button,
+  .form-row > button,
+  .form-row > a.button {
+    width: 100%;
+    flex-basis: auto;
   }
 }
 

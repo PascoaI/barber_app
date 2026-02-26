@@ -811,7 +811,6 @@ function consumeStockForService(appointment) {
 function getAnalytics() {
   return getCached('analytics', () => {
   const appointments = getAppointments();
-  const completed = appointments.filter((a) => a.status === 'completed');
   const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
 
   const heatmap = {};
@@ -1579,24 +1578,12 @@ function initClientHomePage() {
   if (!session || !hasRole('client')) return;
 
   const appointments = getAppointments().filter((a) => a.client_email === session.email);
-  const completed = appointments.filter((a) => a.status === 'completed');
-  const month = '2026-02';
-  const completedMonth = completed.filter((a) => (a.start_datetime || '').slice(0, 7) === month);
   const next = appointments
     .filter((a) => ['pending', 'confirmed', 'awaiting_payment'].includes(a.status))
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
-  const loyalty = getJson(STORAGE_KEYS.loyaltyPoints, {})[session.email] || 0;
-  const favId = getClientFavorite(session.email) || getClientProfile(session.email).favorite_barber_id;
-  const favBarber = getBarbers().find((b) => b.id === favId);
 
   const metrics = document.getElementById('client-quick-metrics');
-  if (metrics) {
-    metrics.innerHTML = `
-      <article class="schedule-item"><h3>Cortes no mês</h3><p>${completedMonth.length}</p></article>
-      <article class="schedule-item"><h3>Pontos acumulados</h3><p>${loyalty}</p></article>
-      <article class="schedule-item"><h3>Profissional favorito</h3><p>${favBarber?.name || 'Não definido'}</p></article>
-    `;
-  }
+  if (metrics) metrics.innerHTML = '';
 
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
@@ -1618,19 +1605,7 @@ function initClientHomePage() {
   }
 
   const stats = document.getElementById('client-stats');
-  if (stats) {
-    const byBarber = {};
-    completed.forEach((a) => (byBarber[a.barber_name] = (byBarber[a.barber_name] || 0) + 1));
-    const most = Object.entries(byBarber).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
-    const totalSpent = getJson(STORAGE_KEYS.payments, []).filter((p) => p.status === 'paid').filter((p) => appointments.some((a) => a.id === p.appointment_id)).reduce((s, p) => s + Number(p.amount || 0), 0);
-    const avgDays = completed.length > 1 ? Math.round((new Date(completed[0].start_datetime) - new Date(completed[completed.length - 1].start_datetime)) / 86400000 / (completed.length - 1)) : 0;
-    stats.innerHTML = `
-      <article class="schedule-item"><h3>Total de cortes</h3><p>${completed.length}</p></article>
-      <article class="schedule-item"><h3>Profissional mais atendido</h3><p>${most}</p></article>
-      <article class="schedule-item"><h3>Valor investido</h3><p>${asCurrency(totalSpent)}</p></article>
-      <article class="schedule-item"><h3>Tempo médio entre cortes</h3><p>${avgDays || '-'} dias</p></article>
-    `;
-  }
+  if (stats) stats.innerHTML = '';
 
   const quickBtn = document.getElementById('client-quick-booking');
   if (quickBtn) {
@@ -1642,10 +1617,7 @@ function initClientHomePage() {
   }
 
   const notif = document.getElementById('client-notifications');
-  if (notif) {
-    const list = getNotifications().filter((n) => n.user_id === session.email).slice(0, 5);
-    notif.innerHTML = list.length ? list.map((n) => `<article class="schedule-item"><h3>${n.type}</h3><small>${n.status} · ${new Date(n.created_at || nowIso()).toLocaleString('pt-BR')}</small></article>`).join('') : '<article class="schedule-item"><h3>Notificações</h3><p>Sem notificações no momento.</p></article>';
-  }
+  if (notif) notif.innerHTML = '';
 }
 
 function initAdminSettingsPage() {
