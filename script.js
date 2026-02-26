@@ -210,9 +210,9 @@ function ensureSeed() {
 
 function ensureDefaultSubscriptionPlans() {
   const defaults = [
-    { id: 'plano-bronze', unit_id: APP_CONFIG.unitId, name: 'Plano Bronze', price: 59, sessions_per_month: 2, duration_days: 30, benefits: ['2 cortes por mês', 'Suporte padrão'], created_at: nowIso(), updated_at: nowIso() },
-    { id: 'plano-prata', unit_id: APP_CONFIG.unitId, name: 'Plano Prata', price: 99, sessions_per_month: 4, duration_days: 30, benefits: ['4 cortes por mês', 'Prioridade de agendamento'], created_at: nowIso(), updated_at: nowIso() },
-    { id: 'plano-ouro', unit_id: APP_CONFIG.unitId, name: 'Plano Ouro', price: 149, sessions_per_month: 6, duration_days: 30, benefits: ['6 cortes por mês', 'Prioridade máxima', 'Benefícios extras'], created_at: nowIso(), updated_at: nowIso() }
+    { id: 'plano-bronze', unit_id: APP_CONFIG.unitId, name: '🥉 Plano Bronze', price: 59, sessions_per_month: 2, duration_days: 30, is_active: true, benefits: ['2 cortes por mês', 'Suporte padrão'], created_at: nowIso(), updated_at: nowIso() },
+    { id: 'plano-prata', unit_id: APP_CONFIG.unitId, name: '🥈 Plano Prata', price: 99, sessions_per_month: 4, duration_days: 30, is_active: true, benefits: ['4 cortes por mês', 'Prioridade de agendamento'], created_at: nowIso(), updated_at: nowIso() },
+    { id: 'plano-ouro', unit_id: APP_CONFIG.unitId, name: '🥇 Plano Ouro', price: 149, sessions_per_month: 6, duration_days: 30, is_active: true, benefits: ['6 cortes por mês', 'Prioridade máxima', 'Benefícios extras'], created_at: nowIso(), updated_at: nowIso() }
   ];
 
   const all = getJson(STORAGE_KEYS.subscriptionPlans, []);
@@ -226,7 +226,11 @@ function ensureDefaultSubscriptionPlans() {
     else merged.push(d);
   });
 
-  setJson(STORAGE_KEYS.subscriptionPlans, [...merged, ...keep]);
+  setJson(STORAGE_KEYS.subscriptionPlans, [...merged, ...keep].map((plan) => ({ ...plan, is_active: plan.is_active !== false })));
+}
+
+function confirmAction(message) {
+  return window.confirm(message);
 }
 
 function logAudit(action, details = {}) {
@@ -1261,6 +1265,7 @@ function initMySchedulesPage() {
         alert('Cancelamento fora da política: prazo mínimo não respeitado.');
         return;
       }
+      if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
       updateAppointmentStatus(apt.id, 'canceled');
       scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
       initMySchedulesPage();
@@ -1616,6 +1621,7 @@ function initClientHomePage() {
         window.location.href = 'booking-datetime.html?edit=datetime';
       });
       nextWrap.querySelector('[data-client-cancel]')?.addEventListener('click', () => {
+        if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
         updateAppointmentStatus(next.id, 'canceled');
         initClientHomePage();
       });
@@ -1801,7 +1807,10 @@ function initClientSubscriptionsPage() {
   }
 
   ensureDefaultSubscriptionPlans();
-  const plans = getSubscriptionPlans();
+  const planOrder = ['plano-bronze', 'plano-prata', 'plano-ouro'];
+  const plans = getSubscriptionPlans()
+    .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
+    .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subscriptions = getSubscriptions();
   const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
   const profile = getClientProfile(session.email);
@@ -1815,6 +1824,7 @@ function initClientSubscriptionsPage() {
     btn.addEventListener('click', () => {
       const plan = plans.find((x) => x.id === btn.dataset.subscribe);
       if (!plan) return;
+      if (!confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mês?`)) return;
       const rows = getSubscriptions().filter((s) => s.user_id !== session.email);
       rows.unshift({
         id: `sub_${Date.now()}`,
@@ -1928,7 +1938,10 @@ function initSubscriptionsPage() {
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
   ensureDefaultSubscriptionPlans();
-  const plans = getSubscriptionPlans();
+  const planOrder = ['plano-bronze', 'plano-prata', 'plano-ouro'];
+  const plans = getSubscriptionPlans()
+    .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
+    .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subs = getSubscriptions();
   const activeSubs = subs.filter((s) => s.status === 'active');
 
@@ -1938,9 +1951,9 @@ function initSubscriptionsPage() {
   });
 
   root.innerHTML = `
-    <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Planos padrão: Bronze, Prata e Ouro.</small></article>
+    <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Exibindo apenas planos ativos implementáveis.</small></article>
     ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês • ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' • ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
-    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} — ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
+    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} — Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
   `;
 }
 
