@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · Agendamentos | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: {
+              xl: '1rem',
+              '2xl': '1.25rem'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(0,0,0,0.24)'
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="admin-home.html">← Dashboard</a>
+        <h1>Agendamentos</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Agenda com status, filtro por barbeiro e ações operacionais.</p>
+
+        <label for="admin-professional-filter">Filtrar por profissional</label>
+        <select id="admin-professional-filter"></select>
+
+        <label for="admin-status-filter">Filtrar por status</label>
+        <select id="admin-status-filter">
+          <option value="all">Todos</option>
+          <option value="pending">pending</option>
+          <option value="confirmed">confirmed</option>
+          <option value="canceled">canceled</option>
+          <option value="completed">completed</option>
+          <option value="no_show">no_show</option>
+        </select>
+
+        <label for="admin-date-filter">Filtrar por data</label>
+        <input id="admin-date-filter" type="date" />
+
+        <div id="admin-schedules-list" class="admin-schedules-list grid gap-3 mt-4"></div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
