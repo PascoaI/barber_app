@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · Configurações de agenda por unidade | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <a class="back-link" href="admin-home.html">← Dashboard</a>
+        <h1>Configurações de agenda da unidade</h1>
+        <p class="subtitle">Horário de funcionamento, intervalo de slots, política de cancelamento e regras de fidelidade/pré-pagamento.</p>
+
+        <form id="unit-settings-form" class="auth-form">
+          <label for="us-opening-time">Abertura</label>
+          <input id="us-opening-time" type="time" required />
+
+          <label for="us-closing-time">Fechamento</label>
+          <input id="us-closing-time" type="time" required />
+
+          <label for="us-slot-interval">Intervalo dos slots (min)</label>
+          <input id="us-slot-interval" type="number" min="5" step="5" required />
+
+          <label for="us-cancel-limit">Limite de cancelamento (horas)</label>
+          <input id="us-cancel-limit" type="number" min="0" step="1" required />
+
+          <label for="us-no-show-block-days">Bloqueio por no-show (dias)</label>
+          <input id="us-no-show-block-days" type="number" min="0" step="1" required />
+
+          <label class="checkbox-wrap">
+            <input id="us-loyalty-enabled" type="checkbox" />
+            <span>Fidelidade habilitada</span>
+          </label>
+
+          <label class="checkbox-wrap">
+            <input id="us-prepayment-enabled" type="checkbox" />
+            <span>Pré-pagamento habilitado</span>
+          </label>
+
+          <button class="button button-primary" type="submit">Salvar configurações</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
