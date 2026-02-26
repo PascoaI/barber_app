@@ -1,0 +1,814 @@
+/* =========================
+   BarberPro Design System (SaaS 2025)
+   ========================= */
+:root {
+  --primary: #7c5cff;
+  --primary-strong: #6a49f2;
+  --secondary: #18c7a8;
+
+  --background: #090c14;
+  --surface: #111624;
+  --surface-2: #161c2d;
+  --surface-3: #1b2235;
+
+  --border: #28314a;
+  --border-strong: #364266;
+
+  --text-primary: #edf2ff;
+  --text-secondary: #9da8c3;
+  --text-muted: #7d88a7;
+
+  --success: #18c07a;
+  --warning: #f3b33e;
+  --danger: #ff6b6b;
+
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.28);
+  --glow-primary: 0 0 0 3px color-mix(in oklab, var(--primary), transparent 75%);
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+
+  --container-md: 460px;
+  --container-lg: 780px;
+}
+
+/* =========================
+   Base / Reset
+   ========================= */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: var(--text-primary);
+  line-height: 1.5;
+  background:
+    radial-gradient(1200px 500px at 10% -15%, rgba(124, 92, 255, 0.24), transparent 55%),
+    radial-gradient(900px 450px at 100% 0%, rgba(24, 199, 168, 0.14), transparent 50%),
+    var(--background);
+  -webkit-font-smoothing: antialiased;
+  animation: fade-in 320ms ease-out;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+a {
+  color: inherit;
+}
+
+/* =========================
+   Layout
+   ========================= */
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+}
+
+.page-landing {
+  padding-block: var(--space-6);
+}
+
+.hero-card,
+.form-card,
+.booking-card {
+  width: min(100%, var(--container-lg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-5);
+}
+
+.hero-card,
+.form-card {
+  width: min(100%, var(--container-md));
+}
+
+.booking-page {
+  padding-block: var(--space-4) var(--space-6);
+}
+
+.booking-review-card {
+  background:
+    linear-gradient(180deg, rgba(124, 92, 255, 0.08) 0%, rgba(124, 92, 255, 0) 25%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+}
+
+.subtitle {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-5);
+  color: var(--text-secondary);
+}
+
+.brand-pill {
+  width: fit-content;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--primary), transparent 45%);
+  color: color-mix(in oklab, var(--primary), white 8%);
+  background: color-mix(in oklab, var(--primary), transparent 90%);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+}
+
+.cta-group {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}
+
+.back-link,
+.link-muted {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link:hover,
+.link-muted:hover {
+  color: var(--text-primary);
+}
+
+/* =========================
+   Forms / Inputs
+   ========================= */
+.auth-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.auth-form label {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form textarea,
+input[type='date'],
+input[type='datetime-local'],
+input[type='number'],
+select,
+textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  padding: 0 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+textarea {
+  min-height: 110px;
+  padding-top: 10px;
+}
+
+.auth-form input:focus,
+.auth-form select:focus,
+.auth-form textarea:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--glow-primary);
+}
+
+input:invalid,
+select:invalid,
+textarea:invalid {
+  border-color: color-mix(in oklab, var(--danger), transparent 35%);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.checkbox-wrap input {
+  width: auto;
+  min-height: auto;
+}
+
+.switch-text {
+  text-align: center;
+  margin-top: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.switch-text a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:disabled,
+.button[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.button-primary,
+.button-danger {
+  color: #f9f9ff;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+  box-shadow: 0 10px 22px color-mix(in oklab, var(--primary), transparent 65%);
+}
+
+.button-primary:hover,
+.button-danger:hover {
+  box-shadow: 0 14px 28px color-mix(in oklab, var(--primary), transparent 58%);
+}
+
+.button-secondary {
+  border-color: var(--border-strong);
+  background: color-mix(in oklab, var(--surface-3), transparent 12%);
+  color: var(--text-primary);
+}
+
+.button-secondary:hover {
+  border-color: color-mix(in oklab, var(--primary), transparent 40%);
+  color: color-mix(in oklab, var(--primary), white 10%);
+}
+
+.button-ghost {
+  border-color: color-mix(in oklab, var(--primary), transparent 55%);
+  background: color-mix(in oklab, var(--primary), transparent 88%);
+  color: color-mix(in oklab, var(--primary), white 10%);
+}
+
+/* =========================
+   Booking Flow Components
+   ========================= */
+.step-label {
+  margin: 0 0 var(--space-3);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.step-label::after {
+  content: '';
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary) 0%, color-mix(in oklab, var(--primary), transparent 90%) 65%);
+}
+
+.services-grid,
+.pros-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.service-card,
+.pro-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-3) 100%);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.service-card:hover,
+.pro-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.service-card {
+  padding: var(--space-4);
+  text-align: left;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.service-card.active,
+.pro-card.active {
+  border-color: color-mix(in oklab, var(--primary), transparent 20%);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary), transparent 55%), 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.service-title,
+.pro-name {
+  font-weight: 700;
+}
+
+.service-price {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.pro-card {
+  min-height: 126px;
+  padding: var(--space-4);
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+}
+
+.pro-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  background: var(--surface);
+}
+
+.time-grid {
+  margin-top: var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.time-slot {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.time-slot:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.time-slot.active {
+  border-color: var(--primary);
+  color: color-mix(in oklab, var(--primary), white 12%);
+  box-shadow: var(--glow-primary);
+}
+
+.time-slot:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.summary-box,
+.empty-state,
+.review-item,
+.schedule-item,
+.admin-tile,
+.brand-preview,
+.client-branding {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-3) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-box {
+  padding: var(--space-4);
+}
+
+.summary-box h2 {
+  margin-bottom: var(--space-2);
+}
+
+.summary-box p {
+  margin: var(--space-1) 0;
+}
+
+.notice {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.review-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+}
+
+.review-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.review-item p {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.review-edit {
+  border: 1px solid color-mix(in oklab, var(--primary), transparent 50%);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: color-mix(in oklab, var(--primary), white 8%);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.review-edit:hover {
+  background: color-mix(in oklab, var(--primary), transparent 90%);
+}
+
+.review-footer {
+  margin-top: var(--space-4);
+}
+
+.review-price {
+  text-align: right;
+  font-size: clamp(1.6rem, 3.6vw, 2.2rem);
+  line-height: 1;
+  font-weight: 800;
+  margin: 0;
+}
+
+.review-address {
+  text-align: right;
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.button-danger {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.sticky-actions {
+  margin-top: var(--space-4);
+}
+
+/* =========================
+   Auth / Feedback
+   ========================= */
+.login-help {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.login-help-small {
+  font-size: 0.8rem;
+}
+
+.login-feedback {
+  min-height: 1.2rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+  margin: 2px 0 8px;
+}
+
+/* =========================
+   Admin / Dashboard
+   ========================= */
+.admin-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-tile {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary), transparent 55%);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.admin-tile strong {
+  font-size: 1.05rem;
+  color: color-mix(in oklab, var(--primary), white 10%);
+}
+
+.admin-metrics {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.admin-metrics .schedule-item h3 {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: var(--space-2);
+}
+
+.admin-metrics .schedule-item p {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.admin-schedules-list {
+  margin-top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* =========================
+   Shared Cards / Status
+   ========================= */
+.schedule-item,
+.empty-state {
+  padding: var(--space-4);
+}
+
+.schedule-item h3 {
+  margin-bottom: var(--space-2);
+}
+
+.schedule-item p,
+.schedule-item small {
+  margin: 0;
+}
+
+.schedule-item-client {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.schedule-main-time {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+#my-schedules-content .form-row {
+  margin-top: var(--space-2);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-pending,
+.status-awaiting_payment {
+  color: #ffd88b;
+  background: color-mix(in oklab, var(--warning), transparent 82%);
+}
+
+.status-confirmed,
+.status-completed {
+  color: #8dffd0;
+  background: color-mix(in oklab, var(--success), transparent 82%);
+}
+
+.status-no_show,
+.status-canceled {
+  color: #ffacac;
+  background: color-mix(in oklab, var(--danger), transparent 82%);
+}
+
+/* =========================
+   Lists / Brand blocks
+   ========================= */
+.feature-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.feature-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text-secondary);
+}
+
+.feature-list li::before {
+  content: '•';
+  color: var(--secondary);
+  position: absolute;
+  left: 5px;
+}
+
+.client-branding,
+.brand-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.client-branding {
+  margin-bottom: var(--space-4);
+}
+
+.client-branding img,
+.brand-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  object-fit: cover;
+  display: none;
+}
+
+.client-branding h2 {
+  font-size: 1.08rem;
+}
+
+/* =========================
+   Utilities / Motion
+   ========================= */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-card,
+.form-card,
+.booking-card,
+.review-item,
+.schedule-item,
+.admin-tile {
+  animation: fade-in 260ms ease-out;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+@media (min-width: 760px) {
+  .page {
+    padding: var(--space-6);
+  }
+
+  .hero-card,
+  .form-card,
+  .booking-card {
+    padding: var(--space-6);
+  }
+
+  .services-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 759px) {
+  .page {
+    padding: var(--space-3);
+  }
+
+  .hero-card,
+  .form-card,
+  .booking-card {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .review-item {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .review-edit {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .time-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}

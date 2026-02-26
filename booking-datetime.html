@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamento · Data e Horário | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <a class="back-link" href="booking-professional.html">← Voltar</a>
+        <p class="step-label">Etapa 4 de 4</p>
+        <h1>Escolha a data e o horário</h1>
+        <p class="subtitle">Horários indisponíveis ficam automaticamente desabilitados.</p>
+
+        <form class="auth-form" id="datetime-form">
+          <label for="date">Data</label>
+          <select id="date" required></select>
+
+          <div>
+            <label>Horário disponível</label>
+            <div id="time-grid" class="time-grid" aria-live="polite"></div>
+          </div>
+
+          <div class="summary-box">
+            <h2>Resumo do agendamento</h2>
+            <p id="summary-service">Serviço: -</p>
+            <p id="summary-price">Valor a partir de: -</p>
+            <p id="summary-location">Local: -</p>
+            <p id="summary-professional">Profissional: -</p>
+            <p class="notice">O tempo de execução pode variar de acordo com o profissional disponível no momento.</p>
+          </div>
+
+          <button id="confirm-booking" class="button button-primary" type="submit" disabled>
+            Continuar para revisão
+          </button>
+        </form>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
