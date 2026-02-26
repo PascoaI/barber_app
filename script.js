@@ -363,6 +363,22 @@ function saveBooking(partial) {
   setJson(STORAGE_KEYS.booking, { ...getBooking(), ...partial });
 }
 
+function resetBooking() {
+  setJson(STORAGE_KEYS.booking, { ...BOOKING_DEFAULT });
+}
+
+function getBookingStatusLabel(status) {
+  const map = {
+    awaiting_payment: 'Aguardando pagamento',
+    pending: 'Pendente',
+    confirmed: 'Confirmado',
+    canceled: 'Cancelado',
+    completed: 'Concluído',
+    no_show: 'Não compareceu'
+  };
+  return map[status] || status;
+}
+
 function getNotifications() {
   return getJson(STORAGE_KEYS.notifications, []).filter((n) => n.unit_id === APP_CONFIG.unitId);
 }
@@ -783,13 +799,19 @@ function initLocationPage() {
 
   populateSelect(cityEl, BASE_DATA.cities, 'Selecione a cidade');
 
+  const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'location';
+
   cityEl.addEventListener('change', () => {
     const city = BASE_DATA.cities.find((c) => c.id === cityEl.value);
     branchEl.disabled = !city;
     populateSelect(branchEl, city ? city.branches : [], 'Selecione a unidade');
-    saveBooking({ city: cityEl.value, branch: '', service: '', professional: '', date: '', time: '' });
+    if (isEditMode) saveBooking({ city: cityEl.value, branch: '' });
+    else saveBooking({ city: cityEl.value, branch: '', service: '', professional: '', date: '', time: '' });
   });
-  branchEl.addEventListener('change', () => saveBooking({ branch: branchEl.value, service: '', professional: '', date: '', time: '' }));
+  branchEl.addEventListener('change', () => {
+    if (isEditMode) saveBooking({ branch: branchEl.value });
+    else saveBooking({ branch: branchEl.value, service: '', professional: '', date: '', time: '' });
+  });
 
   if (b.city) {
     cityEl.value = b.city;
@@ -801,7 +823,7 @@ function initLocationPage() {
     e.preventDefault();
     if (!cityEl.value || !branchEl.value) return;
     saveBooking({ city: cityEl.value, branch: branchEl.value });
-    window.location.href = 'booking-service.html';
+    window.location.href = isEditMode ? 'booking-review.html' : 'booking-service.html';
   });
 }
 
@@ -811,6 +833,7 @@ function initServicePage() {
   if (!grid || !nextBtn) return;
   const b = getBooking();
   if (!b.city || !b.branch) return (window.location.href = 'booking-location.html');
+  const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'service';
 
   getServices().forEach((s) => {
     const card = document.createElement('button');
@@ -818,7 +841,8 @@ function initServicePage() {
     card.className = `service-card ${b.service === s.id ? 'active' : ''}`;
     card.innerHTML = `<span class="service-bg">${s.emoji}</span><span class="service-title">${s.name}</span><span class="service-price">${asCurrency(s.price)} · ${s.duration_minutes} min</span>`;
     card.addEventListener('click', () => {
-      saveBooking({ service: s.id, professional: '', date: '', time: '' });
+      if (isEditMode) saveBooking({ service: s.id });
+      else saveBooking({ service: s.id, professional: '', date: '', time: '' });
       [...grid.querySelectorAll('.service-card')].forEach((x) => x.classList.remove('active'));
       card.classList.add('active');
       nextBtn.disabled = false;
@@ -829,7 +853,7 @@ function initServicePage() {
   nextBtn.disabled = !b.service;
   nextBtn.addEventListener('click', () => {
     if (!getBooking().service) return;
-    window.location.href = 'booking-professional.html';
+    window.location.href = isEditMode ? 'booking-review.html' : 'booking-professional.html';
   });
 }
 
@@ -839,6 +863,7 @@ function initProfessionalPage() {
   if (!grid || !nextBtn) return;
   const b = getBooking();
   if (!b.service) return (window.location.href = 'booking-service.html');
+  const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'professional';
 
   const pros = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência', avatar: '⭐' }];
   pros.forEach((p) => {
@@ -847,7 +872,8 @@ function initProfessionalPage() {
     card.className = `pro-card ${b.professional === p.id ? 'active' : ''}`;
     card.innerHTML = `<span class="pro-avatar">${p.avatar}</span><span class="pro-name">${p.name}</span>`;
     card.addEventListener('click', () => {
-      saveBooking({ professional: p.id, date: '', time: '' });
+      if (isEditMode) saveBooking({ professional: p.id });
+      else saveBooking({ professional: p.id, date: '', time: '' });
       [...grid.querySelectorAll('.pro-card')].forEach((x) => x.classList.remove('active'));
       card.classList.add('active');
       nextBtn.disabled = false;
@@ -858,7 +884,7 @@ function initProfessionalPage() {
   nextBtn.disabled = !b.professional;
   nextBtn.addEventListener('click', () => {
     if (!getBooking().professional) return;
-    window.location.href = 'booking-datetime.html';
+    window.location.href = isEditMode ? 'booking-review.html' : 'booking-datetime.html';
   });
 }
 
@@ -872,9 +898,25 @@ function initDatetimePage() {
   const b = getBooking();
   if (!b.professional || !b.service) return (window.location.href = 'booking-professional.html');
   const service = getServiceById(b.service);
+  const summaryServiceEl = document.getElementById('summary-service');
+  const summaryPriceEl = document.getElementById('summary-price');
+  const summaryLocationEl = document.getElementById('summary-location');
+  const summaryProfessionalEl = document.getElementById('summary-professional');
 
   populateSelect(dateEl, getNextDays(), 'Selecione uma data');
   if (b.date) dateEl.value = b.date;
+
+  function renderSummary() {
+    const cur = getBooking();
+    const city = BASE_DATA.cities.find((c) => c.id === cur.city);
+    const branch = city?.branches.find((x) => x.id === cur.branch);
+    const selectedService = getServiceById(cur.service);
+    const selectedProfessional = cur.professional === 'sem-preferencia' ? { name: 'Sem preferência' } : getBarbers().find((x) => x.id === cur.professional);
+    if (summaryServiceEl) summaryServiceEl.textContent = `Serviço: ${selectedService?.name || '-'}`;
+    if (summaryPriceEl) summaryPriceEl.textContent = `Valor a partir de: ${asCurrency(selectedService?.price || 0)}`;
+    if (summaryLocationEl) summaryLocationEl.textContent = `Local: ${branch?.name || '-'}`;
+    if (summaryProfessionalEl) summaryProfessionalEl.textContent = `Profissional: ${selectedProfessional?.name || '-'}`;
+  }
 
   function render() {
     const cur = getBooking();
@@ -904,6 +946,7 @@ function initDatetimePage() {
 
       grid.appendChild(btn);
     });
+    renderSummary();
   }
 
   dateEl.addEventListener('change', () => {
@@ -935,11 +978,11 @@ function initBookingReviewPage() {
   const barber = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência' }].find((x) => x.id === b.professional);
 
   list.innerHTML = [
-    ['🌍', city?.name, 'Região', 'booking-location.html'],
-    ['📍', branch?.name, 'Unidade', 'booking-location.html'],
-    ['💈', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html'],
-    ['👤', barber?.name, 'Profissional', 'booking-professional.html'],
-    ['📅', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html']
+    ['🌍', city?.name, 'Região', 'booking-location.html?edit=location'],
+    ['📍', branch?.name, 'Unidade', 'booking-location.html?edit=location'],
+    ['💈', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html?edit=service'],
+    ['👤', barber?.name, 'Profissional', 'booking-professional.html?edit=professional'],
+    ['📅', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html?edit=datetime']
   ]
     .map((row) => `<article class="review-item"><div class="review-icon">${row[0]}</div><div><h3>${row[1] || '-'}</h3><p>${row[2]}</p></div><a class="review-edit" href="${row[3]}">Alterar</a></article>`)
     .join('');
@@ -978,6 +1021,7 @@ function initBookingReviewPage() {
       updateAppointmentStatus(apt.id, 'confirmed');
     }
 
+    resetBooking();
     window.location.href = 'my-schedules.html';
   });
 }
@@ -993,6 +1037,14 @@ function initMySchedulesPage() {
   if (!root) return;
 
   const session = getSession();
+
+  document.querySelectorAll(".booking-tab[href='booking-review.html']").forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetBooking();
+      window.location.href = 'booking-location.html';
+    });
+  });
   if (!session) {
     root.innerHTML = '<div class="empty-state"><h2>Faça login para ver seus horários</h2><p>Você precisa entrar com sua conta para acessar os horários agendados.</p><a class="button button-primary" href="login.html?redirect=my-schedules.html">Efetuar login</a></div>';
     return;
@@ -1010,7 +1062,7 @@ function initMySchedulesPage() {
   }
 
   root.innerHTML = appointments
-    .map((a) => `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>Status: <strong>${a.status}</strong></p><small>${a.barber_name} · ${a.branch}</small>${!['completed', 'canceled'].includes(a.status) ? `<div class="form-row"><button class="button button-secondary" data-reschedule="${a.id}">Remarcar</button><button class="button button-secondary" data-cancel="${a.id}">Cancelar</button></div>` : ''}</article>`)
+    .map((a) => `<article class="schedule-item schedule-item-client"><h3>${a.service_name}</h3><p class="schedule-main-time">${formatBookingDateTime(a.appointment_date, a.start_time)}</p><p>Status: <span class="status-badge status-${a.status}">${getBookingStatusLabel(a.status)}</span></p><small>${a.barber_name} · ${a.branch}</small>${!['completed', 'canceled'].includes(a.status) ? `<div class="form-row"><button class="button button-secondary" data-reschedule="${a.id}">Remarcar</button><button class="button button-secondary" data-cancel="${a.id}">Cancelar</button></div>` : ''}</article>`)
     .join('');
 
   root.querySelectorAll('[data-reschedule]').forEach((btn) => {

@@ -632,3 +632,18 @@ p {
   background: rgba(239, 68, 68, 0.2);
   color: #ff8f8f;
 }
+
+.schedule-item-client {
+  padding: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.schedule-main-time {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+#my-schedules-content .form-row {
+  margin-top: 0.5rem;
+}
