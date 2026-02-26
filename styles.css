@@ -2,9 +2,9 @@
    BarberPro Design System (SaaS 2025)
    ========================= */
 :root {
-  --primary: #7c5cff;
-  --primary-strong: #6a49f2;
-  --secondary: #18c7a8;
+  --primary: #2f6df6;
+  --primary-strong: #1f57d7;
+  --secondary: #14b8a6;
 
   --background: #090c14;
   --surface: #111624;
@@ -810,5 +810,110 @@ textarea:invalid {
 
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================
+   Modal / Confirmation
+   ========================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 20, 0.62);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 60;
+}
+
+.modal-overlay.is-open {
+  display: flex;
+}
+
+.modal-card {
+  width: min(100%, 460px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* =========================
+   Client Home (upgraded)
+   ========================= */
+.client-home-card {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.client-home-hero {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.client-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.client-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.client-action-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-3) 100%);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.client-action-card p {
+  min-height: 44px;
+}
+
+@media (max-width: 759px) {
+  .client-home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Global quick navigation
+   ========================= */
+.quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.quick-nav .button {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 759px) {
+  .quick-nav {
+    justify-content: stretch;
+  }
+
+  .quick-nav .button {
+    flex: 1 1 auto;
   }
 }

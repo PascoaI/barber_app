@@ -8,19 +8,37 @@
   </head>
   <body>
     <main class="page booking-page">
-      <section class="booking-card">
-        <div class="client-branding" id="client-branding">
-          <img id="client-brand-logo" alt="Logo da barbearia" />
-          <div>
-            <p class="subtitle" style="margin:0;">Você está na</p>
-            <h2 id="client-brand-name">BarberPro</h2>
+      <section class="booking-card client-home-card">
+        <nav class="quick-nav" aria-label="Atalhos">
+          <a class="button button-secondary" href="client-home.html" data-home>Home</a>
+          <button class="button button-secondary" type="button" data-back>Voltar</button>
+          <button class="button button-danger" type="button" data-logout>Sair</button>
+        </nav>
+
+        <div class="client-home-hero">
+          <div class="client-branding" id="client-branding">
+            <img id="client-brand-logo" alt="Logo da barbearia" />
+            <div>
+              <p class="client-kicker">Você está na</p>
+              <h2 id="client-brand-name">BarberPro</h2>
+            </div>
           </div>
+          <h1>Bem-vindo de volta 👋</h1>
+          <p class="subtitle">Gerencie seus agendamentos com uma experiência rápida e clara.</p>
         </div>
-        <h1>Olá, cliente 👋</h1>
-        <p class="subtitle">Seu próximo passo é agendar seu horário.</p>
-        <div class="form-row">
-          <a class="button button-primary" href="booking-location.html">Novo agendamento</a>
-          <a class="button button-secondary" href="my-schedules.html">Meus horários</a>
+
+        <div class="client-home-grid">
+          <article class="client-action-card">
+            <h3>Novo agendamento</h3>
+            <p>Escolha serviço, barbeiro, data e horário em poucos passos.</p>
+            <a class="button button-primary" href="booking-location.html">Agendar agora</a>
+          </article>
+
+          <article class="client-action-card">
+            <h3>Meus horários</h3>
+            <p>Veja, remarque ou cancele seus horários em um só lugar.</p>
+            <a class="button button-secondary" href="my-schedules.html">Abrir meus horários</a>
+          </article>
         </div>
       </section>
     </main>

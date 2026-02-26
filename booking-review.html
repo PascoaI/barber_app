@@ -12,6 +12,12 @@
   <body>
     <main class="page booking-page">
       <section class="booking-card booking-review-card">
+        <nav class="quick-nav" aria-label="Atalhos">
+          <a class="button button-secondary" href="client-home.html" data-home>Home</a>
+          <button class="button button-secondary" type="button" data-back>Voltar</button>
+          <button class="button button-danger" type="button" data-logout>Sair</button>
+        </nav>
+
         <div id="review-list" class="review-list"></div>
 
         <div class="review-footer">
@@ -24,6 +30,14 @@
         </div>
       </section>
     </main>
+
+    <div id="booking-success-modal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="booking-success-title">
+        <h2 id="booking-success-title">Agendamento concluído ✅</h2>
+        <p>Seu horário foi registrado com sucesso. Você pode acompanhar seus horários quando quiser.</p>
+        <button id="booking-success-home" class="button button-primary" type="button">Voltar para página inicial</button>
+      </div>
+    </div>
 
     <script src="script.js"></script>
   </body>

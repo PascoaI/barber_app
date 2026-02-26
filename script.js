@@ -999,6 +999,9 @@ function initBookingReviewPage() {
   else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente por no-show';
   else action.textContent = 'Confirmar agendamento';
 
+  const successModal = document.getElementById('booking-success-modal');
+  const successHomeBtn = document.getElementById('booking-success-home');
+
   action.addEventListener('click', () => {
     const currentSession = getSession();
     if (!currentSession) return (window.location.href = 'login.html?redirect=booking-review.html');
@@ -1038,17 +1041,19 @@ function initBookingReviewPage() {
     }
 
     action.disabled = true;
-    let countdown = 5;
-    if (feedback) feedback.textContent = `Agendamento concluído com sucesso! Redirecionando para a página inicial em ${countdown}s...`;
-    const timer = setInterval(() => {
-      countdown -= 1;
-      if (feedback) feedback.textContent = `Agendamento concluído com sucesso! Redirecionando para a página inicial em ${countdown}s...`;
-      if (countdown <= 0) {
-        clearInterval(timer);
+    if (feedback) feedback.textContent = 'Agendamento concluído com sucesso!';
+
+    if (successModal) {
+      successModal.classList.add('is-open');
+      successModal.setAttribute('aria-hidden', 'false');
+    }
+
+    if (successHomeBtn) {
+      successHomeBtn.onclick = () => {
         resetBooking();
         window.location.href = 'client-home.html';
-      }
-    }, 1000);
+      };
+    }
   });
 }
 
@@ -1647,6 +1652,35 @@ function ensureDbSchemaNote() {
   }
 }
 
+
+function initGlobalNavigation() {
+  const session = getSession();
+
+  document.querySelectorAll('[data-back]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = session?.role === 'client' ? 'client-home.html' : 'index.html';
+    });
+  });
+
+  document.querySelectorAll('[data-home]').forEach((link) => {
+    if (!session) link.setAttribute('href', 'index.html');
+    else if (session.role === 'client') link.setAttribute('href', 'client-home.html');
+    else if (session.role === 'barber') link.setAttribute('href', 'barber-home.html');
+    else if (session.role === 'super_admin') link.setAttribute('href', 'super-admin-tenants.html');
+    else link.setAttribute('href', 'admin-home.html');
+  });
+
+  document.querySelectorAll('[data-logout]').forEach((btn) => {
+    btn.style.display = session ? 'inline-flex' : 'none';
+    btn.addEventListener('click', () => {
+      clearSession();
+      resetBooking();
+      window.location.href = 'login.html';
+    });
+  });
+}
+
 ensureSeed();
 checkOverduePrepayments();
 applyBrandTheme();
@@ -1672,3 +1706,4 @@ initSubscriptionsPage();
 initSuperAdminTenantsPage();
 initAdminFinanceModuleCards();
 initBarberHomePage();
+initGlobalNavigation();
