@@ -1017,6 +1017,7 @@ function initDatetimePage() {
   const summaryPriceEl = document.getElementById('summary-price');
   const summaryLocationEl = document.getElementById('summary-location');
   const summaryProfessionalEl = document.getElementById('summary-professional');
+  const summaryTimeEl = document.getElementById('summary-time');
 
   populateSelect(dateEl, getNextDays(), 'Selecione uma data');
   if (b.date) dateEl.value = b.date;
@@ -1031,6 +1032,7 @@ function initDatetimePage() {
     if (summaryPriceEl) summaryPriceEl.textContent = `Valor a partir de: ${asCurrency(selectedService?.price || 0)}`;
     if (summaryLocationEl) summaryLocationEl.textContent = `Local: ${branch?.name || '-'}`;
     if (summaryProfessionalEl) summaryProfessionalEl.textContent = `Profissional: ${selectedProfessional?.name || '-'}`;
+    if (summaryTimeEl) summaryTimeEl.textContent = `Horário: ${cur.time || '-'}`;
   }
 
   function render() {
@@ -1944,35 +1946,115 @@ function ensureDbSchemaNote() {
 function initGlobalNavigation() {
   const session = getSession();
 
+  const handleLogout = () => {
+    clearSession();
+    resetBooking();
+    window.location.href = 'login.html';
+  };
+
+  const getClientMenuDefaults = () => [
+    ['client-subscriptions.html', 'Assinaturas'],
+    ['client-history.html', 'Histórico'],
+    ['client-loyalty.html', 'Fidelidade'],
+    ['client-profile.html', 'Meu perfil'],
+    ['client-notifications.html', 'Notificações']
+  ];
+
   document.querySelectorAll('.quick-nav').forEach((nav) => {
     nav.classList.remove('justify-end');
     nav.classList.add('justify-between', 'items-center');
-  });
 
-  document.querySelectorAll('[data-back]').forEach((btn) => {
-    btn.innerHTML = '←';
-    btn.setAttribute('aria-label', 'Voltar');
-    btn.classList.add('!w-10', '!min-h-10', '!px-0', 'rounded-full', 'text-lg');
-    btn.addEventListener('click', () => {
-      if (window.history.length > 1) window.history.back();
-      else window.location.href = session?.role === 'client' ? 'client-home.html' : 'index.html';
+    const home = nav.querySelector('[data-home]');
+    const back = nav.querySelector('[data-back]');
+
+    if (back) {
+      back.innerHTML = '←';
+      back.setAttribute('aria-label', 'Voltar');
+      back.classList.add('!w-10', '!min-h-10', '!px-0', 'rounded-full', 'text-lg');
+      back.onclick = () => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = session?.role === 'client' ? 'client-home.html' : 'index.html';
+      };
+    }
+
+    if (home) {
+      home.innerHTML = '⌂';
+      home.setAttribute('aria-label', 'Home');
+      home.classList.add('!w-10', '!min-h-10', '!px-0', 'rounded-full', 'text-lg');
+      if (!session) home.setAttribute('href', 'index.html');
+      else if (session.role === 'client') home.setAttribute('href', 'client-home.html');
+      else if (session.role === 'barber') home.setAttribute('href', 'barber-home.html');
+      else if (session.role === 'super_admin') home.setAttribute('href', 'super-admin-tenants.html');
+      else home.setAttribute('href', 'admin-home.html');
+    }
+
+    const left = document.createElement('div');
+    left.className = 'quick-nav-left flex items-center gap-2';
+    if (back) left.appendChild(back);
+    if (home) left.appendChild(home);
+    if (left.children.length) nav.prepend(left);
+
+    const menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.className = 'button button-secondary quick-menu-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
+    menuBtn.setAttribute('aria-label', 'Abrir menu');
+    menuBtn.textContent = '☰';
+
+    const panel = document.createElement('div');
+    panel.className = 'quick-menu-panel';
+
+    const appendMenuLink = (href, label) => {
+      const item = document.createElement('a');
+      item.href = href;
+      item.className = 'button button-secondary quick-menu-item';
+      item.textContent = label;
+      panel.appendChild(item);
+    };
+
+    const appendMenuButton = (label, onClick) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'button button-secondary quick-menu-item';
+      item.textContent = label;
+      item.addEventListener('click', onClick);
+      panel.appendChild(item);
+    };
+
+    const extras = Array.from(nav.children).filter((el) => el !== left && el !== menuBtn && el !== panel);
+    extras.forEach((el) => {
+      if (el === home || el === back) return;
+      if (el.matches('[data-logout]')) {
+        if (session) appendMenuButton('Sair', handleLogout);
+      } else if (el.tagName === 'A') {
+        appendMenuLink(el.getAttribute('href') || '#', el.textContent.trim() || 'Acessar');
+      } else if (el.tagName === 'BUTTON') {
+        appendMenuButton(el.textContent.trim() || 'Ação', () => el.click());
+      }
+      el.remove();
     });
-  });
 
-  document.querySelectorAll('[data-home]').forEach((link) => {
-    if (!session) link.setAttribute('href', 'index.html');
-    else if (session.role === 'client') link.setAttribute('href', 'client-home.html');
-    else if (session.role === 'barber') link.setAttribute('href', 'barber-home.html');
-    else if (session.role === 'super_admin') link.setAttribute('href', 'super-admin-tenants.html');
-    else link.setAttribute('href', 'admin-home.html');
-  });
+    if (session?.role === 'client') {
+      const existing = new Set(Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href')));
+      getClientMenuDefaults().forEach(([href, label]) => {
+        if (!existing.has(href)) appendMenuLink(href, label);
+      });
+      if (!panel.querySelector('button')) appendMenuButton('Sair', handleLogout);
+    }
 
-  document.querySelectorAll('[data-logout]').forEach((btn) => {
-    btn.style.display = session ? 'inline-flex' : 'none';
-    btn.addEventListener('click', () => {
-      clearSession();
-      resetBooking();
-      window.location.href = 'login.html';
+    if (!panel.children.length) return;
+
+    const right = document.createElement('div');
+    right.className = 'quick-nav-right relative';
+    right.appendChild(menuBtn);
+    right.appendChild(panel);
+    nav.appendChild(right);
+
+    menuBtn.addEventListener('click', () => {
+      panel.classList.toggle('is-open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!right.contains(e.target)) panel.classList.remove('is-open');
     });
   });
 }
