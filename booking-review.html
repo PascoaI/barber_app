@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agendamento · Revisão | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card booking-review-card">
+        <nav class="booking-tabs" aria-label="Navegação do cliente">
+          <a class="booking-tab is-active" href="booking-review.html">Agendar</a>
+          <a class="booking-tab" href="my-schedules.html">Meus horários</a>
+        </nav>
+
+        <div id="review-list" class="review-list"></div>
+
+        <div class="review-footer">
+          <p id="review-price" class="review-price">A partir de -</p>
+          <p id="review-address" class="review-address">-</p>
+          <p class="notice">Você não indicou preferência de profissional quando escolher “Sem preferência”.</p>
+          <p class="notice">O tempo de execução pode variar de acordo com o profissional disponível no momento.</p>
+          <button id="review-action" class="button button-danger" type="button">Efetuar login para continuar</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

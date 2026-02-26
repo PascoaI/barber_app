@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · Bloqueio de horários | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page booking-page">
+      <section class="booking-card">
+        <a class="back-link" href="admin-home.html">← Dashboard</a>
+        <h1>Bloquear horários</h1>
+        <p class="subtitle">Bloqueios manuais por barbeiro (folga, reunião, etc.).</p>
+
+        <form id="blocked-slot-form" class="auth-form">
+          <label for="blocked-barber">Barbeiro</label>
+          <select id="blocked-barber" required></select>
+
+          <label for="blocked-start">Início</label>
+          <input id="blocked-start" type="datetime-local" required />
+
+          <label for="blocked-end">Fim</label>
+          <input id="blocked-end" type="datetime-local" required />
+
+          <label for="blocked-reason">Motivo</label>
+          <input id="blocked-reason" type="text" placeholder="Ex.: Reunião" required />
+
+          <button class="button button-primary" type="submit">Criar bloqueio</button>
+        </form>
+
+        <div id="blocked-slot-list" class="admin-schedules-list"></div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

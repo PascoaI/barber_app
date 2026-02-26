@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="form-card">
+        <a class="back-link" href="index.html">← Voltar</a>
+        <h1>Criar conta</h1>
+        <p class="subtitle">Configure sua barbearia e comece a receber agendamentos online.</p>
+
+        <form class="auth-form" action="#" method="post">
+          <label for="shop">Nome da barbearia</label>
+          <input id="shop" name="shop" type="text" placeholder="Barbearia Exemplo" required />
+
+          <label for="owner">Nome do responsável</label>
+          <input id="owner" name="owner" type="text" placeholder="Seu nome" required />
+
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" placeholder="contato@barbearia.com" required />
+
+          <label for="phone">WhatsApp</label>
+          <input id="phone" name="phone" type="tel" placeholder="(11) 99999-9999" required />
+
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" placeholder="Crie uma senha forte" required />
+
+          <button class="button button-primary" type="submit">Começar agora</button>
+        </form>
+
+        <p class="switch-text">
+          Já possui conta?
+          <a href="login.html">Fazer login</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
