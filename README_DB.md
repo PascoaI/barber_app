@@ -301,3 +301,37 @@ CREATE INDEX idx_audit_entity ON audit_logs(entity, entity_id);
 - Garantir isolamento multi-tenant:
   - Todas as queries devem filtrar por `tenant_id`
 - Implementar soft delete quando necessário para manter histórico.
+
+
+## 16) Robustez e maturidade (Fase 3)
+
+```sql
+-- Soft delete global
+ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP NULL;
+ALTER TABLE barbers ADD COLUMN deleted_at TIMESTAMP NULL;
+ALTER TABLE services ADD COLUMN deleted_at TIMESTAMP NULL;
+ALTER TABLE units ADD COLUMN deleted_at TIMESTAMP NULL;
+ALTER TABLE products ADD COLUMN deleted_at TIMESTAMP NULL;
+
+-- Índices compostos para performance
+CREATE INDEX idx_appointments_tenant_unit_start ON appointments(tenant_id, unit_id, start_datetime);
+CREATE INDEX idx_appointments_barber_start ON appointments(barber_id, start_datetime);
+CREATE INDEX idx_appointments_unit_status ON appointments(unit_id, status);
+CREATE INDEX idx_users_tenant_role ON users(tenant_id, role);
+CREATE INDEX idx_products_unit_quantity ON products(unit_id, quantity);
+
+-- Auditoria avançada
+ALTER TABLE audit_logs ADD COLUMN ip_address INET;
+ALTER TABLE audit_logs ADD COLUMN user_agent TEXT;
+ALTER TABLE audit_logs ADD COLUMN before_state JSONB;
+ALTER TABLE audit_logs ADD COLUMN after_state JSONB;
+```
+
+### EXPLAIN (revisão obrigatória de queries críticas)
+
+```sql
+EXPLAIN SELECT unit_id, SUM(amount) FROM payments WHERE paid_at BETWEEN :start AND :end GROUP BY unit_id;
+EXPLAIN SELECT barber_id, COUNT(*) FROM appointments WHERE unit_id = :unit AND start_datetime BETWEEN :start AND :end GROUP BY barber_id;
+EXPLAIN SELECT * FROM appointments WHERE tenant_id = :tenant AND unit_id = :unit AND start_datetime BETWEEN :start AND :end ORDER BY start_datetime;
+EXPLAIN SELECT DATE_TRUNC('month', paid_at) AS month, SUM(amount) FROM payments WHERE unit_id = :unit GROUP BY 1 ORDER BY 1 DESC;
+```
