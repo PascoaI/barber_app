@@ -2,9 +2,9 @@
    BarberPro Design System (SaaS 2025)
    ========================= */
 :root {
-  --primary: #2f6df6;
-  --primary-strong: #1f57d7;
-  --secondary: #14b8a6;
+  --primary: #c69a45;
+  --primary-strong: #a87a2f;
+  --secondary: #d8b26a;
 
   --background: #090c14;
   --surface: #111624;
@@ -61,8 +61,8 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   background:
-    radial-gradient(1200px 500px at 10% -15%, rgba(124, 92, 255, 0.24), transparent 55%),
-    radial-gradient(900px 450px at 100% 0%, rgba(24, 199, 168, 0.14), transparent 50%),
+    radial-gradient(1200px 540px at 8% -12%, rgba(198, 154, 69, 0.16), transparent 58%),
+    radial-gradient(900px 420px at 100% -4%, rgba(168, 122, 47, 0.1), transparent 55%),
     var(--background);
   -webkit-font-smoothing: antialiased;
   animation: fade-in 320ms ease-out;
@@ -138,7 +138,7 @@ a {
 
 .booking-review-card {
   background:
-    linear-gradient(180deg, rgba(124, 92, 255, 0.08) 0%, rgba(124, 92, 255, 0) 25%),
+    linear-gradient(180deg, rgba(198, 154, 69, 0.09) 0%, rgba(198, 154, 69, 0) 30%),
     linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
 }
 
@@ -288,6 +288,7 @@ textarea:invalid {
 
 .button:hover {
   transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
 .button:active {
@@ -915,5 +916,39 @@ textarea:invalid {
 
   .quick-nav .button {
     flex: 1 1 auto;
+  }
+}
+
+
+/* =========================
+   Login/Auth mobile refinements
+   ========================= */
+@media (max-width: 759px) {
+  .page {
+    align-items: start;
+  }
+
+  .form-card {
+    width: 100%;
+    margin-top: var(--space-4);
+  }
+
+  .form-card .subtitle {
+    margin-bottom: var(--space-4);
+  }
+
+  .login-help,
+  .login-help-small {
+    line-height: 1.55;
+  }
+
+  .auth-form .form-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .auth-form .button {
+    width: 100%;
   }
 }
