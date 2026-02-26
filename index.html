@@ -11,49 +11,21 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#c69a45',
-              'primary-dark': '#a87a2f',
-              background: '#090c14',
-              surface: '#111624',
-              borderc: '#28314a',
-              'text-primary': '#edf2ff',
-              'text-secondary': '#9da8c3'
-            },
-            fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif']
-            },
-            borderRadius: {
-              xl: '1rem',
-              '2xl': '1.25rem'
-            },
-            boxShadow: {
-              soft: '0 10px 30px rgba(0,0,0,0.24)'
-            }
-          }
-        }
-      }
-    </script>
   </head>
   <body>
-    <main class="page page-landing min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-10 md:py-14">
-      <section class="hero-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 md:p-8 space-y-4">
-        <div class="brand-pill inline-flex rounded-full border border-primary/50 bg-primary/10 text-primary px-3 py-1 text-xs font-semibold uppercase tracking-wide">BarberPro</div>
+    <main class="page page-landing">
+      <section class="hero-card">
+        <div class="brand-pill">BarberPro</div>
         <h1>Sistema de agendamento online para barbearias</h1>
         <p>
           Um site rápido, moderno e pronto para celular. Seus clientes agendam em poucos
           toques, e sua barbearia mantém os horários organizados.
         </p>
 
-        <div class="cta-group grid gap-3 my-5">
-          <a class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" href="login.html">Entrar no sistema</a>
-          <a class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" href="register.html">Criar conta</a>
-          <a class="button button-ghost inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20" href="booking-location.html">Ver fluxo de agendamento</a>
+        <div class="cta-group">
+          <a class="button button-primary" href="login.html">Entrar no sistema</a>
+          <a class="button button-secondary" href="register.html">Criar conta</a>
+          <a class="button button-ghost" href="booking-location.html">Ver fluxo de agendamento</a>
         </div>
 
         <ul class="feature-list">
