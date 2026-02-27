@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: {
+              xl: '1rem',
+              '2xl': '1.25rem'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(0,0,0,0.24)'
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans">
+      <section class="form-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 md:p-8 space-y-4">
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="index.html">← Voltar</a>
+        <h1>Entrar</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Acesse sua conta para gerenciar horários e clientes.</p>
+
+        <p class="login-help text-sm text-text-secondary">Use suas credenciais. O sistema identifica automaticamente se você é cliente, barbeiro ou admin.</p>
+        <p class="login-help login-help-small text-sm text-text-secondary text-xs">Demo: cliente@barber.com / 123456 · admin@barber.com / 123456 · barbeiros cadastrados pelo admin</p>
+        <p id="login-feedback" class="login-feedback text-sm text-red-300 min-h-[1.25rem]" role="alert" aria-live="polite"></p>
+
+        <form class="auth-form grid gap-3" action="#" method="post">
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" placeholder="barbearia@email.com" required />
+
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" placeholder="••••••••" required />
+
+          <div class="form-row flex flex-wrap items-center justify-between gap-2">
+            <label class="checkbox-wrap inline-flex items-center gap-2 text-sm text-text-secondary">
+              <input type="checkbox" name="remember" />
+              <span>Lembrar acesso</span>
+            </label>
+            <a class="link-muted text-sm text-text-secondary hover:text-text-primary" href="#">Esqueci a senha</a>
+          </div>
+
+          <button class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]" type="submit">Entrar</button>
+        </form>
+
+        <p class="switch-text text-center text-text-secondary text-sm mt-4">
+          Ainda não tem conta?
+          <a href="register.html">Criar agora</a>
+        </p>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
