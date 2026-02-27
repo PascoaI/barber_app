@@ -1533,6 +1533,12 @@ function initAdminDashboard() {
   if (!wrap) return;
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
+  const unitLabel = document.getElementById('admin-unit-label');
+  if (unitLabel) {
+    const brand = getBrandSettings();
+    unitLabel.textContent = brand?.shopName || APP_CONFIG.unitId || 'Unidade atual';
+  }
+
   const metrics = getDashboardMetrics();
   renderMetrics(wrap, metrics);
 
@@ -1544,7 +1550,94 @@ function initAdminDashboard() {
     alertCard.innerHTML = `<h3>⚠️ Alerta de estoque baixo</h3><p>${alerts}</p>`;
     wrap.appendChild(alertCard);
   }
+
+  const appointmentsRoot = document.getElementById('admin-appointments-summary');
+  const financeRoot = document.getElementById('admin-finance-summary');
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+  const appointments = getAppointments();
+  const todayAppointments = appointments.filter((a) => {
+    const d = new Date(a.start_datetime);
+    return d >= startOfToday && d < new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+  });
+  const weekAppointments = appointments.filter((a) => {
+    const d = new Date(a.start_datetime);
+    return d >= startOfWeek && d < endOfWeek;
+  });
+
+  const renderAppointments = (rows, title) => {
+    if (!appointmentsRoot) return;
+    const list = rows
+      .slice(0, 5)
+      .map((a) => `<article class="schedule-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)} · ${a.barber_name}</p><small>Status: ${getBookingStatusLabel(a.status)}</small></article>`)
+      .join('');
+    appointmentsRoot.innerHTML = `
+      <header class="flex items-center justify-between mb-3"><h3>${title}</h3><small class="text-text-secondary">${rows.length} registros</small></header>
+      <div class="grid gap-2">${list || '<article class="schedule-item"><p>Sem agendamentos no período.</p></article>'}</div>
+    `;
+  };
+
+  const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
+  const revenueToday = payments
+    .filter((p) => {
+      const d = new Date(p.paid_at || p.created_at || 0);
+      return d >= startOfToday && d < new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+    })
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const revenueWeek = payments
+    .filter((p) => {
+      const d = new Date(p.paid_at || p.created_at || 0);
+      return d >= startOfWeek && d < endOfWeek;
+    })
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+  const renderFinance = (revenue, totalAppointments, label) => {
+    if (!financeRoot) return;
+    const avgTicket = totalAppointments ? revenue / totalAppointments : 0;
+    financeRoot.innerHTML = `
+      <header class="flex items-center justify-between mb-3"><h3>Resumo financeiro (${label})</h3><small class="text-text-secondary">Atualizado agora</small></header>
+      <div class="grid gap-2 md:grid-cols-2">
+        <article class="schedule-item"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p></article>
+        <article class="schedule-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
+      </div>
+    `;
+  };
+
+  const tabButtons = Array.from(document.querySelectorAll('[data-admin-tab]'));
+  const setTab = (tab) => {
+    tabButtons.forEach((btn) => {
+      const isActive = btn.dataset.adminTab === tab;
+      btn.classList.toggle('button-primary', isActive);
+      btn.classList.toggle('button-secondary', !isActive);
+      btn.classList.toggle('ring-2', isActive);
+      btn.classList.toggle('ring-primary/40', isActive);
+      btn.classList.toggle('shadow-md', isActive);
+      btn.classList.toggle('scale-[1.01]', isActive);
+      btn.classList.toggle('opacity-90', !isActive);
+    });
+
+    if (tab === 'today') {
+      renderAppointments(todayAppointments, 'Agendamentos de hoje');
+      renderFinance(revenueToday, todayAppointments.length, 'Hoje');
+    } else {
+      renderAppointments(weekAppointments, 'Agendamentos da semana');
+      renderFinance(revenueWeek, weekAppointments.length, 'Semana');
+    }
+  };
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => setTab(btn.dataset.adminTab || 'today'));
+  });
+
+  setTab('today');
 }
+
 
 function initClientHomePage() {
   const wrap = document.getElementById('client-branding');
