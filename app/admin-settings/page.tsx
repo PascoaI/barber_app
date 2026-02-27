@@ -172,8 +172,8 @@ export default function AdminSettingsPage() {
       </section>
 
       {showSuccessModal && (
-        <div className="modal-overlay is-open fixed inset-0 z-50 items-center justify-center bg-black/70 p-4">
-          <div className="booking-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 text-center">
+        <div className="modal-overlay is-open app-success-modal">
+          <div className="booking-card app-success-modal__card">
             <h2 className="text-xl font-semibold mb-2">Alterações salvas</h2>
             <p className="text-text-secondary mb-5">Configurações atualizadas com sucesso.</p>
             <button
