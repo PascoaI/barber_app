@@ -26,7 +26,6 @@ export default function ClientProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -90,9 +89,8 @@ export default function ClientProfilePage() {
       const { error: updateError } = await supabase.from('users').update(payload).eq('id', user.id);
       if (updateError) throw updateError;
 
-      setFeedback(null);
+      setFeedback({ type: 'success', message: 'Operação concluída com sucesso.' });
       await loadProfile();
-      setShowSuccessModal(true);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Erro ao salvar perfil.' });
     } finally {
@@ -134,25 +132,6 @@ export default function ClientProfilePage() {
           {feedback && <small style={{ color: feedback.type === 'success' ? '#60d394' : '#ff7b7b' }}>{feedback.message}</small>}
         </form>
       </section>
-
-      {showSuccessModal && (
-        <div className="modal-overlay is-open app-success-modal">
-          <div className="booking-card app-success-modal__card">
-            <h2 className="text-xl font-semibold mb-2">Alterações salvas</h2>
-            <p className="text-text-secondary mb-5">Perfil atualizado com sucesso.</p>
-            <button
-              type="button"
-              className="button button-primary w-full"
-              onClick={() => {
-                setShowSuccessModal(false);
-                window.location.href = '/client';
-              }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

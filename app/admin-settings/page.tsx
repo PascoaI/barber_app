@@ -32,7 +32,6 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -117,9 +116,8 @@ export default function AdminSettingsPage() {
       const { error: updateError } = await supabase.from('unit_settings').update(payload).eq('unit_id', form.unit_id);
       if (updateError) throw updateError;
 
-      setFeedback(null);
+      setFeedback({ type: 'success', message: 'Operação concluída com sucesso.' });
       await loadSettings();
-      setShowSuccessModal(true);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Erro ao salvar configurações.' });
     } finally {
@@ -171,24 +169,6 @@ export default function AdminSettingsPage() {
         </form>
       </section>
 
-      {showSuccessModal && (
-        <div className="modal-overlay is-open app-success-modal">
-          <div className="booking-card app-success-modal__card">
-            <h2 className="text-xl font-semibold mb-2">Alterações salvas</h2>
-            <p className="text-text-secondary mb-5">Configurações atualizadas com sucesso.</p>
-            <button
-              type="button"
-              className="button button-primary w-full"
-              onClick={() => {
-                setShowSuccessModal(false);
-                window.location.href = '/admin';
-              }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
