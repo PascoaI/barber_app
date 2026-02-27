@@ -1611,8 +1611,16 @@ function initAdminDashboard() {
 
   const tabButtons = Array.from(document.querySelectorAll('[data-admin-tab]'));
   const setTab = (tab) => {
-    tabButtons.forEach((btn) => btn.classList.toggle('button-primary', btn.dataset.adminTab === tab));
-    tabButtons.forEach((btn) => btn.classList.toggle('button-secondary', btn.dataset.adminTab !== tab));
+    tabButtons.forEach((btn) => {
+      const isActive = btn.dataset.adminTab === tab;
+      btn.classList.toggle('button-primary', isActive);
+      btn.classList.toggle('button-secondary', !isActive);
+      btn.classList.toggle('ring-2', isActive);
+      btn.classList.toggle('ring-primary/40', isActive);
+      btn.classList.toggle('shadow-md', isActive);
+      btn.classList.toggle('scale-[1.01]', isActive);
+      btn.classList.toggle('opacity-90', !isActive);
+    });
 
     if (tab === 'today') {
       renderAppointments(todayAppointments, 'Agendamentos de hoje');

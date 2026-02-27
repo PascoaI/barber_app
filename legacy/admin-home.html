@@ -51,10 +51,10 @@
             <h1 class="text-2xl md:text-3xl">Dashboard</h1>
             <p class="subtitle text-text-secondary">Unidade: <strong id="admin-unit-label">-</strong></p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto">
-            <a class="button button-secondary w-full" href="admin-schedules.html">Ver Agendamentos</a>
-            <a class="button button-secondary w-full" href="admin-finance.html">Financeiro</a>
-            <a class="button button-secondary w-full" href="admin-settings.html">Configurações</a>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full md:w-auto">
+            <a class="button button-secondary w-full !min-h-12 md:!min-h-11 !text-sm md:!text-[13px] !font-semibold rounded-2xl border-primary/25 bg-gradient-to-b from-slate-800/80 to-slate-900/70 hover:border-primary/70 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200" href="admin-schedules.html">📅 Agendamentos</a>
+            <a class="button button-secondary w-full !min-h-12 md:!min-h-11 !text-sm md:!text-[13px] !font-semibold rounded-2xl border-emerald-400/20 bg-gradient-to-b from-slate-800/80 to-slate-900/70 hover:border-emerald-300/60 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-200" href="admin-finance.html">💸 Financeiro</a>
+            <a class="button button-secondary w-full !min-h-12 md:!min-h-11 !text-sm md:!text-[13px] !font-semibold rounded-2xl border-indigo-400/20 bg-gradient-to-b from-slate-800/80 to-slate-900/70 hover:border-indigo-300/60 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-200" href="admin-settings.html">⚙️ Configurações</a>
           </div>
         </header>
 
@@ -66,9 +66,9 @@
         <section class="grid gap-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h2>Resumo do painel</h2>
-            <div class="inline-flex gap-2">
-              <button type="button" class="button button-primary" data-admin-tab="today">Hoje</button>
-              <button type="button" class="button button-secondary" data-admin-tab="week">Esta semana</button>
+            <div class="inline-flex gap-2 p-1 rounded-2xl border border-borderc bg-slate-900/40">
+              <button type="button" class="button button-primary admin-period-tab !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl shadow-sm" data-admin-tab="today">Hoje</button>
+              <button type="button" class="button button-secondary admin-period-tab !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-admin-tab="week">Esta semana</button>
             </div>
           </div>
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
