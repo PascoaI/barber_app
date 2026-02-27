@@ -1,0 +1,16 @@
+# Copie para .npmrc e ajuste para seu ambiente corporativo
+# cp .npmrc.example .npmrc
+
+registry=https://registry.npmjs.org/
+always-auth=true
+
+# Se sua empresa usa repositório privado (Artifactory/Nexus/GitHub Packages),
+# substitua o registry e configure token de leitura.
+# Exemplo:
+# registry=https://<seu-registry>/repository/npm-group/
+# // <seu-registry>/repository/npm-group/:_authToken=${NPM_TOKEN}
+
+# Configuração de proxy (se necessário)
+# proxy=http://proxy:8080
+# https-proxy=http://proxy:8080
+# strict-ssl=true
