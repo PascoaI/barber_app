@@ -496,6 +496,24 @@ textarea:focus {
 }
 
 
+.app-success-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.app-success-modal__card {
+  width: min(100%, 28rem);
+  text-align: center;
+  padding: 1.5rem;
+}
+
+
 .button-primary {
   border: 1px solid color-mix(in srgb, var(--primary, #d4a24f) 82%, #000 6%);
   box-shadow: 0 6px 18px rgba(212, 162, 79, 0.22);
