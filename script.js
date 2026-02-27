@@ -1852,25 +1852,17 @@ function initClientProfilePage() {
   const nameEl = document.getElementById('profile-name');
   const emailEl = document.getElementById('profile-email');
   const phoneEl = document.getElementById('profile-phone');
-  const favEl = document.getElementById('profile-favorite-barber');
-  const unitEl = document.getElementById('profile-default-unit');
   nameEl.value = profile.name || '';
   emailEl.value = profile.email || session.email;
   phoneEl.value = profile.phone || '';
-  populateSelect(favEl, getBarbers(), 'Sem favorito');
-  favEl.value = profile.favorite_barber_id || '';
-  unitEl.value = profile.default_unit_id || APP_CONFIG.unitId;
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const patch = {
       name: sanitizeText(nameEl.value),
       phone: sanitizeText(phoneEl.value),
-      favorite_barber_id: favEl.value || null,
-      default_unit_id: unitEl.value || APP_CONFIG.unitId,
       updated_by: session.email
     };
     saveClientProfile(session.email, patch);
-    saveClientFavorite(session.email, favEl.value || null);
     logAudit('client_profile_updated', { user_id: session.email, changes: patch });
     let feedback = form.querySelector('[data-profile-feedback]');
     if (!feedback) {
