@@ -9,6 +9,8 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --text-primary: #edf2ff;
   --text-secondary: #9da8c3;
+  --brand: #c69a45;
+  --primary: var(--brand);
 }
 
 * {
@@ -498,6 +500,8 @@ textarea:focus {
 
 .button-primary {
   border: 1px solid color-mix(in srgb, var(--primary, #d4a24f) 82%, #000 6%);
+  background: var(--brand, #c69a45);
+  color: #111827;
   box-shadow: 0 6px 18px rgba(212, 162, 79, 0.22);
 }
 
@@ -689,4 +693,22 @@ textarea:focus {
 
 .subscription-plan-card {
   border: 1px solid rgba(198, 154, 69, 0.28);
+}
+
+
+.subscription-static-card {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none;
+}
+
+.subscription-static-card:hover {
+  transform: none !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+.subscription-clickable-card {
+  cursor: pointer;
 }

@@ -77,6 +77,23 @@ function from(table: string) {
         }
       };
     },
+
+    upsert(payload: Record<string, unknown>, opts?: { onConflict?: string }) {
+      return {
+        async execute() {
+          const conflict = opts?.onConflict ? `?on_conflict=${encodeURIComponent(opts.onConflict)}` : '';
+          const path = `/rest/v1/${table}${conflict}`;
+          const { error } = await request<unknown>(path, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+              Prefer: 'resolution=merge-duplicates,return=minimal'
+            }
+          });
+          return { error: mapError(error) };
+        }
+      };
+    },
     update(payload: Record<string, unknown>) {
       return {
         async eq(column: string, value: string) {

@@ -1770,12 +1770,12 @@ function initClientSubscriptionsPage() {
   const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
   root.innerHTML = `
     <section class="subscription-info-stack">
-      ${active ? `<article class=\"schedule-item\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
-      <article class=\"schedule-item\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
+      ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
+      <article class=\"schedule-item subscription-static-card\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
     </section>
     <section class="subscription-plans-stack">
-      <article class=\"schedule-item\"><h3>Planos disponíveis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
-      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[🥉🥈🥇]\s*/, '')}</button></div></article>`).join('')}
+      <article class=\"schedule-item subscription-static-card\"><h3>Planos disponíveis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
+      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card subscription-clickable-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[🥉🥈🥇]\s*/, '')}</button></div></article>`).join('')}
     </section>
   `;
 
@@ -1845,7 +1845,7 @@ function initClientProfilePage() {
   if (!form) return;
   const session = getSession();
   if (!session || !hasRole('client')) {
-    window.location.href = 'login.html?redirect=client-profile.html';
+    window.location.href = 'login.html?redirect=client-profile';
     return;
   }
   const profile = getClientProfile(session.email);
@@ -1975,7 +1975,7 @@ function initGlobalNavigation() {
   const getClientMenuDefaults = () => [
     ['client-subscriptions.html', 'Assinaturas'],
     ['client-history.html', 'Histórico'],
-    ['client-profile.html', 'Meu perfil'],
+    ['client-profile', 'Meu perfil'],
     ['client-notifications.html', 'Notificações']
   ];
 
