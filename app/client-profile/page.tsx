@@ -26,6 +26,7 @@ export default function ClientProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -89,8 +90,9 @@ export default function ClientProfilePage() {
       const { error: updateError } = await supabase.from('users').update(payload).eq('id', user.id);
       if (updateError) throw updateError;
 
-      setFeedback({ type: 'success', message: 'Perfil salvo com sucesso.' });
+      setFeedback(null);
       await loadProfile();
+      setShowSuccessModal(true);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Erro ao salvar perfil.' });
     } finally {
@@ -132,6 +134,25 @@ export default function ClientProfilePage() {
           {feedback && <small style={{ color: feedback.type === 'success' ? '#60d394' : '#ff7b7b' }}>{feedback.message}</small>}
         </form>
       </section>
+
+      {showSuccessModal && (
+        <div className="modal-overlay is-open fixed inset-0 z-50 items-center justify-center bg-black/70 p-4">
+          <div className="booking-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">Alterações salvas</h2>
+            <p className="text-text-secondary mb-5">Perfil atualizado com sucesso.</p>
+            <button
+              type="button"
+              className="button button-primary w-full"
+              onClick={() => {
+                setShowSuccessModal(false);
+                window.location.href = '/client';
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
