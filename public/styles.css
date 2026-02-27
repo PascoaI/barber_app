@@ -694,3 +694,21 @@ textarea:focus {
 .subscription-plan-card {
   border: 1px solid rgba(198, 154, 69, 0.28);
 }
+
+
+.subscription-static-card {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none;
+}
+
+.subscription-static-card:hover {
+  transform: none !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+.subscription-clickable-card {
+  cursor: pointer;
+}
