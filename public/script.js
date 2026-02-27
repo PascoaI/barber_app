@@ -1883,110 +1883,17 @@ function initClientProfilePage() {
   });
 }
 
-function getClientNotificationFeed(sessionEmail) {
-  const systemRows = getNotifications()
-    .filter((n) => n.user_id === sessionEmail)
-    .map((n) => ({
-      id: n.id || `notif_${n.type}_${n.created_at || ''}`,
-      type: n.type || 'Atualização',
-      message: n.status || 'Nova atualização disponível.',
-      created_at: n.created_at || nowIso(),
-      source: 'system'
-    }));
-
-  const appointmentRows = getAppointments()
-    .filter((a) => a.client_email === sessionEmail)
-    .flatMap((a) => {
-      const createdAt = a.updated_at || a.created_at || a.start_datetime || nowIso();
-      const startTime = new Date(a.start_datetime).getTime();
-      const now = Date.now();
-      const within24h = startTime > now && (startTime - now) <= 24 * 60 * 60 * 1000;
-
-      const rows = [];
-      if (a.status === 'confirmed') {
-        rows.push({
-          id: `appt_confirmed_${a.id}`,
-          type: 'Confirmação de agendamento',
-          message: `${a.service_name} em ${formatBookingDateTime(a.appointment_date, a.start_time)} foi confirmado.`,
-          created_at: createdAt,
-          source: 'appointment'
-        });
-      }
-      if (a.status === 'canceled') {
-        rows.push({
-          id: `appt_canceled_${a.id}`,
-          type: 'Cancelamento',
-          message: `Seu agendamento de ${a.service_name} foi cancelado.`,
-          created_at: createdAt,
-          source: 'appointment'
-        });
-      }
-      if (a.status === 'pending') {
-        rows.push({
-          id: `appt_pending_${a.id}`,
-          type: 'Atualização de status',
-          message: `Seu agendamento de ${a.service_name} está pendente de confirmação.`,
-          created_at: createdAt,
-          source: 'appointment'
-        });
-      }
-      if (within24h) {
-        rows.push({
-          id: `appt_reminder_${a.id}`,
-          type: 'Lembrete',
-          message: `Você tem ${a.service_name} em ${formatBookingDateTime(a.appointment_date, a.start_time)}.`,
-          created_at: a.start_datetime,
-          source: 'reminder'
-        });
-      }
-      return rows;
-    });
-
-  const dedup = new Map();
-  [...systemRows, ...appointmentRows].forEach((row) => {
-    if (!dedup.has(row.id)) dedup.set(row.id, row);
-  });
-
-  return Array.from(dedup.values())
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    .slice(0, 12);
-}
-
 function createClientNotificationsBell(session) {
   if (!session || session.role !== 'client') return null;
 
-  const feed = getClientNotificationFeed(session.email);
-
   const bellBtn = document.createElement('button');
   bellBtn.type = 'button';
-  bellBtn.className = 'button button-secondary quick-menu-trigger quick-notification-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
-  bellBtn.setAttribute('aria-label', 'Abrir notificações');
+  bellBtn.className = 'button button-secondary quick-menu-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
+  bellBtn.setAttribute('aria-label', 'Notificações (em breve)');
+  bellBtn.title = 'Notificações (em breve)';
   bellBtn.textContent = '🔔';
 
-  const unreadCount = feed.filter((item) => item.source !== 'reminder').length;
-  if (unreadCount > 0) {
-    const badge = document.createElement('span');
-    badge.className = 'quick-notification-badge';
-    badge.textContent = String(Math.min(unreadCount, 9));
-    bellBtn.appendChild(badge);
-  }
-
-  const panel = document.createElement('div');
-  panel.className = 'quick-notification-panel';
-
-  if (!feed.length) {
-    panel.innerHTML = '<article class="quick-notification-item"><strong>Sem notificações</strong><small>Quando houver atualizações, elas aparecerão aqui.</small></article>';
-  } else {
-    panel.innerHTML = feed.map((item) => `
-      <article class="quick-notification-item">
-        <strong>${item.type}</strong>
-        <p>${item.message}</p>
-        <small>${new Date(item.created_at || nowIso()).toLocaleString('pt-BR')}</small>
-      </article>
-    `).join('');
-  }
-
-  return { bellBtn, panel };
+  return { bellBtn };
 }
 
 function initClientNotificationsPage() {
@@ -2198,11 +2105,6 @@ function initGlobalNavigation() {
     const notifications = createClientNotificationsBell(session);
     if (notifications) {
       right.appendChild(notifications.bellBtn);
-      right.appendChild(notifications.panel);
-      notifications.bellBtn.addEventListener('click', () => {
-        notifications.panel.classList.toggle('is-open');
-        panel.classList.remove('is-open');
-      });
     }
 
     right.appendChild(menuBtn);
@@ -2211,13 +2113,11 @@ function initGlobalNavigation() {
 
     menuBtn.addEventListener('click', () => {
       panel.classList.toggle('is-open');
-      if (notifications) notifications.panel.classList.remove('is-open');
     });
 
     document.addEventListener('click', (e) => {
       if (!right.contains(e.target)) {
         panel.classList.remove('is-open');
-        if (notifications) notifications.panel.classList.remove('is-open');
       }
     });
   });

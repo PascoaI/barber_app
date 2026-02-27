@@ -615,65 +615,12 @@ textarea:focus {
 }
 
 
-.quick-notification-trigger {
-  position: relative;
-}
 
-.quick-notification-badge {
-  position: absolute;
-  top: -0.2rem;
-  right: -0.2rem;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #0b1222;
-  background: var(--primary, #d4a24f);
-}
 
-.quick-notification-panel {
-  position: absolute;
-  right: 3.2rem;
-  top: calc(100% + 0.45rem);
-  z-index: 25;
-  width: min(24rem, 85vw);
-  max-height: 24rem;
-  overflow: auto;
-  display: none;
-  gap: 0.55rem;
-  padding: 0.65rem;
-  border: 1px solid rgba(140, 159, 205, 0.35);
-  border-radius: 0.9rem;
-  background: linear-gradient(180deg, rgba(8, 14, 30, 0.96), rgba(7, 12, 24, 0.93));
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.32);
-}
 
-.quick-notification-panel.is-open {
-  display: grid;
-}
 
-.quick-notification-item {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.6rem;
-  border: 1px solid rgba(138, 157, 204, 0.26);
-  border-radius: 0.75rem;
-  background: rgba(10, 18, 35, 0.7);
-}
 
-.quick-notification-item p {
-  margin: 0;
-  font-size: 0.86rem;
-  color: #d9e1ff;
-}
 
-.quick-notification-item small {
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-}
 
 .review-list {
   display: grid;
