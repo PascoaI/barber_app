@@ -1,8 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import ConfirmSaveModal from '@/app/_components/ConfirmSaveModal';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 type UnitSettingsForm = {
@@ -34,8 +32,6 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -120,9 +116,8 @@ export default function AdminSettingsPage() {
       const { error: updateError } = await supabase.from('unit_settings').update(payload).eq('unit_id', form.unit_id);
       if (updateError) throw updateError;
 
-      setFeedback(null);
+      setFeedback({ type: 'success', message: 'Operação concluída com sucesso.' });
       await loadSettings();
-      setIsOpen(true);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Erro ao salvar configurações.' });
     } finally {
@@ -174,14 +169,6 @@ export default function AdminSettingsPage() {
         </form>
       </section>
 
-      <ConfirmSaveModal
-        isOpen={isOpen}
-        title="Alterações salvas!"
-        message="Configurações atualizadas com sucesso."
-        onGoHome={() => router.push('/admin')}
-        onStay={() => setIsOpen(false)}
-        onClose={() => setIsOpen(false)}
-      />
     </main>
   );
 }

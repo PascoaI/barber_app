@@ -1,8 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import ConfirmSaveModal from '@/app/_components/ConfirmSaveModal';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 type ProfileForm = {
@@ -28,8 +26,6 @@ export default function ClientProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -93,9 +89,8 @@ export default function ClientProfilePage() {
       const { error: updateError } = await supabase.from('users').update(payload).eq('id', user.id);
       if (updateError) throw updateError;
 
-      setFeedback(null);
+      setFeedback({ type: 'success', message: 'Operação concluída com sucesso.' });
       await loadProfile();
-      setIsOpen(true);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Erro ao salvar perfil.' });
     } finally {
@@ -137,15 +132,6 @@ export default function ClientProfilePage() {
           {feedback && <small style={{ color: feedback.type === 'success' ? '#60d394' : '#ff7b7b' }}>{feedback.message}</small>}
         </form>
       </section>
-
-      <ConfirmSaveModal
-        isOpen={isOpen}
-        title="Alterações salvas!"
-        message="Perfil atualizado com sucesso."
-        onGoHome={() => router.push('/client')}
-        onStay={() => setIsOpen(false)}
-        onClose={() => setIsOpen(false)}
-      />
     </main>
   );
 }
