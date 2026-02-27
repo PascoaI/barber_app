@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Admin | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: {
+              xl: '1rem',
+              '2xl': '1.25rem'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(0,0,0,0.24)'
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
+        <nav class="quick-nav flex flex-wrap justify-end gap-2 mb-4" aria-label="Atalhos">
+          <a class="button button-secondary" href="index.html" data-home>Home</a>
+          <button class="button button-secondary" type="button" data-back>Voltar</button>
+          <button class="button button-danger" type="button" data-logout>Sair</button>
+        </nav>
+
+        <h1>Dashboard da barbearia</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Gestão de agenda, barbeiros, bloqueios, financeiro e branding.</p>
+
+        <section class="admin-section admin-section-metrics mb-5">
+          <div class="admin-section-head mb-3">
+            <h2>Visão rápida</h2>
+            <p class="subtitle text-text-secondary">Resumo operacional do dia.</p>
+          </div>
+          <div id="admin-metrics" class="admin-metrics grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </section>
+
+        <section class="admin-section admin-section-actions">
+          <div class="admin-section-head mb-3">
+            <h2>Ações administrativas</h2>
+            <p class="subtitle text-text-secondary">Atalhos para módulos de gestão.</p>
+          </div>
+          <div class="admin-grid grid grid-cols-1 md:grid-cols-2 gap-3">
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-schedules.html">
+            <strong>Agendamentos</strong>
+            <span>Visualizar e alterar status por barbeiro</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-barbers.html">
+            <strong>Gerenciar barbeiros</strong>
+            <span>Incluir, editar e excluir barbeiros</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-blocked-slots.html">
+            <strong>Bloquear horários</strong>
+            <span>Bloqueios manuais da agenda por barbeiro</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-finance.html">
+            <strong>Financeiro</strong>
+            <span>Faturamento, ticket médio e receitas</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-unit-settings.html">
+            <strong>Configurações de agenda</strong>
+            <span>Horário, intervalos, pré-pagamento e política de cancelamento</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-stock.html">
+            <strong>Estoque</strong>
+            <span>Produtos, mínimo e alertas de baixa</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-subscriptions.html">
+            <strong>Assinaturas de clientes</strong>
+            <span>Planos recorrentes e sessões mensais</span>
+          </a>
+          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-settings.html">
+            <strong>Configurações</strong>
+            <span>Cor predominante, logo e identidade da barbearia</span>
+          </a>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
