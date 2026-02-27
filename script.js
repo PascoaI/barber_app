@@ -1568,7 +1568,7 @@ function initClientHomePage() {
 
   const appointments = getAppointments().filter((a) => a.client_email === session.email);
   const next = appointments
-    .filter((a) => ['pending', 'confirmed', 'awaiting_payment'].includes(a.status))
+    .filter((a) => ['pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
 
   const metrics = document.getElementById('client-quick-metrics');
@@ -1852,25 +1852,17 @@ function initClientProfilePage() {
   const nameEl = document.getElementById('profile-name');
   const emailEl = document.getElementById('profile-email');
   const phoneEl = document.getElementById('profile-phone');
-  const favEl = document.getElementById('profile-favorite-barber');
-  const unitEl = document.getElementById('profile-default-unit');
   nameEl.value = profile.name || '';
   emailEl.value = profile.email || session.email;
   phoneEl.value = profile.phone || '';
-  populateSelect(favEl, getBarbers(), 'Sem favorito');
-  favEl.value = profile.favorite_barber_id || '';
-  unitEl.value = profile.default_unit_id || APP_CONFIG.unitId;
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const patch = {
       name: sanitizeText(nameEl.value),
       phone: sanitizeText(phoneEl.value),
-      favorite_barber_id: favEl.value || null,
-      default_unit_id: unitEl.value || APP_CONFIG.unitId,
       updated_by: session.email
     };
     saveClientProfile(session.email, patch);
-    saveClientFavorite(session.email, favEl.value || null);
     logAudit('client_profile_updated', { user_id: session.email, changes: patch });
     let feedback = form.querySelector('[data-profile-feedback]');
     if (!feedback) {
@@ -1881,6 +1873,19 @@ function initClientProfilePage() {
     }
     feedback.textContent = 'Perfil salvo com sucesso.';
   });
+}
+
+function createClientNotificationsBell(session) {
+  if (!session || session.role !== 'client') return null;
+
+  const bellBtn = document.createElement('button');
+  bellBtn.type = 'button';
+  bellBtn.className = 'button button-secondary quick-menu-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
+  bellBtn.setAttribute('aria-label', 'Notificações (em breve)');
+  bellBtn.title = 'Notificações (em breve)';
+  bellBtn.textContent = '🔔';
+
+  return { bellBtn };
 }
 
 function initClientNotificationsPage() {
@@ -1975,8 +1980,7 @@ function initGlobalNavigation() {
   const getClientMenuDefaults = () => [
     ['client-subscriptions.html', 'Assinaturas'],
     ['client-history.html', 'Histórico'],
-    ['client-profile', 'Meu perfil'],
-    ['client-notifications.html', 'Notificações']
+    ['client-profile', 'Perfil']
   ];
 
 
@@ -2089,6 +2093,12 @@ function initGlobalNavigation() {
 
     const right = document.createElement('div');
     right.className = 'quick-nav-right relative';
+
+    const notifications = createClientNotificationsBell(session);
+    if (notifications) {
+      right.appendChild(notifications.bellBtn);
+    }
+
     right.appendChild(menuBtn);
     right.appendChild(panel);
     nav.appendChild(right);
@@ -2098,7 +2108,9 @@ function initGlobalNavigation() {
     });
 
     document.addEventListener('click', (e) => {
-      if (!right.contains(e.target)) panel.classList.remove('is-open');
+      if (!right.contains(e.target)) {
+        panel.classList.remove('is-open');
+      }
     });
   });
 }
