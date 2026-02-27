@@ -292,7 +292,6 @@ a.button {
 #client-notifications,
 #client-history-root,
 #client-subscriptions-root,
-#client-loyalty-root,
 #client-notifications-root,
 #tenants-root,
 #subscriptions-root {
@@ -675,4 +674,19 @@ textarea:focus {
   min-height: 2.35rem;
   padding: 0.45rem 0.95rem;
   font-size: 0.9rem;
+}
+
+
+.subscription-info-stack,
+.subscription-plans-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.subscription-plans-stack {
+  margin-top: 0.35rem;
+}
+
+.subscription-plan-card {
+  border: 1px solid rgba(198, 154, 69, 0.28);
 }

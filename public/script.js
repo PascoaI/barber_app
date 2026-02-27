@@ -726,7 +726,6 @@ function finalizeAppointmentTransaction(appointment) {
   withTransaction(
     () => {
       registerPaymentAndCommission(appointment);
-      registerLoyalty(appointment);
       registerSubscriptionUsage(appointment);
       consumeStockForService(appointment);
     },
@@ -734,8 +733,6 @@ function finalizeAppointmentTransaction(appointment) {
       snapshot: () => ({
         payments: getJson(STORAGE_KEYS.payments, []),
         commissions: getJson(STORAGE_KEYS.commissions, []),
-        loyaltyPoints: getJson(STORAGE_KEYS.loyaltyPoints, {}),
-        loyaltyTx: getJson(STORAGE_KEYS.loyaltyTx, []),
         products: getJson(STORAGE_KEYS.products, []),
         productMovements: getJson(STORAGE_KEYS.productMovements, []),
         subscriptions: getJson(STORAGE_KEYS.subscriptions, []),
@@ -744,8 +741,6 @@ function finalizeAppointmentTransaction(appointment) {
       restore: (snapshot) => {
         setJson(STORAGE_KEYS.payments, snapshot.payments);
         setJson(STORAGE_KEYS.commissions, snapshot.commissions);
-        setJson(STORAGE_KEYS.loyaltyPoints, snapshot.loyaltyPoints);
-        setJson(STORAGE_KEYS.loyaltyTx, snapshot.loyaltyTx);
         setJson(STORAGE_KEYS.products, snapshot.products);
         setJson(STORAGE_KEYS.productMovements, snapshot.productMovements);
         setJson(STORAGE_KEYS.subscriptions, snapshot.subscriptions);
@@ -777,38 +772,6 @@ function registerPaymentAndCommission(appointment) {
   invalidateDashboardCache('payment_created');
 }
 
-function registerLoyalty(appointment) {
-  const settings = getUnitSettings();
-  if (!settings.loyalty_enabled) return;
-
-  const cuts = getJson(STORAGE_KEYS.loyaltyPoints, {});
-  const tx = getJson(STORAGE_KEYS.loyaltyTx, []);
-  const user = appointment.client_email;
-
-  cuts[user] = (cuts[user] || 0) + 1;
-  tx.unshift({ id: `loy_${Date.now()}`, unit_id: appointment.unit_id, user_id: user, appointment_id: appointment.id, points_earned: 1, points_used: 0, created_at: nowIso(), updated_at: nowIso() });
-
-  if (cuts[user] % 10 === 0) {
-    const activeSub = getClientSubscription(user);
-    if (activeSub) {
-      const subs = getSubscriptions();
-      const idx = subs.findIndex((s) => s.id === activeSub.id);
-      if (idx >= 0) {
-        subs[idx].remaining_sessions = Number(subs[idx].remaining_sessions || 0) + 1;
-        subs[idx].updated_at = nowIso();
-        saveSubscriptions(subs);
-      }
-      logAudit('loyalty_reward_applied_to_subscription', { user_id: user, reward_sessions: 1, subscription_id: activeSub.id });
-    } else {
-      const profile = getClientProfile(user);
-      saveClientProfile(user, { free_cuts_balance: Number(profile.free_cuts_balance || 0) + 1 });
-      logAudit('loyalty_reward_stored_in_profile', { user_id: user, reward_sessions: 1 });
-    }
-  }
-
-  setJson(STORAGE_KEYS.loyaltyPoints, cuts);
-  setJson(STORAGE_KEYS.loyaltyTx, tx);
-}
 
 
 function consumeStockForService(appointment) {
@@ -1598,7 +1561,10 @@ function initClientHomePage() {
   }
 
   const session = getSession();
-  if (!session || !hasRole('client')) return;
+  if (!session || !hasRole('client')) {
+    window.location.href = 'login.html?redirect=client-home.html';
+    return;
+  }
 
   const appointments = getAppointments().filter((a) => a.client_email === session.email);
   const next = appointments
@@ -1611,7 +1577,7 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><a class="button button-primary" href="booking-location.html">Agendar próximo horário</a></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></article>`;
     } else {
       nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {
@@ -1630,15 +1596,6 @@ function initClientHomePage() {
 
   const stats = document.getElementById('client-stats');
   if (stats) stats.innerHTML = '';
-
-  const quickBtn = document.getElementById('client-quick-booking');
-  if (quickBtn) {
-    quickBtn.style.display = 'inline-flex';
-    quickBtn.onclick = () => {
-      resetBooking();
-      window.location.href = 'booking-location.html';
-    };
-  }
 
   const notif = document.getElementById('client-notifications');
   if (notif) notif.innerHTML = '';
@@ -1701,7 +1658,6 @@ function initUnitSettingsPage() {
     closing_time: document.getElementById('us-closing-time'),
     slot_interval_minutes: document.getElementById('us-slot-interval'),
     cancellation_limit_hours: document.getElementById('us-cancel-limit'),
-    loyalty_enabled: document.getElementById('us-loyalty-enabled'),
     prepayment_enabled: document.getElementById('us-prepayment-enabled')
   };
 
@@ -1719,7 +1675,6 @@ function initUnitSettingsPage() {
       closing_time: fields.closing_time.value,
       slot_interval_minutes: Number(fields.slot_interval_minutes.value),
       cancellation_limit_hours: Number(fields.cancellation_limit_hours.value),
-      loyalty_enabled: fields.loyalty_enabled.checked,
       prepayment_enabled: fields.prepayment_enabled.checked
     });
   });
@@ -1813,11 +1768,15 @@ function initClientSubscriptionsPage() {
     .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subscriptions = getSubscriptions();
   const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
-  const profile = getClientProfile(session.email);
-  const freeCuts = Number(profile.free_cuts_balance || 0);
-
   root.innerHTML = `
-    ${active ? `<article class=\"schedule-item\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : ''}\n    <article class=\"schedule-item\"><h3>Fidelidade</h3><p>Cortes grátis acumulados: <strong>${freeCuts}</strong></p><small>A cada 10 cortes, você ganha 1 corte grátis.</small></article>\n    <article class=\"schedule-item\"><h3>Planos disponíveis</h3><p>Escolha o plano mensal ideal para você.</p></article>\n    ${plans.map((p) => `<article class=\"schedule-item\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Assinar plano</button></article>`).join('')}
+    <section class="subscription-info-stack">
+      ${active ? `<article class=\"schedule-item\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
+      <article class=\"schedule-item\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
+    </section>
+    <section class="subscription-plans-stack">
+      <article class=\"schedule-item\"><h3>Planos disponíveis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
+      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[🥉🥈🥇]\s*/, '')}</button></div></article>`).join('')}
+    </section>
   `;
 
   root.querySelectorAll('[data-subscribe]').forEach((btn) => {
@@ -1832,14 +1791,13 @@ function initClientSubscriptionsPage() {
         user_id: session.email,
         plan_id: plan.id,
         plan_name: plan.name,
-        remaining_sessions: Number(plan.sessions_per_month || 0) + Number(getClientProfile(session.email).free_cuts_balance || 0),
+        remaining_sessions: Number(plan.sessions_per_month || 0),
         expires_at: addMinutes(new Date(), Number(plan.duration_days || 30) * 24 * 60).toISOString(),
         status: 'active',
         created_at: nowIso(),
         updated_at: nowIso()
       });
       saveSubscriptions(rows);
-      saveClientProfile(session.email, { free_cuts_balance: 0 });
       logAudit('client_subscription_created', { user_id: session.email, plan_id: plan.id });
       initClientSubscriptionsPage();
     });
@@ -1851,19 +1809,20 @@ function initClientHistoryPage() {
   const root = document.getElementById('client-history-root');
   if (!root) return;
   const session = getSession();
-  if (!session || !hasRole('client')) return;
+  if (!session || !hasRole('client')) {
+    window.location.href = 'login.html?redirect=client-history.html';
+    return;
+  }
   const appointments = getAppointments().filter((a) => a.client_email === session.email).sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime));
   const payments = getJson(STORAGE_KEYS.payments, []);
-  const loyaltyTx = getJson(STORAGE_KEYS.loyaltyTx, []);
   const reviews = getJson(STORAGE_KEYS.reviews, []);
   const usage = getSubscriptionUsage();
   root.innerHTML = appointments.map((a) => {
     const pay = payments.find((p) => p.appointment_id === a.id);
-    const loy = loyaltyTx.find((l) => l.appointment_id === a.id);
     const rev = reviews.find((r) => r.appointment_id === a.id);
     const usedSub = usage.some((u) => u.appointment_id === a.id);
     const reviewAction = a.status === 'completed' && !rev ? `<button class="button button-secondary" data-review="${a.id}">Avaliar</button>` : (rev ? `<small>Avaliação: ${rev.rating}/5</small>` : '');
-    return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.branch}</p><small>Status: ${a.status} · Pago: ${asCurrency(pay?.amount || a.service_price)} · Pontos: ${loy?.points_earned || 0} · Assinatura: ${usedSub ? 'Sim' : 'Não'}</small><div class="form-row">${reviewAction}</div></article>`;
+    return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.branch}</p><small>Status: ${a.status} · Pago: ${asCurrency(pay?.amount || a.service_price)} · Assinatura: ${usedSub ? 'Sim' : 'Não'}</small><div class="form-row">${reviewAction}</div></article>`;
   }).join('') || '<article class="schedule-item"><h3>Histórico vazio</h3></article>';
   root.querySelectorAll('[data-review]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1879,31 +1838,16 @@ function initClientHistoryPage() {
   });
 }
 
-function initClientLoyaltyPage() {
-  const root = document.getElementById('client-loyalty-root');
-  if (!root) return;
-  const session = getSession();
-  if (!session || !hasRole('client')) return;
 
-  const cuts = getJson(STORAGE_KEYS.loyaltyPoints, {})[session.email] || 0;
-  const progress = cuts % 10;
-  const missing = progress === 0 ? 10 : 10 - progress;
-  const rewards = Math.floor(cuts / 10);
-  const profile = getClientProfile(session.email);
-  const freeCuts = Number(profile.free_cuts_balance || 0);
-
-  root.innerHTML = `
-    <article class="schedule-item"><h3>Cartela fidelidade</h3><p>${progress}/10 cortes no ciclo atual</p><small>Faltam ${missing} corte(s) para o próximo prêmio.</small></article>
-    <article class="schedule-item"><h3>Prêmios conquistados</h3><p>${rewards}</p><small>Cada 10 cortes = +1 corte grátis.</small></article>
-    <article class="schedule-item"><h3>Cortes grátis disponíveis</h3><p>${freeCuts}</p><small>Esse saldo é somado ao seu plano quando você assina/renova.</small></article>
-  `;
-}
 
 function initClientProfilePage() {
   const form = document.getElementById('client-profile-form');
   if (!form) return;
   const session = getSession();
-  if (!session || !hasRole('client')) return;
+  if (!session || !hasRole('client')) {
+    window.location.href = 'login.html?redirect=client-profile.html';
+    return;
+  }
   const profile = getClientProfile(session.email);
   const nameEl = document.getElementById('profile-name');
   const emailEl = document.getElementById('profile-email');
@@ -1918,8 +1862,24 @@ function initClientProfilePage() {
   unitEl.value = profile.default_unit_id || APP_CONFIG.unitId;
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    saveClientProfile(session.email, { name: sanitizeText(nameEl.value), phone: sanitizeText(phoneEl.value), favorite_barber_id: favEl.value || null, default_unit_id: unitEl.value || APP_CONFIG.unitId });
+    const patch = {
+      name: sanitizeText(nameEl.value),
+      phone: sanitizeText(phoneEl.value),
+      favorite_barber_id: favEl.value || null,
+      default_unit_id: unitEl.value || APP_CONFIG.unitId,
+      updated_by: session.email
+    };
+    saveClientProfile(session.email, patch);
     saveClientFavorite(session.email, favEl.value || null);
+    logAudit('client_profile_updated', { user_id: session.email, changes: patch });
+    let feedback = form.querySelector('[data-profile-feedback]');
+    if (!feedback) {
+      feedback = document.createElement('small');
+      feedback.setAttribute('data-profile-feedback', '1');
+      feedback.style.color = 'var(--text-secondary)';
+      form.appendChild(feedback);
+    }
+    feedback.textContent = 'Perfil salvo com sucesso.';
   });
 }
 
@@ -1927,7 +1887,10 @@ function initClientNotificationsPage() {
   const root = document.getElementById('client-notifications-root');
   if (!root) return;
   const session = getSession();
-  if (!session || !hasRole('client')) return;
+  if (!session || !hasRole('client')) {
+    window.location.href = 'login.html?redirect=client-notifications.html';
+    return;
+  }
   const rows = getNotifications().filter((n) => n.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   root.innerHTML = rows.map((n) => `<article class="schedule-item"><h3>${n.type}</h3><p>${n.status}</p><small>${new Date(n.created_at || nowIso()).toLocaleString('pt-BR')}</small></article>`).join('') || '<article class="schedule-item"><h3>Sem notificações</h3></article>';
 }
@@ -1968,7 +1931,7 @@ function initSuperAdminTenantsPage() {
   root.innerHTML = tenants
     .map((t) => {
       const plan = plans.find((p) => p.id === t.subscription_plan_id);
-      return `<article class="schedule-item"><h3>${t.name}</h3><p>Plano: ${plan?.name || '-'} · Status: ${t.subscription_status}</p><small>Recursos: analytics=${plan?.analytics_enabled ? 'on' : 'off'}, loyalty=${plan?.loyalty_enabled ? 'on' : 'off'}, estoque=${plan?.stock_enabled ? 'on' : 'off'}, assinatura=${plan?.subscription_enabled ? 'on' : 'off'}</small></article>`;
+      return `<article class="schedule-item"><h3>${t.name}</h3><p>Plano: ${plan?.name || '-'} · Status: ${t.subscription_status}</p><small>Recursos: analytics=${plan?.analytics_enabled ? 'on' : 'off'}, estoque=${plan?.stock_enabled ? 'on' : 'off'}, assinatura=${plan?.subscription_enabled ? 'on' : 'off'}</small></article>`;
     })
     .join('');
 }
@@ -2012,7 +1975,6 @@ function initGlobalNavigation() {
   const getClientMenuDefaults = () => [
     ['client-subscriptions.html', 'Assinaturas'],
     ['client-history.html', 'Histórico'],
-    ['client-loyalty.html', 'Fidelidade'],
     ['client-profile.html', 'Meu perfil'],
     ['client-notifications.html', 'Notificações']
   ];
@@ -2161,7 +2123,6 @@ initAdminDashboard();
 initClientHomePage();
 initClientSubscriptionsPage();
 initClientHistoryPage();
-initClientLoyaltyPage();
 initClientProfilePage();
 initClientNotificationsPage();
 initAdminSettingsPage();

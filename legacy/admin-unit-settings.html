@@ -42,7 +42,7 @@
       <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
         <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="admin-home.html">← Dashboard</a>
         <h1>Configurações de agenda da unidade</h1>
-        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Horário de funcionamento, intervalo de slots, política de cancelamento e regras de fidelidade/pré-pagamento.</p>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Horário de funcionamento, intervalo de slots, política de cancelamento e pré-pagamento.</p>
 
         <form id="unit-settings-form" class="auth-form grid gap-3">
           <label for="us-opening-time">Abertura</label>
@@ -57,10 +57,7 @@
           <label for="us-cancel-limit">Limite de cancelamento (horas)</label>
           <input id="us-cancel-limit" type="number" min="0" step="1" required />
 
-          <label class="checkbox-wrap inline-flex items-center gap-2 text-sm text-text-secondary">
-            <input id="us-loyalty-enabled" type="checkbox" />
-            <span>Fidelidade habilitada</span>
-          </label>
+          
 
           <label class="checkbox-wrap inline-flex items-center gap-2 text-sm text-text-secondary">
             <input id="us-prepayment-enabled" type="checkbox" />
