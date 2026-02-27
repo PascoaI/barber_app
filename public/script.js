@@ -1975,7 +1975,7 @@ function initGlobalNavigation() {
   const getClientMenuDefaults = () => [
     ['client-subscriptions.html', 'Assinaturas'],
     ['client-history.html', 'Histórico'],
-    ['/client-profile', 'Meu perfil'],
+    ['client-profile.html', 'Meu perfil'],
     ['client-notifications.html', 'Notificações']
   ];
 
