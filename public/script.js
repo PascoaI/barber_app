@@ -420,6 +420,16 @@ function saveProducts(rows) {
   setJson(STORAGE_KEYS.products, [...rows, ...keep]);
 }
 
+
+function getPayments() {
+  return getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && !p.deleted_at);
+}
+
+function savePayments(rows) {
+  const keep = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id !== APP_CONFIG.unitId || p.deleted_at);
+  setJson(STORAGE_KEYS.payments, [...rows, ...keep]);
+}
+
 function getProductMovements() {
   return getJson(STORAGE_KEYS.productMovements, []).filter((m) => m.unit_id === APP_CONFIG.unitId);
 }
@@ -926,7 +936,7 @@ function renderMetrics(container, metrics) {
 
 function initLoginPage() {
   const form = document.querySelector('form.auth-form');
-  if (!form || !document.title.includes('Login')) return;
+  if (!form) return;
   const feedback = document.getElementById('login-feedback');
 
   form.addEventListener('submit', (e) => {
