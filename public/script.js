@@ -1662,8 +1662,12 @@ function initClientHomePage() {
 
   const appointments = getAppointments().filter((a) => a.client_email === session.email);
   const next = appointments
-    .filter((a) => ['pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
+    .filter((a) => ['awaiting_payment', 'pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
+
+  const lastCompleted = appointments
+    .filter((a) => a.status === 'completed')
+    .sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime))[0];
 
   const metrics = document.getElementById('client-quick-metrics');
   if (metrics) metrics.innerHTML = '';
@@ -1671,9 +1675,23 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><div class="form-row"><a class="button button-primary" href="booking-location.html">Agendar agora</a><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button></div></article>`;
+      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
+        if (!lastCompleted) return;
+        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
+        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
+        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
+        window.location.href = 'booking-datetime.html?prefill=last-cut';
+      });
     } else {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
+      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
+        if (!lastCompleted) return;
+        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
+        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
+        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
+        window.location.href = 'booking-datetime.html?prefill=last-cut';
+      });
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {
         const city = BASE_DATA.cities.find((c) => c.name === next.city);
         const branch = city?.branches.find((x) => x.name === next.branch);
