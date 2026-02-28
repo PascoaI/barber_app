@@ -105,3 +105,27 @@ export function filterAvailabilityBySubscription(slots: Array<{ start: string }>
     return diffHours >= priorityHours;
   });
 }
+
+
+export function getRealAvailability(input: {
+  slots: Array<{ start: string; end: string }>;
+  busy: Array<{ start: string; end: string }>;
+  blocked: Array<{ start: string; end: string }>;
+  minAdvanceMinutes?: number;
+  bufferMinutes?: number;
+}) {
+  const now = Date.now();
+  const minAdvance = Number(input.minAdvanceMinutes || 60) * 60000;
+  const buffer = Number(input.bufferMinutes || 0) * 60000;
+  const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd;
+
+  return input.slots.filter((slot) => {
+    const s = new Date(slot.start).getTime();
+    const e = new Date(slot.end).getTime();
+    if (s < now + minAdvance) return false;
+
+    const busyConflict = input.busy.some((b) => overlaps(s, e, new Date(b.start).getTime() - buffer, new Date(b.end).getTime() + buffer));
+    const blockedConflict = input.blocked.some((b) => overlaps(s, e, new Date(b.start).getTime(), new Date(b.end).getTime()));
+    return !busyConflict && !blockedConflict;
+  });
+}

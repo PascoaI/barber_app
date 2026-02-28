@@ -88,6 +88,10 @@ const DEFAULT_UNIT_SETTINGS = {
   closing_time: '19:00',
   slot_interval_minutes: 30,
   cancellation_limit_hours: 3,
+  min_advance_minutes: 60,
+  buffer_between_appointments_minutes: 10,
+  no_show_block_limit: 3,
+  no_show_block_days: 7,
   loyalty_enabled: true,
   prepayment_enabled: true,
   created_at: new Date().toISOString(),
@@ -590,6 +594,10 @@ function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppoint
   const end = addMinutes(start, serviceDuration);
   const settings = getUnitSettings();
   const close = toDate(date, settings.closing_time);
+  const minAdvanceMinutes = Number(settings.min_advance_minutes || 60);
+  const bufferMinutes = Number(settings.buffer_between_appointments_minutes || 0);
+
+  if (start.getTime() < Date.now() + minAdvanceMinutes * 60000) return false;
   if (end > close) return false;
 
   const blockedConflict = getBlockedSlots()
@@ -601,15 +609,53 @@ function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppoint
     .filter((a) => a.barber_id === barberId && ['awaiting_payment', 'pending', 'confirmed'].includes(a.status))
     .some((a) => {
       if (editingAppointmentId && a.id === editingAppointmentId) return false;
-      return overlaps(start, end, new Date(a.start_datetime), new Date(a.end_datetime));
+      const existingStart = addMinutes(new Date(a.start_datetime), -bufferMinutes);
+      const existingEnd = addMinutes(new Date(a.end_datetime), bufferMinutes);
+      return overlaps(start, end, existingStart, existingEnd);
     });
 
   return !busy;
 }
 
+
 function formatBookingDateTime(date, time) {
   const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T00:00:00`));
   return `${formattedDate} - ${time}`;
+}
+
+
+function autoUpdateAppointmentStatuses() {
+  const rows = getAppointments();
+  const now = new Date();
+  const payments = getPayments();
+  const settings = getUnitSettings();
+  const limit = Number(settings.no_show_block_limit || 3);
+  const blockDays = Number(settings.no_show_block_days || 7);
+  let changed = false;
+
+  rows.forEach((a) => {
+    if (!['pending', 'confirmed'].includes(a.status)) return;
+    if (new Date(a.start_datetime) > now) return;
+    const wasPaid = payments.some((p) => p.appointment_id === a.id && p.status === 'paid');
+    a.status = wasPaid ? 'completed' : 'no_show';
+    a.updated_at = nowIso();
+    a.updated_by = 'system_auto_status';
+    changed = true;
+  });
+
+  if (changed) saveAppointments(rows);
+
+  const noShowByClient = {};
+  getAppointments().forEach((a) => {
+    if (a.status !== 'no_show') return;
+    noShowByClient[a.client_email] = (noShowByClient[a.client_email] || 0) + 1;
+  });
+
+  Object.entries(noShowByClient).forEach(([email, total]) => {
+    if (total < limit) return;
+    const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
+    setUserBlockedUntil(email, blockedUntil);
+  });
 }
 
 function checkOverduePrepayments() {
@@ -632,6 +678,8 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
+  const blockedUntil = getBlockedUntil(session?.email || '');
+  if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
   const barbers = getBarbers(true);
 
@@ -1879,9 +1927,11 @@ function initClientSubscriptionsPage() {
     .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
     .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subscriptions = getSubscriptions();
-  const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
+  const currentSub = subscriptions.filter((s) => s.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
+  const active = currentSub && currentSub.status === 'active' ? currentSub : null;
+  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>⚠ Plano vencido</h3><p>Seu status atual é <strong>${currentSub.status}</strong>. O consumo de sessões está bloqueado até regularização.</p></article>` : '';
   root.innerHTML = `
-    <section class="subscription-info-stack">
+    ${expiredBanner}<section class="subscription-info-stack">
       ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
       <article class=\"schedule-item subscription-static-card\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
     </section>
@@ -2229,6 +2279,7 @@ function initGlobalNavigation() {
 
 ensureSeed();
 checkOverduePrepayments();
+autoUpdateAppointmentStatuses();
 applyBrandTheme();
 ensureDbSchemaNote();
 

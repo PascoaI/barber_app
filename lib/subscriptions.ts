@@ -10,7 +10,9 @@ export async function getClientSubscriptionPanel() {
   const { data: subscription, error } = await supabase
     .from('subscriptions')
     .select('id,user_id,plan_id,remaining_sessions,expires_at,status,created_at,addon_sessions,paused_until,subscription_plans(name,price,sessions_per_month,max_members)')
-    .eq('user_id', String(user.id))
+.eq('user_id', String(user.id))
+    .eq('tenant_id', String(user.tenant_id))
+    .eq('unit_id', String(user.unit_id))
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -79,7 +81,7 @@ export async function applySubscriptionUsageOnCompleted(appointmentId: string) {
     .limit(1)
     .single();
 
-  if (subscription && Number(subscription.remaining_sessions || 0) > 0) {
+  if (subscription && canConsumeSubscriptionSessions(subscription.status) && Number(subscription.remaining_sessions || 0) > 0) {
     await supabase.from('subscriptions').update({ remaining_sessions: Number(subscription.remaining_sessions) - 1 }).eq('id', String(subscription.id));
     await supabase.from('subscription_usage').insert({
       subscription_id: subscription.id,
@@ -121,4 +123,9 @@ export async function applyTenureBenefits(subscriptionId: string) {
   if (months >= 3) {
     await supabase.from('subscription_rewards').insert({ subscription_id: sub.id, user_id: sub.user_id, reward_type: months >= 6 ? 'temporary_upgrade' : 'bonus_session', granted_at: new Date().toISOString() }).execute();
   }
+}
+
+
+export function canConsumeSubscriptionSessions(status: string | undefined | null) {
+  return status === 'active';
 }

@@ -133,3 +133,10 @@ export async function blockClientUntil(clientId: string, blockedUntil: string) {
   const { error } = await supabase.from('users').update({ blocked_until: blockedUntil }).eq('id', clientId);
   if (error) throw error;
 }
+
+
+export async function unblockClient(clientId: string) {
+  const supabase = supabaseClient();
+  const { error } = await supabase.from('users').update({ blocked_until: null }).eq('id', clientId);
+  if (error) throw error;
+}

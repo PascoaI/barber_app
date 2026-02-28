@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MrrCards } from '@/components/admin/MrrCards';
 import { OccupancyTable } from '@/components/admin/OccupancyTable';
-import { blockClientUntil, getAdminKpis, getOccupancyByBarber, getRecurringNoShowClients, getRetentionReport } from '@/lib/analytics';
+import { blockClientUntil, getAdminKpis, getOccupancyByBarber, getRecurringNoShowClients, getRetentionReport, unblockClient } from '@/lib/analytics';
 import { CardSkeleton, TableSkeleton } from '@/components/common/Skeletons';
 import { useToast } from '@/components/ui/toast';
 
@@ -13,6 +13,7 @@ export default function AdminHomePage() {
   const [retention, setRetention] = useState<any>(null);
   const [repeatNoShows, setRepeatNoShows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unlockId, setUnlockId] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,6 +51,13 @@ export default function AdminHomePage() {
             toast('Cliente bloqueado por 7 dias para novos agendamentos.');
           }}>Bloquear 1º reincidente por 7 dias</button>
         ) : null}
+      </div>
+      <div className="rounded-xl border border-borderc p-3 text-sm grid gap-2">
+        <p className="font-medium">Desbloqueio manual</p>
+        <div className="flex gap-2">
+          <input className="border rounded px-2 py-1 flex-1" value={unlockId} onChange={(e) => setUnlockId(e.target.value)} placeholder="ID do cliente" />
+          <button className="underline" onClick={async () => { if (!unlockId) return; await unblockClient(unlockId); toast('Cliente desbloqueado manualmente.'); setUnlockId(''); }}>Desbloquear cliente</button>
+        </div>
       </div>
       <h2 className="text-lg font-semibold">Retenção</h2>
       <div className="grid md:grid-cols-2 gap-3">
