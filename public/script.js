@@ -88,6 +88,10 @@ const DEFAULT_UNIT_SETTINGS = {
   closing_time: '19:00',
   slot_interval_minutes: 30,
   cancellation_limit_hours: 3,
+  min_advance_minutes: 60,
+  buffer_between_appointments_minutes: 10,
+  no_show_block_limit: 3,
+  no_show_block_days: 7,
   loyalty_enabled: true,
   prepayment_enabled: true,
   created_at: new Date().toISOString(),
@@ -416,6 +420,16 @@ function saveProducts(rows) {
   setJson(STORAGE_KEYS.products, [...rows, ...keep]);
 }
 
+
+function getPayments() {
+  return getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && !p.deleted_at);
+}
+
+function savePayments(rows) {
+  const keep = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id !== APP_CONFIG.unitId || p.deleted_at);
+  setJson(STORAGE_KEYS.payments, [...rows, ...keep]);
+}
+
 function getProductMovements() {
   return getJson(STORAGE_KEYS.productMovements, []).filter((m) => m.unit_id === APP_CONFIG.unitId);
 }
@@ -549,7 +563,8 @@ function populateSelect(select, options, placeholder) {
 }
 
 function getNextDays(count = 7) {
-  const base = new Date('2026-02-26T00:00:00');
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
   return Array.from({ length: count }, (_, i) => {
     const d = new Date(base);
     d.setDate(base.getDate() + i);
@@ -589,6 +604,10 @@ function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppoint
   const end = addMinutes(start, serviceDuration);
   const settings = getUnitSettings();
   const close = toDate(date, settings.closing_time);
+  const minAdvanceMinutes = Number(settings.min_advance_minutes || 60);
+  const bufferMinutes = Number(settings.buffer_between_appointments_minutes || 0);
+
+  if (start.getTime() < Date.now() + minAdvanceMinutes * 60000) return false;
   if (end > close) return false;
 
   const blockedConflict = getBlockedSlots()
@@ -600,15 +619,53 @@ function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppoint
     .filter((a) => a.barber_id === barberId && ['awaiting_payment', 'pending', 'confirmed'].includes(a.status))
     .some((a) => {
       if (editingAppointmentId && a.id === editingAppointmentId) return false;
-      return overlaps(start, end, new Date(a.start_datetime), new Date(a.end_datetime));
+      const existingStart = addMinutes(new Date(a.start_datetime), -bufferMinutes);
+      const existingEnd = addMinutes(new Date(a.end_datetime), bufferMinutes);
+      return overlaps(start, end, existingStart, existingEnd);
     });
 
   return !busy;
 }
 
+
 function formatBookingDateTime(date, time) {
   const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T00:00:00`));
   return `${formattedDate} - ${time}`;
+}
+
+
+function autoUpdateAppointmentStatuses() {
+  const rows = getAppointments();
+  const now = new Date();
+  const payments = getPayments();
+  const settings = getUnitSettings();
+  const limit = Number(settings.no_show_block_limit || 3);
+  const blockDays = Number(settings.no_show_block_days || 7);
+  let changed = false;
+
+  rows.forEach((a) => {
+    if (!['pending', 'confirmed'].includes(a.status)) return;
+    if (new Date(a.start_datetime) > now) return;
+    const wasPaid = payments.some((p) => p.appointment_id === a.id && p.status === 'paid');
+    a.status = wasPaid ? 'completed' : 'no_show';
+    a.updated_at = nowIso();
+    a.updated_by = 'system_auto_status';
+    changed = true;
+  });
+
+  if (changed) saveAppointments(rows);
+
+  const noShowByClient = {};
+  getAppointments().forEach((a) => {
+    if (a.status !== 'no_show') return;
+    noShowByClient[a.client_email] = (noShowByClient[a.client_email] || 0) + 1;
+  });
+
+  Object.entries(noShowByClient).forEach(([email, total]) => {
+    if (total < limit) return;
+    const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
+    setUserBlockedUntil(email, blockedUntil);
+  });
 }
 
 function checkOverduePrepayments() {
@@ -631,11 +688,15 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
+  const blockedUntil = getUserBlockedUntil(session?.email || "");
+  if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
+  if (!service) return null;
   const barbers = getBarbers(true);
 
   let barberId = booking.professional;
-  if (barberId === 'sem-preferencia') {
+  const isKnownBarber = barbers.some((b) => b.id === barberId);
+  if (barberId === 'sem-preferencia' || !isKnownBarber) {
     const candidate = barbers.find((b) => isSlotAvailable({ barberId: b.id, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes }));
     barberId = candidate?.id;
   }
@@ -877,7 +938,7 @@ function renderMetrics(container, metrics) {
 
 function initLoginPage() {
   const form = document.querySelector('form.auth-form');
-  if (!form || !document.title.includes('Login')) return;
+  if (!form) return;
   const feedback = document.getElementById('login-feedback');
 
   form.addEventListener('submit', (e) => {
@@ -1112,10 +1173,19 @@ function initBookingReviewPage() {
   if (noPrefNotice) noPrefNotice.style.display = b.professional === 'sem-preferencia' ? 'block' : 'none';
 
   const session = getSession();
-  if (!session) action.textContent = 'Efetuar login para continuar';
-  else if (!hasRole('client')) action.textContent = 'Perfil administrativo não agenda por esta tela';
-  else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente';
-  else action.textContent = 'Confirmar agendamento';
+  if (!session) {
+    action.textContent = 'Efetuar login para continuar';
+    action.disabled = false;
+  } else if (!hasRole('client')) {
+    action.textContent = 'Perfil administrativo não agenda por esta tela';
+    action.disabled = true;
+  } else if (!canClientBook(session.email)) {
+    action.textContent = 'Cliente bloqueado temporariamente';
+    action.disabled = true;
+  } else {
+    action.textContent = 'Confirmar agendamento';
+    action.disabled = false;
+  }
 
   const successModal = document.getElementById('booking-success-modal');
   const successHomeBtn = document.getElementById('booking-success-home');
@@ -1128,6 +1198,7 @@ function initBookingReviewPage() {
 
     const apt = createAppointmentFromBooking();
     if (!apt) {
+      if (feedback) feedback.textContent = 'Horário indisponível ou dados inválidos. Volte e selecione outro horário/profissional.';
       action.textContent = 'Horário indisponível. Escolha outro.';
       return;
     }
@@ -1162,12 +1233,18 @@ function initBookingReviewPage() {
     if (feedback) feedback.textContent = 'Agendamento concluído com sucesso!';
 
     if (successModal) {
+      successModal.classList.remove('hidden');
       successModal.classList.add('is-open');
       successModal.setAttribute('aria-hidden', 'false');
     }
 
     if (successHomeBtn) {
       successHomeBtn.onclick = () => {
+        if (successModal) {
+          successModal.classList.remove('is-open');
+          successModal.classList.add('hidden');
+          successModal.setAttribute('aria-hidden', 'true');
+        }
         resetBooking();
         window.location.href = 'client-home.html';
       };
@@ -1661,8 +1738,12 @@ function initClientHomePage() {
 
   const appointments = getAppointments().filter((a) => a.client_email === session.email);
   const next = appointments
-    .filter((a) => ['pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
+    .filter((a) => ['awaiting_payment', 'pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
+
+  const lastCompleted = appointments
+    .filter((a) => a.status === 'completed')
+    .sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime))[0];
 
   const metrics = document.getElementById('client-quick-metrics');
   if (metrics) metrics.innerHTML = '';
@@ -1670,9 +1751,23 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><div class="form-row"><a class="button button-primary" href="booking-location.html">Agendar agora</a><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button></div></article>`;
+      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
+        if (!lastCompleted) return;
+        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
+        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
+        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
+        window.location.href = 'booking-datetime.html?prefill=last-cut';
+      });
     } else {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
+      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
+        if (!lastCompleted) return;
+        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
+        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
+        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
+        window.location.href = 'booking-datetime.html?prefill=last-cut';
+      });
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {
         const city = BASE_DATA.cities.find((c) => c.name === next.city);
         const branch = city?.branches.find((x) => x.name === next.branch);
@@ -1860,9 +1955,11 @@ function initClientSubscriptionsPage() {
     .filter((p) => planOrder.includes(p.id) && p.is_active !== false)
     .sort((a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id));
   const subscriptions = getSubscriptions();
-  const active = subscriptions.find((s) => s.user_id === session.email && s.status === 'active');
+  const currentSub = subscriptions.filter((s) => s.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
+  const active = currentSub && currentSub.status === 'active' ? currentSub : null;
+  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>⚠ Plano vencido</h3><p>Seu status atual é <strong>${currentSub.status}</strong>. O consumo de sessões está bloqueado até regularização.</p></article>` : '';
   root.innerHTML = `
-    <section class="subscription-info-stack">
+    ${expiredBanner}<section class="subscription-info-stack">
       ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
       <article class=\"schedule-item subscription-static-card\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
     </section>
@@ -2210,6 +2307,7 @@ function initGlobalNavigation() {
 
 ensureSeed();
 checkOverduePrepayments();
+autoUpdateAppointmentStatuses();
 applyBrandTheme();
 ensureDbSchemaNote();
 

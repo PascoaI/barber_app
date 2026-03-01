@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast';
+import { upsertFamilyPlan } from '@/lib/subscriptions';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
@@ -37,6 +38,7 @@ export default function AdminSettingsPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { setBrandColor, brandColor } = useTheme();
   const { toast } = useToast();
+  const [familyPlanName, setFamilyPlanName] = useState('Plano família');
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -161,6 +163,18 @@ export default function AdminSettingsPage() {
             </Tabs>
 
             <Button type="submit" disabled={loading || saveStatus === 'saving' || !form.unit_id}>{saveStatus === 'saving' ? 'Salvando...' : 'Salvar'}</Button>
+            <div className="rounded-xl border border-borderc p-3 grid gap-2">
+              <p className="text-sm font-medium">Plano família</p>
+              <Input value={familyPlanName} onChange={(e) => setFamilyPlanName(e.target.value)} placeholder="Nome do plano" />
+              <Button type="button" onClick={async () => {
+                try {
+                  await upsertFamilyPlan({ unit_id: String(form.unit_id), name: familyPlanName, price: 199.9, sessions_per_month: 8, max_members: 3 });
+                  toast('Plano família salvo.');
+                } catch {
+                  toast('Falha ao salvar plano família.');
+                }
+              }}>Salvar plano família (até 3 membros)</Button>
+            </div>
             {feedback ? <small className="text-text-secondary">{feedback}</small> : null}
           </form>
         </CardContent>
