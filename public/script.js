@@ -688,13 +688,15 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
-  const blockedUntil = getBlockedUntil(session?.email || '');
+  const blockedUntil = getUserBlockedUntil(session?.email || "");
   if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
+  if (!service) return null;
   const barbers = getBarbers(true);
 
   let barberId = booking.professional;
-  if (barberId === 'sem-preferencia') {
+  const isKnownBarber = barbers.some((b) => b.id === barberId);
+  if (barberId === 'sem-preferencia' || !isKnownBarber) {
     const candidate = barbers.find((b) => isSlotAvailable({ barberId: b.id, date: booking.date, time: booking.time, serviceDuration: service.duration_minutes }));
     barberId = candidate?.id;
   }
@@ -1171,10 +1173,19 @@ function initBookingReviewPage() {
   if (noPrefNotice) noPrefNotice.style.display = b.professional === 'sem-preferencia' ? 'block' : 'none';
 
   const session = getSession();
-  if (!session) action.textContent = 'Efetuar login para continuar';
-  else if (!hasRole('client')) action.textContent = 'Perfil administrativo não agenda por esta tela';
-  else if (!canClientBook(session.email)) action.textContent = 'Cliente bloqueado temporariamente';
-  else action.textContent = 'Confirmar agendamento';
+  if (!session) {
+    action.textContent = 'Efetuar login para continuar';
+    action.disabled = false;
+  } else if (!hasRole('client')) {
+    action.textContent = 'Perfil administrativo não agenda por esta tela';
+    action.disabled = true;
+  } else if (!canClientBook(session.email)) {
+    action.textContent = 'Cliente bloqueado temporariamente';
+    action.disabled = true;
+  } else {
+    action.textContent = 'Confirmar agendamento';
+    action.disabled = false;
+  }
 
   const successModal = document.getElementById('booking-success-modal');
   const successHomeBtn = document.getElementById('booking-success-home');
@@ -1187,6 +1198,7 @@ function initBookingReviewPage() {
 
     const apt = createAppointmentFromBooking();
     if (!apt) {
+      if (feedback) feedback.textContent = 'Horário indisponível ou dados inválidos. Volte e selecione outro horário/profissional.';
       action.textContent = 'Horário indisponível. Escolha outro.';
       return;
     }
@@ -1221,12 +1233,18 @@ function initBookingReviewPage() {
     if (feedback) feedback.textContent = 'Agendamento concluído com sucesso!';
 
     if (successModal) {
+      successModal.classList.remove('hidden');
       successModal.classList.add('is-open');
       successModal.setAttribute('aria-hidden', 'false');
     }
 
     if (successHomeBtn) {
       successHomeBtn.onclick = () => {
+        if (successModal) {
+          successModal.classList.remove('is-open');
+          successModal.classList.add('hidden');
+          successModal.setAttribute('aria-hidden', 'true');
+        }
         resetBooking();
         window.location.href = 'client-home.html';
       };
