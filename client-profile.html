@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cliente | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {theme:{extend:{colors:{primary:'#c69a45','primary-dark':'#a87a2f',background:'#090c14',surface:'#111624',borderc:'#28314a','text-primary':'#edf2ff','text-secondary':'#9da8c3'},fontFamily:{sans:['Inter','system-ui','sans-serif']},borderRadius:{xl:'1rem','2xl':'1.25rem'},boxShadow:{soft:'0 10px 30px rgba(0,0,0,0.24)'}}}}
+    </script>
+  </head>
+  <body>
+    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card booking-review-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8 bg-gradient-to-b from-amber-900/20 to-surface">
+        <nav class="quick-nav flex flex-wrap justify-end gap-2 mb-4" aria-label="Atalhos">
+          <a class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" href="client-home.html" data-home>Home</a>
+          <button class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" type="button" data-back>Voltar</button>
+          <button class="button button-danger inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark w-full" type="button" data-logout>Sair</button>
+        </nav>
+        <h1 class="mb-4">Meu perfil</h1><form id="client-profile-form" class="auth-form grid gap-3"><label for="profile-name">Nome</label><input id="profile-name" required /><label for="profile-email">E-mail</label><input id="profile-email" disabled /><label for="profile-phone">Telefone</label><input id="profile-phone" /><button class="button button-primary" type="submit">Salvar perfil</button></form>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
