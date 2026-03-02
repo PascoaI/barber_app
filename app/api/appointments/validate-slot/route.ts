@@ -28,12 +28,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ valid: false, reason: 'min_advance_not_met' });
     }
 
-    const day = start.toISOString().slice(0, 10);
     const openTime = String(settings.opening_time || '08:00');
     const closeTime = String(settings.closing_time || '20:00');
-    const open = new Date(`${day}T${openTime}:00.000Z`);
-    const close = new Date(`${day}T${closeTime}:00.000Z`);
-    if (start < open || end > close) return NextResponse.json({ valid: false, reason: 'outside_working_hours' });
+    const timezoneOffsetMinutes = Number(settings.timezone_offset_minutes ?? -180);
+
+    const localStartMs = start.getTime() + timezoneOffsetMinutes * 60000;
+    const localDate = new Date(localStartMs);
+    const y = localDate.getUTCFullYear();
+    const m = localDate.getUTCMonth();
+    const d = localDate.getUTCDate();
+
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+
+    const openUtcMs = Date.UTC(y, m, d, openH, openM) - timezoneOffsetMinutes * 60000;
+    const closeUtcMs = Date.UTC(y, m, d, closeH, closeM) - timezoneOffsetMinutes * 60000;
+
+    if (start.getTime() < openUtcMs || end.getTime() > closeUtcMs) {
+      return NextResponse.json({ valid: false, reason: 'outside_working_hours' });
+    }
 
     const appts = await supabaseAdmin.select(
       'appointments',
