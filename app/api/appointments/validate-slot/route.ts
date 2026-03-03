@@ -1,0 +1,76 @@
+import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { overlaps, toUtcIso } from '@/lib/server/appointment-core';
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { tenant_id, unit_id, barber_id, start_datetime, duration_minutes, editing_appointment_id = null } = body || {};
+    if (!tenant_id || !unit_id || !barber_id || !start_datetime || !duration_minutes) {
+      return NextResponse.json({ valid: false, reason: 'missing_required_fields' }, { status: 400 });
+    }
+
+    const startIso = toUtcIso(start_datetime);
+    if (!startIso) return NextResponse.json({ valid: false, reason: 'invalid_datetime_range' }, { status: 400 });
+
+    const start = new Date(startIso);
+    const end = new Date(start.getTime() + Number(duration_minutes) * 60000);
+    if (Number.isNaN(end.getTime()) || end <= start) {
+      return NextResponse.json({ valid: false, reason: 'invalid_datetime_range' }, { status: 400 });
+    }
+
+    const settingsRows = await supabaseAdmin.select('unit_settings', `select=opening_time,closing_time,min_advance_minutes,buffer_between_appointments_minutes&unit_id=eq.${encodeURIComponent(String(unit_id))}&limit=1`);
+    const settings = (settingsRows as any[])?.[0] || {};
+    const minAdvanceMinutes = Number(settings.min_advance_minutes || 60);
+    const bufferMinutes = Number(settings.buffer_between_appointments_minutes || 0);
+
+    if (start.getTime() < Date.now() + minAdvanceMinutes * 60000) {
+      return NextResponse.json({ valid: false, reason: 'min_advance_not_met' });
+    }
+
+    const openTime = String(settings.opening_time || '08:00');
+    const closeTime = String(settings.closing_time || '20:00');
+    const timezoneOffsetMinutes = Number(settings.timezone_offset_minutes ?? -180);
+
+    const localStartMs = start.getTime() + timezoneOffsetMinutes * 60000;
+    const localDate = new Date(localStartMs);
+    const y = localDate.getUTCFullYear();
+    const m = localDate.getUTCMonth();
+    const d = localDate.getUTCDate();
+
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+
+    const openUtcMs = Date.UTC(y, m, d, openH, openM) - timezoneOffsetMinutes * 60000;
+    const closeUtcMs = Date.UTC(y, m, d, closeH, closeM) - timezoneOffsetMinutes * 60000;
+
+    if (start.getTime() < openUtcMs || end.getTime() > closeUtcMs) {
+      return NextResponse.json({ valid: false, reason: 'outside_working_hours' });
+    }
+
+    const appts = await supabaseAdmin.select(
+      'appointments',
+      `select=id,start_datetime,end_datetime,status,barber_id&tenant_id=eq.${encodeURIComponent(String(tenant_id))}&unit_id=eq.${encodeURIComponent(String(unit_id))}&barber_id=eq.${encodeURIComponent(String(barber_id))}&status=in.(awaiting_payment,pending,confirmed)`
+    ) as any[];
+
+    const conflicts = (appts || []).some((a) => {
+      if (editing_appointment_id && String(a.id) === String(editing_appointment_id)) return false;
+      const aStart = new Date(new Date(a.start_datetime).getTime() - bufferMinutes * 60000);
+      const aEnd = new Date(new Date(a.end_datetime).getTime() + bufferMinutes * 60000);
+      return overlaps(start, end, aStart, aEnd);
+    });
+    if (conflicts) return NextResponse.json({ valid: false, reason: 'appointment_overlap' });
+
+    const blocked = await supabaseAdmin.select(
+      'blocked_slots',
+      `select=id,start_datetime,end_datetime,barber_id&tenant_id=eq.${encodeURIComponent(String(tenant_id))}&unit_id=eq.${encodeURIComponent(String(unit_id))}&barber_id=eq.${encodeURIComponent(String(barber_id))}`
+    ) as any[];
+
+    const blockedConflict = (blocked || []).some((b) => overlaps(start, end, new Date(b.start_datetime), new Date(b.end_datetime)));
+    if (blockedConflict) return NextResponse.json({ valid: false, reason: 'blocked_slot_conflict' });
+
+    return NextResponse.json({ valid: true, normalized_start_datetime: start.toISOString(), normalized_end_datetime: end.toISOString() });
+  } catch (error: any) {
+    return NextResponse.json({ valid: false, reason: 'validation_failed', error: error?.message }, { status: 500 });
+  }
+}
