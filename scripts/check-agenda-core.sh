@@ -4,11 +4,36 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+cleanup() {
+  if [ -n "${DEV_PID:-}" ] && kill -0 "$DEV_PID" >/dev/null 2>&1; then
+    kill "$DEV_PID" >/dev/null 2>&1 || true
+    wait "$DEV_PID" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
+
 echo "[agenda] parity"
 ./scripts/check-parity.sh
 
 echo "[agenda] build"
 npm run build >/tmp/agenda_build.log 2>&1 || (cat /tmp/agenda_build.log && exit 1)
+
+echo "[agenda] start dev server"
+npm run dev >/tmp/agenda_dev.log 2>&1 &
+DEV_PID=$!
+
+for _ in $(seq 1 60); do
+  if curl -sS "http://127.0.0.1:3000/" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if ! curl -sS "http://127.0.0.1:3000/" >/dev/null 2>&1; then
+  echo "[agenda] failed to start dev server"
+  cat /tmp/agenda_dev.log
+  exit 1
+fi
 
 echo "[agenda] endpoint sanity"
 node - <<'NODE'
@@ -25,8 +50,9 @@ function req(path, payload){
 (async()=>{
   const a = await req('/api/appointments/validate-slot', {});
   const b = await req('/api/cron/appointments-status', {});
-  if(a.status<400 || b.status<400){
-    console.error('expected validation errors for empty payloads');
+  if(a.status !== 400 || b.status !== 400){
+    console.error('expected 400 validation errors for empty payloads');
+    console.error({a,b});
     process.exit(1);
   }
   console.log('ok');

@@ -10,7 +10,8 @@
     "check:parity": "./scripts/check-parity.sh",
     "check:agenda": "./scripts/check-agenda-core.sh",
     "test": "node --test tests/*.test.cjs",
-    "check:agenda:full": "./scripts/run-agenda-blindada.sh"
+    "check:agenda:full": "./scripts/run-agenda-blindada.sh",
+    "check:supabase": "./scripts/check-supabase-readiness.sh"
   },
   "dependencies": {
     "next": "14.2.5",

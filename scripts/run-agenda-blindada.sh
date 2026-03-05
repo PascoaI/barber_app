@@ -48,7 +48,7 @@ run_cmd() {
   fi
 }
 
-echo "[1/5] Configuração"
+echo "[1/6] Configuração"
 if [ ! -f .env.local ] && [ -f .env.example ]; then
   cp .env.example .env.local
   warn "copiado .env.example -> .env.local (preencha valores reais antes de integração com Supabase)"
@@ -71,7 +71,7 @@ else
   fail "docs/AGENDA_HARDENING.sql não encontrado"
 fi
 
-echo "[2/5] Build/test local"
+echo "[2/6] Build/test local"
 if [ -f package-lock.json ]; then
   run_cmd "npm ci" npm ci
 else
@@ -87,7 +87,20 @@ if npm run build; then pass "npm run build"; else warn "npm run build falhou"; f
 if npm run lint; then pass "npm run lint"; else warn "npm run lint falhou"; fi
 if npm run test; then pass "npm run test"; else fail "npm run test"; fi
 
-echo "[3/5] Integração real com Supabase"
+echo "[3/6] Conectividade Supabase"
+if [ "$missing_env" -eq 1 ]; then
+  warn "checagem Supabase pulada: variáveis de ambiente ausentes/placeholder"
+elif [ -f scripts/check-supabase-readiness.sh ]; then
+  if ./scripts/check-supabase-readiness.sh; then
+    pass "scripts/check-supabase-readiness.sh"
+  else
+    warn "scripts/check-supabase-readiness.sh falhou (credenciais/rede/schema)"
+  fi
+else
+  warn "scripts/check-supabase-readiness.sh não encontrado"
+fi
+
+echo "[4/6] Integração real (Next + Supabase)"
 if [ "$missing_env" -eq 1 ]; then
   warn "integração real pulada: variáveis de ambiente do Supabase ausentes/placeholder"
 else
@@ -100,14 +113,14 @@ else
   fi
 fi
 
-echo "[4/5] Cenários determinísticos"
+echo "[5/6] Cenários determinísticos"
 if npm run test; then
   pass "cenários de agenda cobertos pelos testes determinísticos"
 else
   fail "cenários determinísticos falharam"
 fi
 
-echo "[5/5] Checklist final"
+echo "[6/6] Checklist final"
 echo "Resumo: PASS=$PASS WARN=$WARN FAIL=$FAIL"
 if [ "$FAIL" -gt 0 ]; then
   exit 1
