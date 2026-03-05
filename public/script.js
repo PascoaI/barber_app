@@ -79,7 +79,15 @@ const STORAGE_KEYS = {
   clientProfiles: 'barberpro_client_profiles'
 };
 
-const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed'];
+const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed', 'no_show'];
+const APPOINTMENT_TRANSITIONS = {
+  awaiting_payment: ['pending', 'confirmed', 'canceled'],
+  pending: ['confirmed', 'canceled', 'completed', 'no_show'],
+  confirmed: ['completed', 'canceled', 'no_show'],
+  canceled: [],
+  completed: [],
+  no_show: []
+};
 
 const DEFAULT_BRAND = { shopName: 'Barbearia X', primaryColor: '#d4a24f', logoUrl: '' };
 const DEFAULT_UNIT_SETTINGS = {
@@ -647,7 +655,7 @@ function autoUpdateAppointmentStatuses() {
     if (!['pending', 'confirmed'].includes(a.status)) return;
     if (new Date(a.start_datetime) > now) return;
     const wasPaid = payments.some((p) => p.appointment_id === a.id && p.status === 'paid');
-    a.status = wasPaid ? 'completed' : 'no_show';
+    a.status = deriveAutoStatus(a.status, a.start_datetime, wasPaid);
     a.updated_at = nowIso();
     a.updated_by = 'system_auto_status';
     changed = true;
@@ -742,10 +750,38 @@ function createAppointmentFromBooking() {
       created_at: nowIso(),
       updated_at: nowIso(),
       created_by: session?.email || 'system',
-      updated_by: session?.email || 'system'
+      updated_by: session?.email || 'system',
+      idempotency_key: `idem:${APP_CONFIG.tenantId}:${APP_CONFIG.unitId}:${session?.email || 'anon'}:${booking.date}:${booking.time}:${service.id}:${barberId}`
     };
   } finally {
     releaseLock(lockName);
+  }
+}
+
+
+function canTransitionAppointmentStatus(from, to) {
+  if (from === to) return true;
+  return (APPOINTMENT_TRANSITIONS[from] || []).includes(to);
+}
+
+function deriveAutoStatus(currentStatus, startDatetime, wasPaid) {
+  if (!['pending', 'confirmed'].includes(currentStatus)) return currentStatus;
+  if (new Date(startDatetime) > new Date()) return currentStatus;
+  if (currentStatus === 'confirmed') return wasPaid ? 'completed' : 'no_show';
+  return 'no_show';
+}
+
+async function validateSlotServerSide(payload) {
+  try {
+    const res = await fetch('/api/appointments/validate-slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: !!data.valid, reason: data.reason || null };
+  } catch {
+    return { ok: true, reason: null };
   }
 }
 
@@ -756,6 +792,7 @@ function updateAppointmentStatus(id, status) {
   if (idx < 0) return;
 
   const beforeState = { ...rows[idx] };
+  if (!canTransitionAppointmentStatus(rows[idx].status, status)) return;
   rows[idx].status = status;
   rows[idx].updated_at = nowIso();
   rows[idx].updated_by = getSession()?.email || 'system';
@@ -1190,11 +1227,27 @@ function initBookingReviewPage() {
   const successModal = document.getElementById('booking-success-modal');
   const successHomeBtn = document.getElementById('booking-success-home');
 
-  action.addEventListener('click', () => {
+  action.addEventListener('click', async () => {
     const currentSession = getSession();
     if (!currentSession) return (window.location.href = 'login.html?redirect=booking-review.html');
     if (!hasRole('client')) return;
     if (!canClientBook(currentSession.email)) return;
+
+    const bookingSnapshot = getBooking();
+    const serviceForValidation = getServiceById(bookingSnapshot.service);
+    const validation = await validateSlotServerSide({
+      tenant_id: APP_CONFIG.tenantId,
+      unit_id: APP_CONFIG.unitId,
+      barber_id: bookingSnapshot.professional,
+      start_datetime: `${bookingSnapshot.date}T${bookingSnapshot.time}:00`,
+      duration_minutes: Number(serviceForValidation?.duration_minutes || 0),
+      editing_appointment_id: bookingSnapshot.edit_appointment_id || null
+    });
+    if (!validation.ok) {
+      if (feedback) feedback.textContent = `Horário indisponível (${validation.reason || 'server_validation'}).`;
+      action.textContent = 'Horário indisponível. Escolha outro.';
+      return;
+    }
 
     const apt = createAppointmentFromBooking();
     if (!apt) {
@@ -1204,6 +1257,12 @@ function initBookingReviewPage() {
     }
 
     const rows = getAppointments();
+    const duplicated = rows.find((r) => r.idempotency_key && r.idempotency_key === apt.idempotency_key);
+    if (duplicated) {
+      if (feedback) feedback.textContent = 'Agendamento já confirmado anteriormente para este horário.';
+      action.disabled = true;
+      return;
+    }
     const editId = getBooking().edit_appointment_id;
     const existingIdx = editId ? rows.findIndex((r) => r.id === editId) : -1;
 
@@ -1741,9 +1800,6 @@ function initClientHomePage() {
     .filter((a) => ['awaiting_payment', 'pending', 'confirmed'].includes(a.status) && new Date(a.start_datetime).getTime() >= Date.now())
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
 
-  const lastCompleted = appointments
-    .filter((a) => a.status === 'completed')
-    .sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime))[0];
 
   const metrics = document.getElementById('client-quick-metrics');
   if (metrics) metrics.innerHTML = '';
@@ -1751,23 +1807,9 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><div class="form-row"><a class="button button-primary" href="booking-location.html">Agendar agora</a><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button></div></article>`;
-      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
-        if (!lastCompleted) return;
-        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
-        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
-        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
-        window.location.href = 'booking-datetime.html?prefill=last-cut';
-      });
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><div class="form-row"><a class="button button-primary" href="booking-location.html">Agendar agora</a></div></article>`;
     } else {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-repeat ${lastCompleted ? '' : 'disabled title="Sem histórico concluído"'}>Repetir último corte</button><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
-      nextWrap.querySelector('[data-client-repeat]')?.addEventListener('click', () => {
-        if (!lastCompleted) return;
-        const city = BASE_DATA.cities.find((c) => c.name === lastCompleted.city);
-        const branch = city?.branches.find((x) => x.name === lastCompleted.branch);
-        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: lastCompleted.service_id, professional: lastCompleted.barber_id });
-        window.location.href = 'booking-datetime.html?prefill=last-cut';
-      });
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {
         const city = BASE_DATA.cities.find((c) => c.name === next.city);
         const branch = city?.branches.find((x) => x.name === next.branch);

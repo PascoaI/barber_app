@@ -26,31 +26,6 @@ export async function getNextAppointment() {
   return data || null;
 }
 
-export async function getLastCompletedAppointment() {
-  const user = await getCurrentUserContext();
-  const supabase = supabaseClient();
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('id, service_id, barber_id, start_datetime')
-    .eq('tenant_id', String(user.tenant_id))
-    .eq('unit_id', String(user.unit_id))
-    .eq('client_id', String(user.id))
-    .eq('status', 'completed')
-    .order('start_datetime', { ascending: false })
-    .limit(1)
-    .single();
-  if (error && !String(error.message || '').includes('0 rows')) throw error;
-  return data || null;
-}
-
-export function buildRepeatLastCutUrl(data: { service_id?: string; barber_id?: string } | null) {
-  if (!data?.service_id) return null;
-  const params = new URLSearchParams();
-  params.set('service_id', String(data.service_id));
-  if (data.barber_id) params.set('barber_id', String(data.barber_id));
-  return `/booking-datetime?${params.toString()}`;
-}
-
 export async function listClientHistory(filters: {
   status?: string;
   barber_id?: string;
@@ -79,7 +54,6 @@ export async function listClientHistory(filters: {
 
 export async function createAppointmentSafe(payload: Record<string, any>) {
   const user = await getCurrentUserContext();
-  const supabase = supabaseClient();
   if (user.blocked_until && new Date(user.blocked_until) > new Date()) {
     throw new Error(`Cliente bloqueado para agendamento até ${new Date(user.blocked_until).toLocaleString('pt-BR')}.`);
   }
@@ -91,9 +65,18 @@ export async function createAppointmentSafe(payload: Record<string, any>) {
     client_id: user.id
   };
 
-  const { data, error } = await supabase.from('appointments').insert(normalized).select('*').single();
-  if (error) throw error;
-  return data;
+  const response = await fetch('/api/appointments/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(normalized)
+  });
+
+  const result = await response.json();
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.reason || result?.error || 'create_appointment_failed');
+  }
+
+  return result.appointment;
 }
 
 
