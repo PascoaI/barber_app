@@ -248,8 +248,76 @@ function ensureDefaultSubscriptionPlans() {
   setJson(STORAGE_KEYS.subscriptionPlans, [...merged, ...keep].map((plan) => ({ ...plan, is_active: plan.is_active !== false })));
 }
 
-function confirmAction(message) {
-  return window.confirm(message);
+function showAppModal(options) {
+  const {
+    title = 'Confirmação',
+    message = '',
+    confirmText = 'Confirmar',
+    cancelText = 'Cancelar',
+    hideCancel = false
+  } = options || {};
+
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[120] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  modal.innerHTML = `
+    <div class="w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-5 md:p-6 grid gap-4">
+      <div class="grid gap-2">
+        <h2 class="text-xl font-semibold text-text-primary">${sanitizeText(title)}</h2>
+        <p class="text-sm text-text-secondary leading-relaxed">${sanitizeText(message).replace(/\n/g, '<br>')}</p>
+      </div>
+      <div class="grid gap-2 ${hideCancel ? '' : 'md:grid-cols-2'}">
+        ${hideCancel ? '' : `<button type="button" data-modal-cancel class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]">` + sanitizeText(cancelText) + `</button>`}
+        <button type="button" data-modal-confirm class="button button-primary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01]">${sanitizeText(confirmText)}</button>
+      </div>
+    </div>
+  `;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value) => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKeyDown);
+      modal.remove();
+      resolve(value);
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') settle(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) settle(false);
+    });
+
+    modal.querySelector('[data-modal-confirm]')?.addEventListener('click', () => settle(true));
+    modal.querySelector('[data-modal-cancel]')?.addEventListener('click', () => settle(false));
+
+    document.body.appendChild(modal);
+    modal.querySelector('[data-modal-confirm]')?.focus();
+  });
+}
+
+async function confirmAction(message, options = {}) {
+  return showAppModal({
+    title: options.title || 'Confirmar ação',
+    message,
+    confirmText: options.confirmText || 'Confirmar',
+    cancelText: options.cancelText || 'Cancelar'
+  });
+}
+
+async function alertAction(message, options = {}) {
+  await showAppModal({
+    title: options.title || 'Aviso',
+    message,
+    confirmText: options.confirmText || 'Entendi',
+    hideCancel: true
+  });
 }
 
 function logAudit(action, details = {}) {
@@ -1423,15 +1491,15 @@ function initMySchedulesPage() {
   });
 
   root.querySelectorAll('[data-cancel]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const apt = appointments.find((a) => a.id === btn.dataset.cancel);
       if (!apt) return;
       const allowed = canCancelAppointment(apt);
       if (!allowed) {
-        alert('Cancelamento fora da política: prazo mínimo não respeitado.');
+        await alertAction('Cancelamento fora da política: prazo mínimo não respeitado.');
         return;
       }
-      if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
+      if (!(await confirmAction('Deseja realmente cancelar este agendamento?'))) return;
       updateAppointmentStatus(apt.id, 'canceled');
       scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
       initMySchedulesPage();
@@ -1936,8 +2004,8 @@ function initClientHomePage() {
         saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: next.service_id, professional: next.barber_id, date: next.appointment_date, time: next.start_time, edit_appointment_id: next.id });
         window.location.href = 'booking-datetime.html?edit=datetime';
       });
-      nextWrap.querySelector('[data-client-cancel]')?.addEventListener('click', () => {
-        if (!confirmAction('Deseja realmente cancelar este agendamento?')) return;
+      nextWrap.querySelector('[data-client-cancel]')?.addEventListener('click', async () => {
+        if (!(await confirmAction('Deseja realmente cancelar este agendamento?'))) return;
         updateAppointmentStatus(next.id, 'canceled');
         initClientHomePage();
       });
@@ -2132,10 +2200,10 @@ function initClientSubscriptionsPage() {
   `;
 
   root.querySelectorAll('[data-subscribe]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const plan = plans.find((x) => x.id === btn.dataset.subscribe);
       if (!plan) return;
-      if (!confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mês?`)) return;
+      if (!(await confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mês?`))) return;
       const rows = getSubscriptions().filter((s) => s.user_id !== session.email);
       rows.unshift({
         id: `sub_${Date.now()}`,
