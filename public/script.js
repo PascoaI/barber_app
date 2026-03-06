@@ -1086,24 +1086,31 @@ function getDashboardMetrics() {
 }
 
 function renderMetrics(container, metrics) {
+  const metricIcon = {
+    calendar: '<span class="admin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path></svg></span>',
+    wallet: '<span class="admin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"></path><path d="M16 12h.01"></path><path d="M6 7V5a2 2 0 0 1 2-2h9"></path></svg></span>',
+    clock: '<span class="admin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></span>',
+    spark: '<span class="admin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"></path><path d="M5 16l.9 2.1L8 19l-2.1.9L5 22l-.9-2.1L2 19l2.1-.9L5 16Z"></path><path d="M19 14l.7 1.5L21 16l-1.3.6L19 18l-.7-1.4L17 16l1.3-.5L19 14Z"></path></svg></span>'
+  };
+
   container.innerHTML = `
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top"><span class="admin-kpi-icon">📅</span><p>Agendamentos hoje</p></div>
+      <div class="admin-kpi-top">${metricIcon.calendar}<p>Agendamentos hoje</p></div>
       <h3>${metrics.totalToday}</h3>
       <small>Meta diária operacional</small>
     </article>
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top"><span class="admin-kpi-icon">💸</span><p>Faturamento do dia</p></div>
+      <div class="admin-kpi-top">${metricIcon.wallet}<p>Faturamento do dia</p></div>
       <h3>${asCurrency(metrics.revenueToday)}</h3>
       <small>Entradas confirmadas</small>
     </article>
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top"><span class="admin-kpi-icon">⏱</span><p>Horário mais movimentado</p></div>
+      <div class="admin-kpi-top">${metricIcon.clock}<p>Horário mais movimentado</p></div>
       <h3>${metrics.busiestHour}</h3>
       <small>Pico de demanda</small>
     </article>
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top"><span class="admin-kpi-icon">✨</span><p>Serviço mais vendido</p></div>
+      <div class="admin-kpi-top">${metricIcon.spark}<p>Serviço mais vendido</p></div>
       <h3>${metrics.topService}</h3>
       <small>Produto líder do dia</small>
     </article>
@@ -1967,7 +1974,7 @@ function initAdminDashboard() {
     const alerts = lowStock.map((p) => `${p.name} (${p.quantity})`).join(', ');
     const alertCard = document.createElement('article');
     alertCard.className = 'admin-alert-card';
-    alertCard.innerHTML = `<div class="admin-alert-head"><span>⚠️</span><h3>Alerta de estoque baixo</h3></div><p>${alerts}</p>`;
+    alertCard.innerHTML = `<div class="admin-alert-head"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path></svg></span><h3>Alerta de estoque baixo</h3></div><p>${alerts}</p>`;
     wrap.appendChild(alertCard);
   }
 
@@ -2478,16 +2485,7 @@ function initClientProfilePage() {
 }
 
 function createClientNotificationsBell(session) {
-  if (!session || session.role !== 'client') return null;
-
-  const bellBtn = document.createElement('button');
-  bellBtn.type = 'button';
-  bellBtn.className = 'button button-secondary quick-menu-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
-  bellBtn.setAttribute('aria-label', 'Notificações (em breve)');
-  bellBtn.title = 'Notificações (em breve)';
-  bellBtn.innerHTML = '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path><path d="M9 17a3 3 0 0 0 6 0"></path></svg></span>';
-
-  return { bellBtn };
+  return null;
 }
 
 function initClientNotificationsPage() {
@@ -2690,7 +2688,9 @@ function initGlobalNavigation() {
     if (session?.role === 'client' && !panel.children.length) {
       appendMenuButton('Sair', handleLogout);
     }
-    if (!panel.children.length) return;
+
+    const isAdminDashboard = /admin-home(\.html)?$/i.test(window.location.pathname) || document.getElementById('admin-metrics');
+    if (isAdminDashboard) panel.innerHTML = '';
 
     const right = document.createElement('div');
     right.className = 'quick-nav-right relative';
@@ -2700,7 +2700,7 @@ function initGlobalNavigation() {
       right.appendChild(notifications.bellBtn);
     }
 
-    const showMenu = !!panel.children.length;
+    const showMenu = !isAdminDashboard && !!panel.children.length;
     if (showMenu) {
       right.appendChild(menuBtn);
       right.appendChild(panel);
