@@ -1087,10 +1087,26 @@ function getDashboardMetrics() {
 
 function renderMetrics(container, metrics) {
   container.innerHTML = `
-    <article class="schedule-item"><h3>Agendamentos hoje</h3><p>${metrics.totalToday}</p></article>
-    <article class="schedule-item"><h3>Faturamento do dia</h3><p>${asCurrency(metrics.revenueToday)}</p></article>
-    <article class="schedule-item"><h3>Horário mais movimentado</h3><p>${metrics.busiestHour}</p></article>
-    <article class="schedule-item"><h3>Serviço mais vendido</h3><p>${metrics.topService}</p></article>
+    <article class="admin-kpi-card">
+      <div class="admin-kpi-top"><span class="admin-kpi-icon">📅</span><p>Agendamentos hoje</p></div>
+      <h3>${metrics.totalToday}</h3>
+      <small>Meta diária operacional</small>
+    </article>
+    <article class="admin-kpi-card">
+      <div class="admin-kpi-top"><span class="admin-kpi-icon">💸</span><p>Faturamento do dia</p></div>
+      <h3>${asCurrency(metrics.revenueToday)}</h3>
+      <small>Entradas confirmadas</small>
+    </article>
+    <article class="admin-kpi-card">
+      <div class="admin-kpi-top"><span class="admin-kpi-icon">⏱</span><p>Horário mais movimentado</p></div>
+      <h3>${metrics.busiestHour}</h3>
+      <small>Pico de demanda</small>
+    </article>
+    <article class="admin-kpi-card">
+      <div class="admin-kpi-top"><span class="admin-kpi-icon">✨</span><p>Serviço mais vendido</p></div>
+      <h3>${metrics.topService}</h3>
+      <small>Produto líder do dia</small>
+    </article>
   `;
 }
 
@@ -1817,8 +1833,8 @@ function initAdminDashboard() {
   if (lowStock.length) {
     const alerts = lowStock.map((p) => `${p.name} (${p.quantity})`).join(', ');
     const alertCard = document.createElement('article');
-    alertCard.className = 'schedule-item';
-    alertCard.innerHTML = `<h3>⚠️ Alerta de estoque baixo</h3><p>${alerts}</p>`;
+    alertCard.className = 'admin-alert-card';
+    alertCard.innerHTML = `<div class="admin-alert-head"><span>⚠️</span><h3>Alerta de estoque baixo</h3></div><p>${alerts}</p>`;
     wrap.appendChild(alertCard);
   }
 
@@ -1846,11 +1862,11 @@ function initAdminDashboard() {
     if (!appointmentsRoot) return;
     const list = rows
       .slice(0, 5)
-      .map((a) => `<article class="schedule-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)} · ${a.barber_name}</p><small>Status: ${getBookingStatusLabel(a.status)}</small></article>`)
+      .map((a) => `<article class="admin-list-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)}</p><small>${a.barber_name} · ${getBookingStatusLabel(a.status)}</small></article>`)
       .join('');
     appointmentsRoot.innerHTML = `
-      <header class="flex items-center justify-between mb-3"><h3>${title}</h3><small class="text-text-secondary">${rows.length} registros</small></header>
-      <div class="grid gap-2">${list || '<article class="schedule-item"><p>Sem agendamentos no período.</p></article>'}</div>
+      <header class="admin-panel-head"><div><h3>${title}</h3><small>Agenda filtrada do período</small></div><span>${rows.length} registros</span></header>
+      <div class="grid gap-2">${list || '<article class="admin-list-item"><p>Sem agendamentos no período.</p></article>'}</div>
     `;
   };
 
@@ -1872,10 +1888,10 @@ function initAdminDashboard() {
     if (!financeRoot) return;
     const avgTicket = totalAppointments ? revenue / totalAppointments : 0;
     financeRoot.innerHTML = `
-      <header class="flex items-center justify-between mb-3"><h3>Resumo financeiro (${label})</h3><small class="text-text-secondary">Atualizado agora</small></header>
+      <header class="admin-panel-head"><div><h3>Resumo financeiro (${label})</h3><small>Atualizado agora</small></div><span>Performance</span></header>
       <div class="grid gap-2 md:grid-cols-2">
-        <article class="schedule-item"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p></article>
-        <article class="schedule-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
+        <article class="admin-list-item"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p></article>
+        <article class="admin-list-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
       </div>
     `;
   };
