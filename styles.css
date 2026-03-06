@@ -1566,6 +1566,19 @@ textarea:focus {
   color: #9db0d8;
 }
 
+.superadmin-table-head-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.superadmin-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .superadmin-table-wrap {
   display: grid;
   gap: 0.5rem;
@@ -1598,10 +1611,17 @@ textarea:focus {
   gap: 0.35rem;
 }
 
-.superadmin-actions .button {
+.superadmin-action-btn {
   min-height: 2.3rem;
   padding-inline: 0.7rem;
   font-size: 0.76rem;
+  border-width: 1px;
+}
+
+.superadmin-action-delete {
+  border-color: rgba(248, 113, 113, 0.42) !important;
+  background: linear-gradient(180deg, rgba(95, 24, 24, 0.88), rgba(61, 15, 15, 0.82)) !important;
+  color: #ffd6d6 !important;
 }
 
 .superadmin-login-card {
@@ -1621,5 +1641,10 @@ textarea:focus {
   .superadmin-table-row div:last-child {
     border-bottom: 0;
     padding-bottom: 0;
+  }
+
+  .superadmin-table-head-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

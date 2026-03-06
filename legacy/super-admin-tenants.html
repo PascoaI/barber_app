@@ -57,58 +57,23 @@
           <div>
             <p class="superadmin-overline">Modulo SuperAdmin</p>
             <h1>Painel central da plataforma</h1>
-            <p class="subtitle text-text-secondary">Cadastre e gerencie todas as barbearias da plataforma em um unico lugar.</p>
+            <p class="subtitle text-text-secondary">Gerencie todas as barbearias da plataforma com controle centralizado.</p>
           </div>
           <article class="superadmin-counter"><small>Barbearias cadastradas</small><strong id="sa-total-barbershops">0</strong></article>
         </header>
 
-        <section class="grid gap-3 lg:grid-cols-[1.05fr_1.4fr] items-start">
-          <article class="superadmin-form-card">
-            <h2>Cadastrar / editar barbearia</h2>
-            <p class="subtitle text-text-secondary">A barbearia criada podera acessar o sistema principal como admin.</p>
-            <p id="superadmin-feedback" class="text-sm text-text-secondary min-h-[1.2rem]"></p>
-
-            <form id="superadmin-barbershop-form" class="auth-form grid gap-3 mt-1">
-              <input id="sa-edit-id" type="hidden" />
-
-              <label for="sa-name">Nome da barbearia</label>
-              <input id="sa-name" type="text" required />
-
-              <label for="sa-owner-name">Nome do responsavel</label>
-              <input id="sa-owner-name" type="text" required />
-
-              <label for="sa-email">Email</label>
-              <input id="sa-email" type="email" required />
-
-              <label for="sa-phone">Telefone</label>
-              <input id="sa-phone" type="text" required />
-
-              <label for="sa-password">Senha inicial / reset</label>
-              <input id="sa-password" type="text" placeholder="Ex.: 123456" />
-
-              <label for="sa-address">Endereco (opcional)</label>
-              <input id="sa-address" type="text" />
-
-              <label for="sa-status">Status</label>
-              <select id="sa-status">
-                <option value="active">Ativa</option>
-                <option value="disabled">Desativada</option>
-              </select>
-
-              <div class="form-row">
-                <button id="sa-submit" class="button button-primary" type="submit">Cadastrar barbearia</button>
-                <button id="sa-cancel" class="button button-secondary hidden" type="button">Cancelar edicao</button>
-              </div>
-            </form>
-          </article>
-
-          <article class="superadmin-table-card">
-            <header class="superadmin-table-head">
+        <section class="superadmin-table-card">
+          <header class="superadmin-table-head superadmin-table-head-actions">
+            <div>
               <h2>Barbearias da plataforma</h2>
               <p>Nome, contato, status e acoes administrativas.</p>
-            </header>
-            <div class="superadmin-table-wrap" id="tenants-root"></div>
-          </article>
+            </div>
+            <a class="button button-primary superadmin-create-btn" href="super-admin-barbershop-form.html">
+              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span>
+              <span>Adicionar barbearia</span>
+            </a>
+          </header>
+          <div class="superadmin-table-wrap" id="tenants-root"></div>
         </section>
       </section>
     </main>

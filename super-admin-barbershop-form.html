@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SuperAdmin | Barbearias | BarberPro</title>
+    <title>SuperAdmin | Cadastro de Barbearia | BarberPro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -30,15 +30,15 @@
   </head>
   <body>
     <main class="page booking-page min-h-screen grid place-items-center p-3 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
-      <section class="booking-card superadmin-shell w-full max-w-7xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-7 grid gap-5 relative overflow-hidden">
+      <section class="booking-card superadmin-shell w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-7 grid gap-5 relative overflow-hidden">
         <div class="superadmin-glow superadmin-glow-a" aria-hidden="true"></div>
         <div class="superadmin-glow superadmin-glow-b" aria-hidden="true"></div>
 
         <nav class="quick-nav quick-nav-admin flex flex-wrap justify-between gap-2" aria-label="Atalhos">
           <div class="quick-nav-left">
-            <a class="button button-secondary nav-icon-btn" href="index.html" data-home>
-              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg></span>
-              <span>Home</span>
+            <a class="button button-secondary nav-icon-btn" href="super-admin-tenants.html" data-home>
+              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="4"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+              <span>Dashboard</span>
             </a>
             <button class="button button-secondary nav-icon-btn" type="button" data-back>
               <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></span>
@@ -53,27 +53,46 @@
           </div>
         </nav>
 
-        <header class="superadmin-hero grid gap-2 md:grid-cols-[1.2fr_auto] items-center">
-          <div>
-            <p class="superadmin-overline">Modulo SuperAdmin</p>
-            <h1>Painel central da plataforma</h1>
-            <p class="subtitle text-text-secondary">Gerencie todas as barbearias da plataforma com controle centralizado.</p>
-          </div>
-          <article class="superadmin-counter"><small>Barbearias cadastradas</small><strong id="sa-total-barbershops">0</strong></article>
+        <header class="superadmin-hero grid gap-2">
+          <p class="superadmin-overline">Cadastro de barbearia</p>
+          <h1>Nova barbearia na plataforma</h1>
+          <p class="subtitle text-text-secondary">Preencha os dados abaixo para liberar acesso no sistema principal.</p>
+          <p id="superadmin-feedback" class="text-sm text-text-secondary min-h-[1.2rem]"></p>
         </header>
 
-        <section class="superadmin-table-card">
-          <header class="superadmin-table-head superadmin-table-head-actions">
-            <div>
-              <h2>Barbearias da plataforma</h2>
-              <p>Nome, contato, status e acoes administrativas.</p>
+        <section class="superadmin-form-card">
+          <form id="superadmin-barbershop-form" class="auth-form grid gap-3">
+            <input id="sa-edit-id" type="hidden" />
+
+            <label for="sa-name">Nome da barbearia</label>
+            <input id="sa-name" type="text" required />
+
+            <label for="sa-owner-name">Nome do responsavel</label>
+            <input id="sa-owner-name" type="text" required />
+
+            <label for="sa-email">Email</label>
+            <input id="sa-email" type="email" required />
+
+            <label for="sa-phone">Telefone</label>
+            <input id="sa-phone" type="text" required />
+
+            <label for="sa-password">Senha inicial / reset</label>
+            <input id="sa-password" type="text" placeholder="Ex.: 123456" />
+
+            <label for="sa-address">Endereco (opcional)</label>
+            <input id="sa-address" type="text" />
+
+            <label for="sa-status">Status</label>
+            <select id="sa-status">
+              <option value="active">Ativa</option>
+              <option value="disabled">Desativada</option>
+            </select>
+
+            <div class="form-row">
+              <button id="sa-submit" class="button button-primary" type="submit">Cadastrar barbearia</button>
+              <button id="sa-cancel" class="button button-secondary" type="button">Voltar ao dashboard</button>
             </div>
-            <a class="button button-primary superadmin-create-btn" href="super-admin-barbershop-form.html">
-              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span>
-              <span>Adicionar barbearia</span>
-            </a>
-          </header>
-          <div class="superadmin-table-wrap" id="tenants-root"></div>
+          </form>
         </section>
       </section>
     </main>

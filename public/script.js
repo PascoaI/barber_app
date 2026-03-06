@@ -2603,34 +2603,12 @@ function initSuperAdminTenantsPage() {
   if (!root) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
 
-  const form = document.getElementById('superadmin-barbershop-form');
-  const feedbackEl = document.getElementById('superadmin-feedback');
-  const editIdEl = document.getElementById('sa-edit-id');
-  const nameEl = document.getElementById('sa-name');
-  const ownerEl = document.getElementById('sa-owner-name');
-  const emailEl = document.getElementById('sa-email');
-  const phoneEl = document.getElementById('sa-phone');
-  const passwordEl = document.getElementById('sa-password');
-  const addressEl = document.getElementById('sa-address');
-  const statusEl = document.getElementById('sa-status');
-  const submitBtn = document.getElementById('sa-submit');
-  const cancelBtn = document.getElementById('sa-cancel');
   const totalEl = document.getElementById('sa-total-barbershops');
-
-  if (!form || !nameEl || !ownerEl || !emailEl || !phoneEl || !passwordEl || !statusEl || !submitBtn || !cancelBtn || !editIdEl) return;
 
   const asDateTime = (iso) => {
     const d = new Date(iso || 0);
     if (!Number.isFinite(d.getTime())) return '-';
     return d.toLocaleString('pt-BR');
-  };
-
-  const resetForm = () => {
-    editIdEl.value = '';
-    form.reset();
-    statusEl.value = 'active';
-    submitBtn.textContent = 'Cadastrar barbearia';
-    cancelBtn.classList.add('hidden');
   };
 
   const upsertAdminUserForShop = (shop, passwordOverride = '') => {
@@ -2689,10 +2667,10 @@ function initSuperAdminTenantsPage() {
             <div><span class="status-badge ${shop.status === 'active' ? 'status-confirmed' : 'status-canceled'}">${shop.status === 'active' ? 'Ativa' : 'Desativada'}</span></div>
             <div>${asDateTime(shop.created_at)}</div>
             <div class="superadmin-actions">
-              <button type="button" class="button button-secondary" data-sa-action="edit" data-id="${shop.id}">Editar</button>
-              <button type="button" class="button button-secondary" data-sa-action="toggle" data-id="${shop.id}">${shop.status === 'active' ? 'Desativar' : 'Ativar'}</button>
-              <button type="button" class="button button-secondary" data-sa-action="reset" data-id="${shop.id}">Reset senha</button>
-              <button type="button" class="button button-danger" data-sa-action="delete" data-id="${shop.id}">Excluir</button>
+              <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="edit" data-id="${shop.id}">Editar</button>
+              <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="toggle" data-id="${shop.id}">${shop.status === 'active' ? 'Desativar' : 'Ativar'}</button>
+              <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="reset" data-id="${shop.id}">Reset senha</button>
+              <button type="button" class="button button-danger superadmin-action-btn superadmin-action-delete" data-sa-action="delete" data-id="${shop.id}">Excluir</button>
             </div>
           </article>
         `)
@@ -2711,16 +2689,7 @@ function initSuperAdminTenantsPage() {
     const row = rows[idx];
 
     if (action === 'edit') {
-      editIdEl.value = row.id;
-      nameEl.value = row.name || '';
-      ownerEl.value = row.owner_name || '';
-      emailEl.value = row.email || '';
-      phoneEl.value = row.phone || '';
-      passwordEl.value = '';
-      if (addressEl) addressEl.value = row.address || '';
-      statusEl.value = row.status || 'active';
-      submitBtn.textContent = 'Salvar alteracoes';
-      cancelBtn.classList.remove('hidden');
+      window.location.href = `super-admin-barbershop-form.html?id=${encodeURIComponent(row.id)}`;
       return;
     }
 
@@ -2772,8 +2741,90 @@ function initSuperAdminTenantsPage() {
       render();
     }
   });
+  render();
+}
 
-  cancelBtn.addEventListener('click', resetForm);
+function initSuperAdminBarbershopFormPage() {
+  const form = document.getElementById('superadmin-barbershop-form');
+  if (!form) return;
+  if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
+
+  const feedbackEl = document.getElementById('superadmin-feedback');
+  const editIdEl = document.getElementById('sa-edit-id');
+  const nameEl = document.getElementById('sa-name');
+  const ownerEl = document.getElementById('sa-owner-name');
+  const emailEl = document.getElementById('sa-email');
+  const phoneEl = document.getElementById('sa-phone');
+  const passwordEl = document.getElementById('sa-password');
+  const addressEl = document.getElementById('sa-address');
+  const statusEl = document.getElementById('sa-status');
+  const submitBtn = document.getElementById('sa-submit');
+  const cancelBtn = document.getElementById('sa-cancel');
+
+  if (!nameEl || !ownerEl || !emailEl || !phoneEl || !passwordEl || !statusEl || !submitBtn || !cancelBtn || !editIdEl) return;
+
+  const upsertAdminUserForShop = (shop, passwordOverride = '') => {
+    const users = getPlatformUsers();
+    const idx = users.findIndex((u) => u.email.toLowerCase() === shop.email.toLowerCase());
+    const password = passwordOverride || String(shop.password_hash || '').replace(/^plain:/, '') || '123456';
+    const payload = {
+      email: shop.email,
+      password,
+      role: 'admin',
+      name: shop.owner_name || 'Administrador',
+      unit_id: shop.id,
+      barbershop_id: shop.id
+    };
+    if (idx >= 0) users[idx] = { ...users[idx], ...payload };
+    else users.push(payload);
+    savePlatformUsers(users);
+  };
+
+  const syncTenantFromShop = (shop) => {
+    const tenants = getJson(STORAGE_KEYS.tenants, []);
+    const idx = tenants.findIndex((t) => t.id === shop.tenant_id || t.id === shop.id);
+    const payload = {
+      id: shop.tenant_id || shop.id,
+      name: shop.name,
+      subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || 'starter',
+      subscription_status: shop.status === 'disabled' ? 'disabled' : 'active',
+      created_at: (tenants[idx] && tenants[idx].created_at) || shop.created_at || nowIso(),
+      updated_at: nowIso()
+    };
+    if (idx >= 0) tenants[idx] = { ...tenants[idx], ...payload };
+    else tenants.unshift(payload);
+    setJson(STORAGE_KEYS.tenants, tenants);
+  };
+
+  const resetForm = () => {
+    editIdEl.value = '';
+    form.reset();
+    statusEl.value = 'active';
+    submitBtn.textContent = 'Cadastrar barbearia';
+  };
+
+  resetForm();
+
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get('id');
+  if (editId) {
+    const current = getBarbershops().find((x) => x.id === editId);
+    if (current) {
+      editIdEl.value = current.id;
+      nameEl.value = current.name || '';
+      ownerEl.value = current.owner_name || '';
+      emailEl.value = current.email || '';
+      phoneEl.value = current.phone || '';
+      passwordEl.value = '';
+      if (addressEl) addressEl.value = current.address || '';
+      statusEl.value = current.status || 'active';
+      submitBtn.textContent = 'Salvar alteracoes';
+    }
+  }
+
+  cancelBtn.addEventListener('click', () => {
+    window.location.href = 'super-admin-tenants.html';
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -2805,7 +2856,7 @@ function initSuperAdminTenantsPage() {
       password_hash: `plain:${passwordRaw}`,
       address: sanitizeText(addressEl?.value || ''),
       status: statusEl.value === 'disabled' ? 'disabled' : 'active',
-      created_at: isEdit ? rows[existingIdx].created_at : nowIso(),
+      created_at: isEdit && existingIdx >= 0 ? rows[existingIdx].created_at : nowIso(),
       updated_at: nowIso()
     };
 
@@ -2815,16 +2866,11 @@ function initSuperAdminTenantsPage() {
     saveBarbershops(rows);
     syncTenantFromShop(payload);
     upsertAdminUserForShop(payload, passwordRaw);
-
-    if (feedbackEl) feedbackEl.textContent = isEdit ? 'Barbearia atualizada com sucesso.' : 'Barbearia cadastrada com sucesso.';
     logAudit(isEdit ? 'superadmin_barbershop_updated' : 'superadmin_barbershop_created', { barbershop_id: payload.id, status: payload.status });
-    render();
-    resetForm();
-    await alertAction(isEdit ? 'Dados atualizados com sucesso.' : 'Cadastro criado com sucesso.', { title: 'Operacao concluida' });
-  });
 
-  resetForm();
-  render();
+    await alertAction(isEdit ? 'Barbearia atualizada com sucesso.' : 'Barbearia cadastrada com sucesso.', { title: 'Operacao concluida' });
+    window.location.href = 'super-admin-tenants.html';
+  });
 }
 
 function initAdminFinanceModuleCards() {
@@ -3047,6 +3093,7 @@ initUnitSettingsPage();
 initStockPage();
 initSubscriptionsPage();
 initSuperAdminTenantsPage();
+initSuperAdminBarbershopFormPage();
 initAdminFinanceModuleCards();
 initBarberHomePage();
 initGlobalNavigation();
