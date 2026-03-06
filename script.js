@@ -1807,7 +1807,7 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p><div class="form-row"><a class="button button-primary" href="booking-location.html">Agendar agora</a></div></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p></article>`;
     } else {
       nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {

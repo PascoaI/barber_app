@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { CardSkeleton } from '@/components/common/Skeletons';
@@ -42,15 +41,11 @@ export function NextAppointmentCard() {
               <strong>{new Date(next.start_datetime).toLocaleString('pt-BR')}</strong> · {next?.services?.name || 'Serviço'}
             </p>
             <p className="text-xs text-text-secondary">Status: {next.status}</p>
-            <div>
-              <Button onClick={() => { window.location.href = '/booking-datetime'; }}>Agendar outro horário</Button>
-            </div>
           </>
         ) : (
           <EmptyState
             title="Nenhum agendamento futuro"
             description="Seu próximo agendamento aparecerá aqui."
-            action={<a href="/booking-location" className="underline text-sm">Agendar agora</a>}
           />
         )}
       </CardContent>
