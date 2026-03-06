@@ -1869,7 +1869,60 @@ function initClientHomePage() {
     if (!next) {
       nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p></article>`;
     } else {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>${formatBookingDateTime(next.appointment_date, next.start_time)} · ${next.service_name}</p><small>${next.barber_name} · ${next.branch} · status ${getBookingStatusLabel(next.status)}</small><div class="form-row"><button class="button button-secondary" data-client-reschedule="${next.id}">Reagendar</button><button class="button button-secondary" data-client-cancel="${next.id}">Cancelar</button></div></article>`;
+      const statusLabel = getBookingStatusLabel(next.status);
+      const statusTone =
+        next.status === 'confirmed'
+          ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40'
+          : next.status === 'awaiting_payment'
+            ? 'bg-amber-500/15 text-amber-200 border-amber-400/40'
+            : 'bg-sky-500/15 text-sky-200 border-sky-400/40';
+
+      nextWrap.innerHTML = `
+        <article class="group relative overflow-hidden rounded-2xl border border-borderc bg-gradient-to-br from-slate-950/70 via-slate-900/60 to-slate-950/70 p-4 md:p-5 shadow-soft transition-all duration-300 hover:border-primary/45 hover:shadow-[0_14px_45px_rgba(198,154,69,0.15)] hover:-translate-y-[1px]">
+          <div class="pointer-events-none absolute -top-16 -right-14 h-44 w-44 rounded-full bg-primary/10 blur-2xl transition-transform duration-500 group-hover:scale-110"></div>
+          <div class="pointer-events-none absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-cyan-400/10 blur-3xl transition-transform duration-500 group-hover:scale-110"></div>
+          <div class="relative grid gap-4">
+            <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary/90">Próximo agendamento</p>
+                <h3 class="text-xl font-semibold text-text-primary md:text-2xl">${next.service_name}</h3>
+              </div>
+              <span class="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone}">
+                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
+                ${statusLabel}
+              </span>
+            </header>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">📅</span> Data e hora</p>
+                <p class="text-sm font-semibold text-text-primary">${formatBookingDateTime(next.appointment_date, next.start_time)}</p>
+              </div>
+              <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">💈</span> Profissional</p>
+                <p class="text-sm font-semibold text-text-primary">${next.barber_name}</p>
+              </div>
+              <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">📍</span> Unidade</p>
+                <p class="text-sm font-semibold text-text-primary">${next.branch}</p>
+              </div>
+              <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">🌆</span> Cidade</p>
+                <p class="text-sm font-semibold text-text-primary">${next.city || 'Porto Alegre'}</p>
+              </div>
+            </div>
+
+            <div class="grid gap-2 md:grid-cols-2">
+              <button class="button button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01] active:scale-[0.99]" data-client-reschedule="${next.id}">
+                <span aria-hidden="true">↻</span> Reagendar
+              </button>
+              <button class="button button-secondary inline-flex items-center justify-center gap-2 rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01] active:scale-[0.99]" data-client-cancel="${next.id}">
+                <span aria-hidden="true">✕</span> Cancelar
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
       nextWrap.querySelector('[data-client-reschedule]')?.addEventListener('click', () => {
         const city = BASE_DATA.cities.find((c) => c.name === next.city);
         const branch = city?.branches.find((x) => x.name === next.branch);
