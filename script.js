@@ -26,7 +26,12 @@ const BASE_DATA = {
   services: [
     { id: 'corte', name: 'Corte', duration_minutes: 30, price: 72, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '✂️' },
     { id: 'corte-sobrancelha', name: 'Corte + Sobrancelha', duration_minutes: 45, price: 89, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: true, emoji: '🧔' },
-    { id: 'hidratacao', name: 'Hidratação', duration_minutes: 60, price: 58, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '💧' }
+    { id: 'hidratacao', name: 'Hidratação', duration_minutes: 60, price: 58, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '💧' },
+    { id: 'corte-hidratacao', name: 'Corte + Hidratação', duration_minutes: 90, price: 124, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: true, emoji: '✨' },
+    { id: 'barba', name: 'Barba', duration_minutes: 30, price: 54, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '🪒' },
+    { id: 'corte-barba', name: 'Corte + Barba', duration_minutes: 60, price: 112, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: true, emoji: '🔥' },
+    { id: 'pigmentacao-barba', name: 'Pigmentação de Barba', duration_minutes: 45, price: 78, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '🎯' },
+    { id: 'pezinho-acabamento', name: 'Pezinho + Acabamento', duration_minutes: 20, price: 38, barber_id: null, unit_id: DEFAULT_UNIT_ID, requires_pre_payment: false, emoji: '🧩' }
   ],
   serviceProducts: [
     { service_id: 'corte', product_id: 'pomada', quantity: 1 },
@@ -36,6 +41,8 @@ const BASE_DATA = {
 
 const BASE_USERS = [
   { email: 'cliente@barber.com', password: '123456', role: 'client', name: 'Cliente', unit_id: DEFAULT_UNIT_ID },
+  { email: 'lucas@barber.com', password: '123456', role: 'client', name: 'Lucas Pascoal', unit_id: DEFAULT_UNIT_ID },
+  { email: 'rafael@barber.com', password: '123456', role: 'client', name: 'Rafael Souza', unit_id: DEFAULT_UNIT_ID },
   { email: 'admin@barber.com', password: '123456', role: 'admin', name: 'Administrador', unit_id: DEFAULT_UNIT_ID },
   { email: 'super@barber.com', password: '123456', role: 'super_admin', name: 'Super Admin', unit_id: DEFAULT_UNIT_ID }
 ];
