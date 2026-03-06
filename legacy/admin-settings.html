@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -38,11 +39,13 @@
 
         <nav class="quick-nav quick-nav-admin flex flex-wrap justify-between gap-2" aria-label="Atalhos">
           <div class="quick-nav-left">
-            <a class="button button-secondary" href="admin-home.html">Dashboard</a>
-            <a class="button button-secondary" href="admin-unit-settings.html">Regras da agenda</a>
+            <a class="button button-secondary nav-icon-btn" href="index.html" data-home><i class="bi bi-house-door"></i><span>Home</span></a>
+            <button class="button button-secondary nav-icon-btn" type="button" data-back><i class="bi bi-arrow-left"></i><span>Voltar</span></button>
+            <a class="button button-secondary nav-icon-btn" href="admin-home.html"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            <a class="button button-secondary nav-icon-btn" href="admin-unit-settings.html"><i class="bi bi-sliders2"></i><span>Regras da agenda</span></a>
           </div>
           <div class="quick-nav-right">
-            <button class="button button-danger" type="button" data-logout>Sair</button>
+            <button class="button button-danger nav-icon-btn" type="button" data-logout><i class="bi bi-box-arrow-right"></i><span>Sair</span></button>
           </div>
         </nav>
 

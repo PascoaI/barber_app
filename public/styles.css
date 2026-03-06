@@ -1297,6 +1297,39 @@ textarea:focus {
   font-size: 0.78rem;
 }
 
+.nav-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  min-width: 6.4rem;
+}
+
+.nav-icon-btn i {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.quick-nav-admin .nav-icon-btn {
+  border-radius: 0.8rem;
+  border-width: 1px;
+  backdrop-filter: blur(3px);
+}
+
+.quick-nav-admin .button-secondary.nav-icon-btn {
+  background: linear-gradient(180deg, rgba(19, 29, 51, 0.92), rgba(12, 20, 36, 0.86));
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.quick-nav-admin .button-danger.nav-icon-btn {
+  background: linear-gradient(180deg, rgba(66, 20, 20, 0.86), rgba(48, 13, 13, 0.82));
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.quick-nav-admin .nav-icon-btn:hover {
+  transform: translateY(-1px);
+}
+
 @media (max-width: 920px) {
   .finance-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
