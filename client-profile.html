@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cliente | BarberPro</title>
+    <title>Cliente | Perfil | BarberPro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -14,14 +14,65 @@
     </script>
   </head>
   <body>
-    <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
-      <section class="booking-card booking-review-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8 bg-gradient-to-b from-amber-900/20 to-surface">
-        <nav class="quick-nav flex flex-wrap justify-end gap-2 mb-4" aria-label="Atalhos">
-          <a class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" href="client-home.html" data-home>Home</a>
-          <button class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01]" type="button" data-back>Voltar</button>
-          <button class="button button-danger inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark w-full" type="button" data-logout>Sair</button>
+    <main class="page booking-page min-h-screen grid place-items-center p-3 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
+      <section class="booking-card profile-shell w-full max-w-5xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-7 grid gap-5 relative overflow-hidden">
+        <div class="profile-glow profile-glow-a" aria-hidden="true"></div>
+        <div class="profile-glow profile-glow-b" aria-hidden="true"></div>
+
+        <nav class="quick-nav quick-nav-admin flex flex-wrap justify-between gap-2" aria-label="Atalhos">
+          <div class="quick-nav-left">
+            <a class="button button-secondary nav-icon-btn" href="client-home.html" data-home>
+              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg></span>
+              <span>Home</span>
+            </a>
+            <button class="button button-secondary nav-icon-btn" type="button" data-back>
+              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></span>
+              <span>Voltar</span>
+            </button>
+          </div>
+          <div class="quick-nav-right">
+            <button class="button button-danger nav-icon-btn" type="button" data-logout>
+              <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 21-5-5 5-5"></path><path d="M4 16h10"></path><path d="M20 3H12a2 2 0 0 0-2 2v4"></path><path d="M14 21h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-6"></path></svg></span>
+              <span>Sair</span>
+            </button>
+          </div>
         </nav>
-        <h1 class="mb-4">Meu perfil</h1><form id="client-profile-form" class="auth-form grid gap-3"><label for="profile-name">Nome</label><input id="profile-name" required /><label for="profile-email">E-mail</label><input id="profile-email" disabled /><label for="profile-phone">Telefone</label><input id="profile-phone" /><button class="button button-primary" type="submit">Salvar perfil</button></form>
+
+        <header class="profile-hero grid gap-3 md:grid-cols-[1.1fr_1fr] items-start">
+          <article class="profile-hero-main">
+            <p class="profile-overline">Area do cliente</p>
+            <h1>Meu perfil</h1>
+            <p class="subtitle text-text-secondary">Atualize seus dados de contato para agilizar o atendimento e comunicacoes.</p>
+          </article>
+          <article class="profile-tip-card">
+            <h3>Dados sempre atualizados</h3>
+            <p>Email identifica sua conta e telefone facilita confirmacoes de horarios.</p>
+          </article>
+        </header>
+
+        <section class="profile-content grid gap-4 lg:grid-cols-[0.92fr_1.35fr]">
+          <article class="profile-preview-card" id="client-profile-summary">
+            <div class="profile-avatar" id="client-profile-avatar">CL</div>
+            <strong id="client-profile-name">Cliente</strong>
+            <p id="client-profile-email" class="profile-preview-email">cliente@barber.com</p>
+            <p class="profile-preview-note">Sua identidade no app da barbearia.</p>
+          </article>
+
+          <article class="profile-form-card">
+            <form id="client-profile-form" class="auth-form grid gap-3">
+              <label for="profile-name">Nome</label>
+              <input id="profile-name" required />
+
+              <label for="profile-email">E-mail</label>
+              <input id="profile-email" disabled />
+
+              <label for="profile-phone">Telefone</label>
+              <input id="profile-phone" placeholder="(51) 99999-0000" />
+
+              <button class="button button-primary" type="submit">Salvar perfil</button>
+            </form>
+          </article>
+        </section>
       </section>
     </main>
     <script src="script.js"></script>

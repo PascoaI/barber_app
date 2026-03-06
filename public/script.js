@@ -2431,9 +2431,31 @@ function initClientProfilePage() {
   const nameEl = document.getElementById('profile-name');
   const emailEl = document.getElementById('profile-email');
   const phoneEl = document.getElementById('profile-phone');
+  const profileNameEl = document.getElementById('client-profile-name');
+  const profileEmailEl = document.getElementById('client-profile-email');
+  const profileAvatarEl = document.getElementById('client-profile-avatar');
   nameEl.value = profile.name || '';
   emailEl.value = profile.email || session.email;
   phoneEl.value = profile.phone || '';
+
+  const syncProfilePreview = () => {
+    if (profileNameEl) profileNameEl.textContent = nameEl.value || 'Cliente';
+    if (profileEmailEl) profileEmailEl.textContent = emailEl.value || session.email;
+    if (profileAvatarEl) {
+      const initials = String(nameEl.value || 'Cliente')
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase();
+      profileAvatarEl.textContent = initials || 'CL';
+    }
+  };
+
+  syncProfilePreview();
+  nameEl.addEventListener('input', syncProfilePreview);
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const patch = {
@@ -2450,6 +2472,7 @@ function initClientProfilePage() {
       feedback.style.color = 'var(--text-secondary)';
       form.appendChild(feedback);
     }
+    syncProfilePreview();
     feedback.textContent = 'Perfil salvo com sucesso.';
   });
 }
@@ -2462,7 +2485,7 @@ function createClientNotificationsBell(session) {
   bellBtn.className = 'button button-secondary quick-menu-trigger inline-flex items-center justify-center rounded-xl px-3 min-h-10';
   bellBtn.setAttribute('aria-label', 'Notificações (em breve)');
   bellBtn.title = 'Notificações (em breve)';
-  bellBtn.textContent = '🔔';
+  bellBtn.innerHTML = '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path><path d="M9 17a3 3 0 0 0 6 0"></path></svg></span>';
 
   return { bellBtn };
 }

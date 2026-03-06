@@ -1,13 +1,14 @@
-'use client';
+﻿'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, House, LogOut, UserRound } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/toast';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
@@ -16,6 +17,7 @@ type ProfileForm = { name: string; phone: string; email: string };
 const initialForm: ProfileForm = { name: '', phone: '', email: '' };
 
 export default function ClientProfilePage() {
+  const router = useRouter();
   const [form, setForm] = useState<ProfileForm>(initialForm);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -30,17 +32,21 @@ export default function ClientProfilePage() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       const user = userData.user;
-      if (!user) throw new Error('Usuário não autenticado.');
+      if (!user) throw new Error('Usuario nao autenticado.');
 
       const { data: profile, error: profileError } = await supabase.from('users').select('id, email, name, phone').eq('id', user.id).single();
       if (profileError) throw profileError;
 
-      setForm({ name: profile?.name ?? '', phone: profile?.phone ?? '', email: profile?.email ?? user.email ?? '' });
+      setForm({
+        name: profile?.name ?? '',
+        phone: profile?.phone ?? '',
+        email: profile?.email ?? user.email ?? ''
+      });
     } catch (error) {
       console.error('loadProfile error:', error);
       setSaveStatus('error');
-      setFeedback('❌ Não foi possível carregar seu perfil.');
-      toast('Não foi possível carregar seu perfil.');
+      setFeedback('Nao foi possivel carregar seu perfil.');
+      toast('Nao foi possivel carregar seu perfil.');
     } finally {
       setLoading(false);
     }
@@ -48,7 +54,9 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     void loadProfile();
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [loadProfile]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -61,60 +69,88 @@ export default function ClientProfilePage() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       const user = userData.user;
-      if (!user) throw new Error('Usuário não autenticado.');
+      if (!user) throw new Error('Usuario nao autenticado.');
 
       const { error: updateError } = await supabase.from('users').update({ name: form.name, phone: form.phone, updated_at: new Date().toISOString() }).eq('id', user.id);
       if (updateError) throw updateError;
 
       await loadProfile();
       setSaveStatus('success');
-      setFeedback('✅ Perfil atualizado com sucesso.');
-      toast('Perfil salvo com sucesso!');
+      setFeedback('Perfil atualizado com sucesso.');
+      toast('Perfil salvo com sucesso.');
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => { setSaveStatus('idle'); setFeedback(''); }, 3000);
+      timerRef.current = setTimeout(() => {
+        setSaveStatus('idle');
+        setFeedback('');
+      }, 3000);
     } catch (error) {
       console.error('saveProfile error:', error);
       setSaveStatus('error');
-      setFeedback('❌ Não foi possível salvar. Tente novamente.');
+      setFeedback('Nao foi possivel salvar. Tente novamente.');
       toast('Erro ao salvar perfil.');
     }
   };
 
-  const initials = form.name?.trim()?.slice(0, 2)?.toUpperCase() || 'CL';
+  const initials = useMemo(() => {
+    const raw = form.name || 'Cliente';
+    const parts = raw.split(' ').filter(Boolean).slice(0, 2);
+    const letters = parts.map((p) => p[0]).join('').toUpperCase();
+    return letters || 'CL';
+  }, [form.name]);
 
   return (
-    <div className="max-w-3xl mx-auto grid gap-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Perfil do Cliente</CardTitle>
-            <p className="text-text-secondary text-sm">Layout atualizado com componentes shadcn-style.</p>
+    <div className="mx-auto grid w-full max-w-5xl gap-4">
+      <Card className="overflow-hidden border-borderc/80 bg-gradient-to-br from-slate-950/75 via-slate-900/70 to-slate-950/80">
+        <CardHeader className="grid gap-4 border-b border-borderc/70">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" className="inline-flex items-center gap-2" onClick={() => router.push('/client-home')}>
+                <House className="h-4 w-4" /> Home
+              </Button>
+              <Button type="button" variant="outline" className="inline-flex items-center gap-2" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" /> Voltar
+              </Button>
+            </div>
+            <Button type="button" variant="destructive" className="inline-flex items-center gap-2" onClick={() => router.push('/login')}>
+              <LogOut className="h-4 w-4" /> Sair
+            </Button>
           </div>
-          <Badge>{saveStatus === 'saving' ? 'Salvando' : 'Ativo'}</Badge>
+
+          <div className="grid gap-1.5">
+            <CardTitle>Meu perfil</CardTitle>
+            <p className="text-sm text-text-secondary">Atualize seus dados para facilitar confirmacoes de agendamento e comunicacoes.</p>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form id="client-profile-form" className="grid gap-5" onSubmit={onSubmit}>
-            <div className="flex items-center gap-3">
-              <Avatar><AvatarFallback>{initials}</AvatarFallback></Avatar>
-              <div className="text-sm text-text-secondary">Dados básicos do perfil</div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="profile-name">Nome</Label>
-                <Input id="profile-name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="profile-email">E-mail</Label>
-                <Input id="profile-email" value={form.email} disabled />
-              </div>
-              <div className="grid gap-1.5 md:col-span-2">
-                <Label htmlFor="profile-phone">Telefone</Label>
-                <Input id="profile-phone" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="(00) 00000-0000" />
-              </div>
+        <CardContent className="grid gap-4 p-4 md:grid-cols-[0.9fr_1.2fr] md:p-6">
+          <article className="grid content-start gap-3 rounded-2xl border border-borderc bg-slate-950/35 p-4">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl border border-primary/45 bg-primary/20 text-text-primary">
+              <span className="text-base font-bold">{initials}</span>
             </div>
+            <div className="grid gap-1">
+              <strong className="text-base text-text-primary">{form.name || 'Cliente'}</strong>
+              <p className="break-all text-sm text-text-secondary">{form.email || 'cliente@barber.com'}</p>
+            </div>
+            <div className="inline-flex w-fit rounded-full border border-borderc bg-slate-900/55 px-3 py-1 text-xs text-text-secondary">
+              <UserRound className="mr-1 h-3.5 w-3.5" /> Conta ativa
+            </div>
+            <Badge>{saveStatus === 'saving' ? 'Salvando' : loading ? 'Carregando' : 'Pronto'}</Badge>
+          </article>
 
-            <Button type="submit" disabled={loading || saveStatus === 'saving'}>{saveStatus === 'saving' ? 'Salvando...' : 'Salvar perfil'}</Button>
+          <form id="client-profile-form" className="grid gap-3 rounded-2xl border border-borderc bg-slate-950/30 p-4" onSubmit={onSubmit}>
+            <Label htmlFor="profile-name">Nome</Label>
+            <Input id="profile-name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
+
+            <Label htmlFor="profile-email">E-mail</Label>
+            <Input id="profile-email" value={form.email} disabled />
+
+            <Label htmlFor="profile-phone">Telefone</Label>
+            <Input id="profile-phone" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="(00) 00000-0000" />
+
+            <Button type="submit" disabled={loading || saveStatus === 'saving'}>
+              {saveStatus === 'saving' ? 'Salvando...' : 'Salvar perfil'}
+            </Button>
+
             {feedback ? <small className="text-text-secondary">{feedback}</small> : null}
           </form>
         </CardContent>
