@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperAdmin Login | BarberPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#c69a45',
+              'primary-dark': '#a87a2f',
+              background: '#090c14',
+              surface: '#111624',
+              borderc: '#28314a',
+              'text-primary': '#edf2ff',
+              'text-secondary': '#9da8c3'
+            },
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans">
+      <section class="form-card superadmin-login-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 md:p-8 space-y-4">
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="login.html">Voltar</a>
+        <h1>Acesso SuperAdmin</h1>
+        <p class="subtitle text-text-secondary leading-relaxed">Acesso exclusivo do administrador da plataforma.</p>
+
+        <p id="superadmin-login-feedback" class="login-feedback text-sm text-red-300 min-h-[1.25rem]" role="alert" aria-live="polite"></p>
+
+        <form id="superadmin-login-form" class="auth-form grid gap-3" action="#" method="post">
+          <label for="superadmin-email">Email</label>
+          <input id="superadmin-email" name="email" type="email" placeholder="super@barber.com" required />
+
+          <label for="superadmin-password">Senha</label>
+          <input id="superadmin-password" name="password" type="password" placeholder="••••••••" required />
+
+          <button class="button button-primary" type="submit">Entrar no painel</button>
+        </form>
+
+        <p class="login-help login-help-small text-sm text-text-secondary text-xs">Demo SuperAdmin: super@barber.com / 123456</p>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>

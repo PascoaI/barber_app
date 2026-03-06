@@ -83,7 +83,9 @@ const STORAGE_KEYS = {
   cache: 'barberpro_cache',
   subscriptionUsage: 'barberpro_subscription_usage',
   clientFavorites: 'barberpro_client_favorites',
-  clientProfiles: 'barberpro_client_profiles'
+  clientProfiles: 'barberpro_client_profiles',
+  platformUsers: 'barberpro_platform_users',
+  barbershops: 'barberpro_barbershops'
 };
 
 const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed', 'no_show'];
@@ -182,6 +184,24 @@ function setJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getPlatformUsers() {
+  const fromStorage = getJson(STORAGE_KEYS.platformUsers, []);
+  if (!fromStorage.length) return [...BASE_USERS];
+  return fromStorage;
+}
+
+function savePlatformUsers(rows) {
+  setJson(STORAGE_KEYS.platformUsers, rows);
+}
+
+function getBarbershops() {
+  return getJson(STORAGE_KEYS.barbershops, []);
+}
+
+function saveBarbershops(rows) {
+  setJson(STORAGE_KEYS.barbershops, rows);
+}
+
 function slugify(text) {
   return String(text)
     .normalize('NFD')
@@ -222,6 +242,25 @@ function ensureSeed() {
     });
   }
   if (!getJson(STORAGE_KEYS.clientFavorites, null)) setJson(STORAGE_KEYS.clientFavorites, {});
+  if (!getJson(STORAGE_KEYS.platformUsers, null)) setJson(STORAGE_KEYS.platformUsers, BASE_USERS);
+  if (!getJson(STORAGE_KEYS.barbershops, null)) {
+    setJson(STORAGE_KEYS.barbershops, [
+      {
+        id: DEFAULT_UNIT_ID,
+        barbershop_id: DEFAULT_UNIT_ID,
+        tenant_id: DEFAULT_TENANT_ID,
+        name: 'Barbearia XZ',
+        owner_name: 'Administrador',
+        email: 'admin@barber.com',
+        phone: '(51) 99999-0000',
+        password_hash: 'plain:123456',
+        address: 'Rua Fernandes Vieira, 631 - Bom Fim, Porto Alegre, RS',
+        status: 'active',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      }
+    ]);
+  }
 }
 
 
@@ -1127,7 +1166,7 @@ function initLoginPage() {
     const email = document.getElementById('email')?.value || '';
     const password = document.getElementById('password')?.value || '';
 
-    const base = BASE_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    const base = getPlatformUsers().find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
     const barber = getBarbers().find((b) => b.email.toLowerCase() === email.toLowerCase() && b.password === password && b.active);
 
     const user = base || (barber ? { email: barber.email, password: barber.password, role: 'barber', name: barber.name, barberId: barber.id, unit_id: barber.unit_id } : null);
@@ -1135,6 +1174,19 @@ function initLoginPage() {
     if (!user) {
       if (feedback) feedback.textContent = 'Credenciais inválidas.';
       return;
+    }
+
+    if (user.role === 'super_admin') {
+      if (feedback) feedback.textContent = 'Use o acesso exclusivo do administrador da plataforma.';
+      return;
+    }
+
+    if (user.role === 'admin') {
+      const shop = getBarbershops().find((s) => s.email.toLowerCase() === user.email.toLowerCase() || s.id === user.unit_id);
+      if (shop && shop.status === 'disabled') {
+        if (feedback) feedback.textContent = 'Acesso desta barbearia está desativado.';
+        return;
+      }
     }
 
     setSession(user);
@@ -1145,6 +1197,27 @@ function initLoginPage() {
     else if (user.role === 'barber') window.location.href = 'barber-home.html';
     else if (user.role === 'super_admin') window.location.href = 'super-admin-tenants.html';
     else window.location.href = 'admin-home.html';
+  });
+}
+
+function initSuperAdminLoginPage() {
+  const form = document.getElementById('superadmin-login-form');
+  if (!form) return;
+  const feedback = document.getElementById('superadmin-login-feedback');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('superadmin-email')?.value || '';
+    const password = document.getElementById('superadmin-password')?.value || '';
+
+    const user = getPlatformUsers().find((u) => u.role === 'super_admin' && u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    if (!user) {
+      if (feedback) feedback.textContent = 'Credenciais do SuperAdmin inválidas.';
+      return;
+    }
+
+    setSession(user);
+    window.location.href = 'super-admin-tenants.html';
   });
 }
 
@@ -2528,17 +2601,206 @@ function initSubscriptionsPage() {
 function initSuperAdminTenantsPage() {
   const root = document.getElementById('tenants-root');
   if (!root) return;
-  if (!requireRole(['super_admin'], 'login.html')) return;
+  if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
 
-  const tenants = getJson(STORAGE_KEYS.tenants, []);
-  const plans = getJson(STORAGE_KEYS.platformPlans, []);
+  const form = document.getElementById('superadmin-barbershop-form');
+  const feedbackEl = document.getElementById('superadmin-feedback');
+  const editIdEl = document.getElementById('sa-edit-id');
+  const nameEl = document.getElementById('sa-name');
+  const ownerEl = document.getElementById('sa-owner-name');
+  const emailEl = document.getElementById('sa-email');
+  const phoneEl = document.getElementById('sa-phone');
+  const passwordEl = document.getElementById('sa-password');
+  const addressEl = document.getElementById('sa-address');
+  const statusEl = document.getElementById('sa-status');
+  const submitBtn = document.getElementById('sa-submit');
+  const cancelBtn = document.getElementById('sa-cancel');
+  const totalEl = document.getElementById('sa-total-barbershops');
 
-  root.innerHTML = tenants
-    .map((t) => {
-      const plan = plans.find((p) => p.id === t.subscription_plan_id);
-      return `<article class="schedule-item"><h3>${t.name}</h3><p>Plano: ${plan?.name || '-'} · Status: ${t.subscription_status}</p><small>Recursos: analytics=${plan?.analytics_enabled ? 'on' : 'off'}, estoque=${plan?.stock_enabled ? 'on' : 'off'}, assinatura=${plan?.subscription_enabled ? 'on' : 'off'}</small></article>`;
-    })
-    .join('');
+  if (!form || !nameEl || !ownerEl || !emailEl || !phoneEl || !passwordEl || !statusEl || !submitBtn || !cancelBtn || !editIdEl) return;
+
+  const asDateTime = (iso) => {
+    const d = new Date(iso || 0);
+    if (!Number.isFinite(d.getTime())) return '-';
+    return d.toLocaleString('pt-BR');
+  };
+
+  const resetForm = () => {
+    editIdEl.value = '';
+    form.reset();
+    statusEl.value = 'active';
+    submitBtn.textContent = 'Cadastrar barbearia';
+    cancelBtn.classList.add('hidden');
+  };
+
+  const upsertAdminUserForShop = (shop, passwordOverride = '') => {
+    const users = getPlatformUsers();
+    const idx = users.findIndex((u) => u.email.toLowerCase() === shop.email.toLowerCase());
+    const password = passwordOverride || String(shop.password_hash || '').replace(/^plain:/, '') || '123456';
+    const payload = {
+      email: shop.email,
+      password,
+      role: 'admin',
+      name: shop.owner_name || 'Administrador',
+      unit_id: shop.id,
+      barbershop_id: shop.id
+    };
+    if (idx >= 0) users[idx] = { ...users[idx], ...payload };
+    else users.push(payload);
+    savePlatformUsers(users);
+  };
+
+  const removeAdminUserForShop = (shop) => {
+    savePlatformUsers(getPlatformUsers().filter((u) => !(u.role === 'admin' && u.email.toLowerCase() === shop.email.toLowerCase())));
+  };
+
+  const render = () => {
+    const rows = getBarbershops().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (totalEl) totalEl.textContent = String(rows.length);
+
+    root.innerHTML = rows.length
+      ? rows
+        .map((shop) => `
+          <article class="superadmin-table-row">
+            <div><strong>${sanitizeText(shop.name)}</strong><small>ID: ${sanitizeText(shop.id)}</small></div>
+            <div>${sanitizeText(shop.owner_name || '-')}</div>
+            <div>${sanitizeText(shop.email || '-')}</div>
+            <div>${sanitizeText(shop.phone || '-')}</div>
+            <div><span class="status-badge ${shop.status === 'active' ? 'status-confirmed' : 'status-canceled'}">${shop.status === 'active' ? 'Ativa' : 'Desativada'}</span></div>
+            <div>${asDateTime(shop.created_at)}</div>
+            <div class="superadmin-actions">
+              <button type="button" class="button button-secondary" data-sa-action="edit" data-id="${shop.id}">Editar</button>
+              <button type="button" class="button button-secondary" data-sa-action="toggle" data-id="${shop.id}">${shop.status === 'active' ? 'Desativar' : 'Ativar'}</button>
+              <button type="button" class="button button-secondary" data-sa-action="reset" data-id="${shop.id}">Reset senha</button>
+              <button type="button" class="button button-danger" data-sa-action="delete" data-id="${shop.id}">Excluir</button>
+            </div>
+          </article>
+        `)
+        .join('')
+      : '<article class="schedule-item"><h3>Nenhuma barbearia cadastrada</h3><p>Use o formulario para criar a primeira.</p></article>';
+  };
+
+  root.addEventListener('click', async (e) => {
+    const target = e.target.closest('[data-sa-action]');
+    if (!target) return;
+    const action = target.dataset.saAction;
+    const id = target.dataset.id;
+    const rows = getBarbershops();
+    const idx = rows.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    const row = rows[idx];
+
+    if (action === 'edit') {
+      editIdEl.value = row.id;
+      nameEl.value = row.name || '';
+      ownerEl.value = row.owner_name || '';
+      emailEl.value = row.email || '';
+      phoneEl.value = row.phone || '';
+      passwordEl.value = '';
+      if (addressEl) addressEl.value = row.address || '';
+      statusEl.value = row.status || 'active';
+      submitBtn.textContent = 'Salvar alteracoes';
+      cancelBtn.classList.remove('hidden');
+      return;
+    }
+
+    if (action === 'toggle') {
+      const toDisable = row.status === 'active';
+      const ok = await confirmAction(toDisable ? 'Deseja desativar esta barbearia?' : 'Deseja reativar esta barbearia?', {
+        title: toDisable ? 'Desativar barbearia' : 'Ativar barbearia',
+        confirmText: toDisable ? 'Desativar' : 'Ativar'
+      });
+      if (!ok) return;
+
+      rows[idx] = { ...row, status: toDisable ? 'disabled' : 'active', updated_at: nowIso() };
+      saveBarbershops(rows);
+      logAudit('superadmin_barbershop_status_changed', { barbershop_id: row.id, status: rows[idx].status });
+      render();
+      return;
+    }
+
+    if (action === 'reset') {
+      const ok = await confirmAction('Definir senha padrão para esta barbearia?', {
+        title: 'Reset de senha',
+        confirmText: 'Resetar'
+      });
+      if (!ok) return;
+      const nextPassword = '123456';
+      rows[idx] = { ...row, password_hash: `plain:${nextPassword}`, updated_at: nowIso() };
+      saveBarbershops(rows);
+      upsertAdminUserForShop(rows[idx], nextPassword);
+      await alertAction('Senha redefinida para: 123456', { title: 'Senha atualizada' });
+      logAudit('superadmin_barbershop_password_reset', { barbershop_id: row.id });
+      render();
+      return;
+    }
+
+    if (action === 'delete') {
+      const ok = await confirmAction('Excluir permanentemente esta barbearia?', {
+        title: 'Excluir barbearia',
+        confirmText: 'Excluir'
+      });
+      if (!ok) return;
+
+      const [removed] = rows.splice(idx, 1);
+      saveBarbershops(rows);
+      removeAdminUserForShop(removed);
+      logAudit('superadmin_barbershop_deleted', { barbershop_id: removed.id });
+      render();
+    }
+  });
+
+  cancelBtn.addEventListener('click', resetForm);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const rows = getBarbershops();
+    const isEdit = !!editIdEl.value;
+    const existingIdx = rows.findIndex((x) => x.id === editIdEl.value);
+    const incomingEmail = sanitizeText(emailEl.value).toLowerCase();
+
+    const duplicated = rows.some((x) => x.email.toLowerCase() === incomingEmail && x.id !== editIdEl.value);
+    if (duplicated) {
+      if (feedbackEl) feedbackEl.textContent = 'Ja existe uma barbearia com este email.';
+      return;
+    }
+
+    const createdId = isEdit
+      ? editIdEl.value
+      : `shop_${slugify(nameEl.value || ownerEl.value || `novo-${Date.now()}`)}_${Date.now().toString().slice(-6)}`;
+
+    const passwordRaw = sanitizeText(passwordEl.value) || (isEdit ? String(rows[existingIdx]?.password_hash || '').replace(/^plain:/, '') : '123456');
+
+    const payload = {
+      id: createdId,
+      barbershop_id: createdId,
+      tenant_id: createdId,
+      name: sanitizeText(nameEl.value),
+      owner_name: sanitizeText(ownerEl.value),
+      email: incomingEmail,
+      phone: sanitizeText(phoneEl.value),
+      password_hash: `plain:${passwordRaw}`,
+      address: sanitizeText(addressEl?.value || ''),
+      status: statusEl.value === 'disabled' ? 'disabled' : 'active',
+      created_at: isEdit ? rows[existingIdx].created_at : nowIso(),
+      updated_at: nowIso()
+    };
+
+    if (isEdit && existingIdx >= 0) rows[existingIdx] = payload;
+    else rows.unshift(payload);
+
+    saveBarbershops(rows);
+    upsertAdminUserForShop(payload, passwordRaw);
+
+    if (feedbackEl) feedbackEl.textContent = isEdit ? 'Barbearia atualizada com sucesso.' : 'Barbearia cadastrada com sucesso.';
+    logAudit(isEdit ? 'superadmin_barbershop_updated' : 'superadmin_barbershop_created', { barbershop_id: payload.id, status: payload.status });
+    render();
+    resetForm();
+    await alertAction(isEdit ? 'Dados atualizados com sucesso.' : 'Cadastro criado com sucesso.', { title: 'Operacao concluida' });
+  });
+
+  resetForm();
+  render();
 }
 
 function initAdminFinanceModuleCards() {
@@ -2739,6 +3001,7 @@ applyBrandTheme();
 ensureDbSchemaNote();
 
 initLoginPage();
+initSuperAdminLoginPage();
 initLocationPage();
 initServicePage();
 initProfessionalPage();

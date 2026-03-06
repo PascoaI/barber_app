@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -43,12 +43,13 @@
   <body>
     <main class="page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans">
       <section class="form-card w-full max-w-md rounded-2xl border border-borderc bg-surface shadow-soft p-6 md:p-8 space-y-4">
-        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="index.html">← Voltar</a>
+        <a class="back-link text-text-secondary hover:text-text-primary text-sm" href="index.html">â† Voltar</a>
         <h1>Entrar</h1>
-        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Acesse sua conta para gerenciar horários e clientes.</p>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Acesse sua conta para gerenciar horÃ¡rios e clientes.</p>
 
-        <p class="login-help text-sm text-text-secondary">Use suas credenciais. O sistema identifica automaticamente se você é cliente, barbeiro ou admin.</p>
-        <p class="login-help login-help-small text-sm text-text-secondary text-xs">Demo clientes: cliente@barber.com / 123456 · lucas@barber.com / 123456 · rafael@barber.com / 123456 · admin@barber.com / 123456</p>
+        <p class="login-help text-sm text-text-secondary">Use suas credenciais. O sistema identifica automaticamente se vocÃª Ã© cliente, barbeiro ou admin.</p>
+        
+        <p class="login-help login-help-small text-sm text-text-secondary text-xs">Acesso exclusivo da plataforma: <a href="super-admin-login.html">Login SuperAdmin</a></p>
         <p id="login-feedback" class="login-feedback text-sm text-red-300 min-h-[1.25rem]" role="alert" aria-live="polite"></p>
 
         <form class="auth-form grid gap-3" action="#" method="post">
@@ -56,7 +57,7 @@
           <input id="email" name="email" type="email" placeholder="barbearia@email.com" required />
 
           <label for="password">Senha</label>
-          <input id="password" name="password" type="password" placeholder="••••••••" required />
+          <input id="password" name="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required />
 
           <div class="form-row flex flex-wrap items-center justify-between gap-2">
             <label class="checkbox-wrap inline-flex items-center gap-2 text-sm text-text-secondary">
@@ -70,7 +71,7 @@
         </form>
 
         <p class="switch-text text-center text-text-secondary text-sm mt-4">
-          Ainda não tem conta?
+          Ainda nÃ£o tem conta?
           <a href="register.html">Criar agora</a>
         </p>
       </section>
@@ -78,3 +79,4 @@
     <script src="script.js"></script>
   </body>
 </html>
+
