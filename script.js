@@ -371,18 +371,28 @@ function getSession() {
 }
 
 function setSession(user) {
-  setJson(STORAGE_KEYS.session, {
+  const payload = {
     email: user.email,
     role: user.role,
     name: user.name,
     barberId: user.barberId || null,
     unit_id: user.unit_id || DEFAULT_UNIT_ID,
     expires_at: addMinutes(new Date(), SESSION_TTL_MINUTES).toISOString()
-  });
+  };
+  setJson(STORAGE_KEYS.session, payload);
+  try {
+    const maxAge = SESSION_TTL_MINUTES * 60;
+    document.cookie = `barberpro_role=${encodeURIComponent(payload.role || '')}; path=/; max-age=${maxAge}; samesite=lax`;
+    document.cookie = `barberpro_session_email=${encodeURIComponent(payload.email || '')}; path=/; max-age=${maxAge}; samesite=lax`;
+  } catch {}
 }
 
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.session);
+  try {
+    document.cookie = 'barberpro_role=; path=/; max-age=0; samesite=lax';
+    document.cookie = 'barberpro_session_email=; path=/; max-age=0; samesite=lax';
+  } catch {}
 }
 
 function sanitizeText(value) {
@@ -2806,7 +2816,8 @@ function initSuperAdminBarbershopFormPage() {
   resetForm();
 
   const params = new URLSearchParams(window.location.search);
-  const editId = params.get('id');
+  const pathMatch = window.location.pathname.match(/\/superadmin\/barbershops\/([^/]+)\/edit\/?$/i);
+  const editId = params.get('id') || (pathMatch ? decodeURIComponent(pathMatch[1]) : '');
   if (editId) {
     const current = getBarbershops().find((x) => x.id === editId);
     if (current) {
