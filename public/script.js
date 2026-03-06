@@ -1743,47 +1743,28 @@ function initBlockedSlotsPage() {
 function initAdminFinancePage() {
   const metricsEl = document.getElementById('finance-metrics');
   const detailsEl = document.getElementById('finance-by-barber');
+  const summaryEl = document.getElementById('finance-summary-note');
+  const servicesEl = document.getElementById('finance-services');
+  const paymentsEl = document.getElementById('finance-payment-status');
+  const exportsEl = document.getElementById('finance-export-actions');
+  const dailyEl = document.getElementById('finance-daily-performance');
+  const periodButtons = Array.from(document.querySelectorAll('[data-finance-period]'));
   if (!metricsEl || !detailsEl) return;
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
-  const analytics = getAnalytics();
-  const metrics = getDashboardMetrics();
-  renderMetrics(metricsEl, metrics);
+  const allAppointments = getAppointments().filter((a) => (a.unit_id || APP_CONFIG.unitId) === APP_CONFIG.unitId);
+  const allPayments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId);
 
-  const toolbar = document.createElement('div');
-  toolbar.className = 'form-row';
-  toolbar.innerHTML = `
-    <button class="button button-secondary" type="button" data-export="revenue">Exportar faturamento CSV</button>
-    <button class="button button-secondary" type="button" data-export="commissions">Exportar comissões CSV</button>
-    <button class="button button-secondary" type="button" data-export="clients">Exportar clientes ativos CSV</button>
-    <button class="button button-secondary" type="button" data-export="stock">Exportar estoque CSV</button>
-  `;
-  detailsEl.before(toolbar);
+  if (exportsEl) {
+    exportsEl.innerHTML = `
+      <button class="button button-secondary" type="button" data-export="revenue">Exportar faturamento CSV</button>
+      <button class="button button-secondary" type="button" data-export="commissions">Exportar comissoes CSV</button>
+      <button class="button button-secondary" type="button" data-export="clients">Exportar clientes CSV</button>
+      <button class="button button-secondary" type="button" data-export="stock">Exportar estoque CSV</button>
+    `;
+  }
 
-  const completed = getAppointments().filter((a) => a.status === 'completed');
-  const byBarber = {};
-  completed.forEach((a) => {
-    byBarber[a.barber_name] = (byBarber[a.barber_name] || 0) + Number(a.service_price || 0);
-  });
-
-  const monthly = getJson(STORAGE_KEYS.payments, [])
-    .filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid' && (p.paid_at || '').slice(0, 7) === '2026-02')
-    .reduce((s, p) => s + Number(p.amount || 0), 0);
-
-  const avgTicket = completed.length ? completed.reduce((s, a) => s + Number(a.service_price || 0), 0) / completed.length : 0;
-
-  detailsEl.innerHTML = `
-    <article class="schedule-item"><h3>Faturamento mensal</h3><p>${asCurrency(monthly)}</p></article>
-    <article class="schedule-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
-    <article class="schedule-item"><h3>Horário mais lucrativo</h3><p>${analytics.profitableHour}</p></article>
-    <article class="schedule-item"><h3>Dia com maior faturamento</h3><p>${analytics.bestWeekDay}</p></article>
-    <article class="schedule-item"><h3>Cliente com maior frequência</h3><p>${analytics.topClient}</p></article>
-    ${Object.entries(byBarber)
-      .map(([name, amount]) => `<article class="schedule-item"><h3>Receita por barbeiro · ${name}</h3><p>${asCurrency(amount)}</p></article>`)
-      .join('') || '<article class="schedule-item"><h3>Receita por barbeiro</h3><p>Sem dados</p></article>'}
-  `;
-
-  toolbar.querySelectorAll('[data-export]').forEach((btn) => {
+  (exportsEl || document).querySelectorAll('[data-export]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.export;
       if (type === 'revenue') {
@@ -1800,7 +1781,7 @@ function initAdminFinancePage() {
       }
       if (type === 'clients') {
         const grouped = {};
-        getAppointments().forEach((a) => {
+        allAppointments.forEach((a) => {
           grouped[a.client_email] = (grouped[a.client_email] || 0) + 1;
         });
         const rows = Object.entries(grouped).map(([client_email, appointments]) => ({ client_email, appointments }));
@@ -1813,6 +1794,158 @@ function initAdminFinancePage() {
     });
   });
 
+  const rangeForPeriod = (period) => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start);
+
+    if (period === 'today') {
+      end.setDate(end.getDate() + 1);
+      return { start, end, label: 'Hoje' };
+    }
+
+    if (period === 'week') {
+      const day = start.getDay();
+      const diffToMonday = (day + 6) % 7;
+      start.setDate(start.getDate() - diffToMonday);
+      end.setTime(start.getTime());
+      end.setDate(end.getDate() + 7);
+      return { start, end, label: 'Semana' };
+    }
+
+    start.setDate(1);
+    end.setMonth(start.getMonth() + 1);
+    return { start, end, label: 'Mes' };
+  };
+
+  const inRange = (value, range) => {
+    const d = new Date(value || 0);
+    return Number.isFinite(d.getTime()) && d >= range.start && d < range.end;
+  };
+
+  const render = (period = 'today') => {
+    const range = rangeForPeriod(period);
+    const appointments = allAppointments.filter((a) => inRange(a.start_datetime, range));
+    const paidPayments = allPayments.filter((p) => p.status === 'paid' && inRange(p.paid_at || p.created_at, range));
+
+    const total = appointments.length;
+    const completed = appointments.filter((a) => a.status === 'completed');
+    const canceled = appointments.filter((a) => a.status === 'canceled');
+    const active = appointments.filter((a) => ['awaiting_payment', 'pending', 'confirmed'].includes(a.status));
+
+    const revenue = paidPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const avgTicket = completed.length ? revenue / completed.length : 0;
+    const cancellationRate = total ? (canceled.length / total) * 100 : 0;
+    const expectedRevenue = active.reduce((sum, a) => sum + Number(a.service_price || 0), 0);
+
+    metricsEl.innerHTML = `
+      <article class="finance-kpi-card"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p><small>${range.label}</small></article>
+      <article class="finance-kpi-card"><h3>Atendimentos concluidos</h3><p>${completed.length}</p><small>de ${total} agendamentos</small></article>
+      <article class="finance-kpi-card"><h3>Ticket medio</h3><p>${asCurrency(avgTicket)}</p><small>por servico concluido</small></article>
+      <article class="finance-kpi-card"><h3>Cancelamentos</h3><p>${cancellationRate.toFixed(0)}%</p><small>${canceled.length} no periodo</small></article>
+      <article class="finance-kpi-card"><h3>Receita prevista</h3><p>${asCurrency(expectedRevenue)}</p><small>agendamentos em aberto</small></article>
+      <article class="finance-kpi-card"><h3>Pagamentos aprovados</h3><p>${paidPayments.length}</p><small>transacoes pagas</small></article>
+    `;
+
+    if (summaryEl) {
+      summaryEl.textContent = `Visao de ${range.label.toLowerCase()}: ${total} agendamentos, ${completed.length} concluidos e ${canceled.length} cancelados.`;
+    }
+
+    const byBarber = {};
+    completed.forEach((a) => {
+      const key = a.barber_name || 'Sem barbeiro';
+      byBarber[key] = (byBarber[key] || 0) + Number(a.service_price || 0);
+    });
+    const barberRows = Object.entries(byBarber)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const topBarberAmount = barberRows[0]?.[1] || 0;
+    detailsEl.innerHTML = barberRows.length
+      ? barberRows
+        .map(([name, amount]) => `
+          <article class="finance-list-card">
+            <div class="finance-list-row"><h3>${name}</h3><strong>${asCurrency(amount)}</strong></div>
+            <div class="finance-progress"><span style="width:${topBarberAmount ? Math.max(8, (amount / topBarberAmount) * 100) : 8}%"></span></div>
+          </article>
+        `)
+        .join('')
+      : '<article class="finance-list-card"><p>Sem faturamento por barbeiro neste periodo.</p></article>';
+
+    const byService = {};
+    completed.forEach((a) => {
+      const key = a.service_name || 'Servico';
+      byService[key] = (byService[key] || 0) + Number(a.service_price || 0);
+    });
+    const serviceRows = Object.entries(byService)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const topService = serviceRows[0]?.[1] || 0;
+    if (servicesEl) {
+      servicesEl.innerHTML = serviceRows.length
+        ? serviceRows
+          .map(([name, amount]) => `
+            <article class="finance-list-card">
+              <div class="finance-list-row"><h3>${name}</h3><strong>${asCurrency(amount)}</strong></div>
+              <div class="finance-progress"><span style="width:${topService ? Math.max(8, (amount / topService) * 100) : 8}%"></span></div>
+            </article>
+          `)
+          .join('')
+        : '<article class="finance-list-card"><p>Sem receita por servico neste periodo.</p></article>';
+    }
+
+    if (paymentsEl) {
+      const paymentGroups = allPayments
+        .filter((p) => inRange(p.paid_at || p.created_at, range))
+        .reduce((acc, p) => {
+          const key = p.status || 'pending';
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+      const statuses = ['paid', 'pending', 'failed', 'refunded'];
+      paymentsEl.innerHTML = statuses
+        .map((status) => `<article class="finance-status-card"><h3>${status}</h3><p>${paymentGroups[status] || 0}</p></article>`)
+        .join('');
+    }
+
+    if (dailyEl) {
+      const days = [];
+      for (let d = new Date(range.start); d < range.end; d.setDate(d.getDate() + 1)) {
+        days.push(new Date(d));
+      }
+      const dayRows = days.map((day) => {
+        const key = day.toISOString().slice(0, 10);
+        const dayRevenue = paidPayments
+          .filter((p) => (p.paid_at || p.created_at || '').slice(0, 10) === key)
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        return { key, label: day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), value: dayRevenue };
+      });
+      const maxValue = Math.max(...dayRows.map((r) => r.value), 0);
+      dailyEl.innerHTML = dayRows.length
+        ? dayRows
+          .map((row) => `
+            <article class="finance-day-row">
+              <span>${row.label}</span>
+              <div class="finance-progress"><span style="width:${maxValue ? Math.max(6, (row.value / maxValue) * 100) : 6}%"></span></div>
+              <strong>${asCurrency(row.value)}</strong>
+            </article>
+          `)
+          .join('')
+        : '<article class="finance-list-card"><p>Sem movimentacao diaria para exibir.</p></article>';
+    }
+
+    periodButtons.forEach((btn) => {
+      const isActive = (btn.dataset.financePeriod || 'today') === period;
+      btn.classList.toggle('button-primary', isActive);
+      btn.classList.toggle('button-secondary', !isActive);
+      btn.classList.toggle('opacity-80', !isActive);
+    });
+  };
+
+  periodButtons.forEach((btn) => {
+    btn.addEventListener('click', () => render(btn.dataset.financePeriod || 'today'));
+  });
+
+  render('today');
 }
 
 function initAdminDashboard() {
@@ -2041,44 +2174,54 @@ function initAdminSettingsPage() {
   if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
 
   const nameEl = document.getElementById('shop-name');
-  const colorEl = document.getElementById('shop-color');
   const logoUrlEl = document.getElementById('shop-logo-url');
   const logoFileEl = document.getElementById('shop-logo-file');
+  const uploadBtn = document.getElementById('shop-logo-trigger');
+  const fileLabelEl = document.getElementById('shop-logo-file-label');
   const previewName = document.getElementById('brand-preview-name');
   const previewLogo = document.getElementById('brand-preview-logo');
+  const previewPlaceholder = document.getElementById('brand-preview-placeholder');
 
   const brand = getBrandSettings();
   nameEl.value = brand.shopName;
-  colorEl.value = brand.primaryColor;
-  logoUrlEl.value = brand.logoUrl;
+  if (logoUrlEl) logoUrlEl.value = brand.logoUrl;
 
   const updatePreview = (logo) => {
     previewName.textContent = nameEl.value || 'BarberPro';
-    if (logo) {
+    if (previewLogo && logo) {
       previewLogo.src = logo;
       previewLogo.style.display = 'block';
-    } else previewLogo.style.display = 'none';
+      if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+    } else {
+      if (previewLogo) previewLogo.style.display = 'none';
+      if (previewPlaceholder) previewPlaceholder.style.display = 'inline-flex';
+    }
   };
 
   updatePreview(brand.logoUrl);
-  nameEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
-  logoUrlEl.addEventListener('input', () => updatePreview(logoUrlEl.value));
-  logoFileEl.addEventListener('change', () => {
+  nameEl.addEventListener('input', () => updatePreview(logoUrlEl?.value || ''));
+  if (uploadBtn && logoFileEl) {
+    uploadBtn.addEventListener('click', () => logoFileEl.click());
+  }
+
+  logoFileEl?.addEventListener('change', () => {
     const file = logoFileEl.files?.[0];
     if (!file) return;
+    if (fileLabelEl) fileLabelEl.textContent = file.name;
     const reader = new FileReader();
     reader.onload = () => {
-      logoUrlEl.value = String(reader.result || '');
-      updatePreview(logoUrlEl.value);
+      if (logoUrlEl) logoUrlEl.value = String(reader.result || '');
+      updatePreview(logoUrlEl?.value || '');
     };
     reader.readAsDataURL(file);
   });
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    saveBrandSettings({ shopName: nameEl.value.trim() || 'BarberPro', primaryColor: colorEl.value, logoUrl: logoUrlEl.value.trim() });
+    saveBrandSettings({ shopName: nameEl.value.trim() || 'BarberPro', logoUrl: (logoUrlEl?.value || '').trim() });
     applyBrandTheme();
     logAudit('brand_updated', { shopName: nameEl.value.trim() });
+    await alertAction('Configuracoes atualizadas com sucesso.', { title: 'Tudo certo', confirmText: 'Fechar' });
   });
 }
 
@@ -2378,14 +2521,7 @@ function initSuperAdminTenantsPage() {
 }
 
 function initAdminFinanceModuleCards() {
-  const cardWrap = document.getElementById('finance-by-barber');
-  if (!cardWrap) return;
-  const occupancy = getAnalytics().occupancyByBarber;
-  if (Object.keys(occupancy).length) {
-    cardWrap.innerHTML += Object.entries(occupancy)
-      .map(([name, count]) => `<article class="schedule-item"><h3>Ocupação média (hoje) · ${name}</h3><p>${count} slots</p></article>`)
-      .join('');
-  }
+  return;
 }
 
 function initBarberHomePage() {
