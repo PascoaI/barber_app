@@ -4,7 +4,7 @@ export default function LegacyPage({ bodyHtml }: { bodyHtml: string }) {
   return (
     <>
       <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: bodyHtml }} />
-      <Script src="/script.js" strategy="afterInteractive" />
+      <Script src="/script.js?v=20260306-ui2" strategy="afterInteractive" />
     </>
   );
 }
