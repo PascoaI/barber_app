@@ -2654,6 +2654,26 @@ function initSuperAdminTenantsPage() {
     savePlatformUsers(getPlatformUsers().filter((u) => !(u.role === 'admin' && u.email.toLowerCase() === shop.email.toLowerCase())));
   };
 
+  const syncTenantFromShop = (shop) => {
+    const tenants = getJson(STORAGE_KEYS.tenants, []);
+    const idx = tenants.findIndex((t) => t.id === shop.tenant_id || t.id === shop.id);
+    const payload = {
+      id: shop.tenant_id || shop.id,
+      name: shop.name,
+      subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || 'starter',
+      subscription_status: shop.status === 'disabled' ? 'disabled' : 'active',
+      created_at: (tenants[idx] && tenants[idx].created_at) || shop.created_at || nowIso(),
+      updated_at: nowIso()
+    };
+    if (idx >= 0) tenants[idx] = { ...tenants[idx], ...payload };
+    else tenants.unshift(payload);
+    setJson(STORAGE_KEYS.tenants, tenants);
+  };
+
+  const removeTenantFromShop = (shop) => {
+    setJson(STORAGE_KEYS.tenants, getJson(STORAGE_KEYS.tenants, []).filter((t) => t.id !== shop.tenant_id && t.id !== shop.id));
+  };
+
   const render = () => {
     const rows = getBarbershops().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     if (totalEl) totalEl.textContent = String(rows.length);
@@ -2714,6 +2734,7 @@ function initSuperAdminTenantsPage() {
 
       rows[idx] = { ...row, status: toDisable ? 'disabled' : 'active', updated_at: nowIso() };
       saveBarbershops(rows);
+      syncTenantFromShop(rows[idx]);
       logAudit('superadmin_barbershop_status_changed', { barbershop_id: row.id, status: rows[idx].status });
       render();
       return;
@@ -2728,6 +2749,7 @@ function initSuperAdminTenantsPage() {
       const nextPassword = '123456';
       rows[idx] = { ...row, password_hash: `plain:${nextPassword}`, updated_at: nowIso() };
       saveBarbershops(rows);
+      syncTenantFromShop(rows[idx]);
       upsertAdminUserForShop(rows[idx], nextPassword);
       await alertAction('Senha redefinida para: 123456', { title: 'Senha atualizada' });
       logAudit('superadmin_barbershop_password_reset', { barbershop_id: row.id });
@@ -2744,6 +2766,7 @@ function initSuperAdminTenantsPage() {
 
       const [removed] = rows.splice(idx, 1);
       saveBarbershops(rows);
+      removeTenantFromShop(removed);
       removeAdminUserForShop(removed);
       logAudit('superadmin_barbershop_deleted', { barbershop_id: removed.id });
       render();
@@ -2790,6 +2813,7 @@ function initSuperAdminTenantsPage() {
     else rows.unshift(payload);
 
     saveBarbershops(rows);
+    syncTenantFromShop(payload);
     upsertAdminUserForShop(payload, passwordRaw);
 
     if (feedbackEl) feedbackEl.textContent = isEdit ? 'Barbearia atualizada com sucesso.' : 'Barbearia cadastrada com sucesso.';
