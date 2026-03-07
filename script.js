@@ -2080,6 +2080,9 @@ function initAdminDashboard() {
     const d = new Date(a.start_datetime);
     return d >= startOfWeek && d < endOfWeek;
   });
+  const dashboardAgendaStatuses = ['pending', 'confirmed'];
+  const todayAgendaAppointments = todayAppointments.filter((a) => dashboardAgendaStatuses.includes(a.status));
+  const weekAgendaAppointments = weekAppointments.filter((a) => dashboardAgendaStatuses.includes(a.status));
 
   const renderAppointments = (rows, title) => {
     if (!appointmentsRoot) return;
@@ -2133,10 +2136,10 @@ function initAdminDashboard() {
     });
 
     if (tab === 'today') {
-      renderAppointments(todayAppointments, 'Agendamentos de hoje');
+      renderAppointments(todayAgendaAppointments, 'Agendamentos de hoje');
       renderFinance(revenueToday, todayAppointments.length, 'Hoje');
     } else {
-      renderAppointments(weekAppointments, 'Agendamentos da semana');
+      renderAppointments(weekAgendaAppointments, 'Agendamentos da semana');
       renderFinance(revenueWeek, weekAppointments.length, 'Semana');
     }
   };
