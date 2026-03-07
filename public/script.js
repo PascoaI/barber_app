@@ -1121,6 +1121,7 @@ function getDashboardMetrics() {
   const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
   const today = new Date().toISOString().slice(0, 10);
   const todayAppointments = appointments.filter((a) => a.appointment_date === today);
+  const todayCompletedAppointments = todayAppointments.filter((a) => a.status === 'completed');
   const todayPayments = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today);
 
   const byHour = {};
@@ -1135,6 +1136,8 @@ function getDashboardMetrics() {
 
   return {
     totalToday: todayAppointments.length,
+    completedToday: todayCompletedAppointments.length,
+    completedRevenueToday: todayCompletedAppointments.reduce((sum, a) => sum + Number(a.service_price || 0), 0),
     revenueToday: todayPayments.reduce((s, p) => s + Number(p.amount || 0), 0),
     busiestHour: Object.entries(byHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
     topService: Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
@@ -1152,9 +1155,9 @@ function renderMetrics(container, metrics) {
 
   container.innerHTML = `
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top">${metricIcon.calendar}<p>Agendamentos hoje</p></div>
-      <h3>${metrics.totalToday}</h3>
-      <small>Meta diária operacional</small>
+      <div class="admin-kpi-top">${metricIcon.calendar}<p>Concluídos hoje</p></div>
+      <h3>${asCurrency(metrics.completedRevenueToday || 0)}</h3>
+      <small>${Number(metrics.completedToday || 0)} concluídos no dia</small>
     </article>
     <article class="admin-kpi-card">
       <div class="admin-kpi-top">${metricIcon.wallet}<p>Faturamento do dia</p></div>
@@ -2095,8 +2098,6 @@ function initAdminDashboard() {
   const dashboardQueueStatuses = ['pending', 'confirmed'];
   const todayQueueAppointments = todayAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
   const weekQueueAppointments = weekAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
-  const todayCompletedAppointments = todayAppointments.filter((a) => a.status === 'completed');
-  const todayCompletedValue = todayCompletedAppointments.reduce((sum, a) => sum + Number(a.service_price || 0), 0);
   const queuePageSize = 3;
   let queuePage = 0;
 
@@ -2125,11 +2126,6 @@ function initAdminDashboard() {
 
     appointmentsRoot.innerHTML = `
       <div class="grid gap-3">
-        <article class="admin-list-item">
-          <header class="admin-panel-head"><div><h3>Agendamentos concluídos (hoje)</h3><small>Valor somado dos serviços concluídos no dia atual</small></div><span>${todayCompletedAppointments.length} concluídos</span></header>
-          <p class="text-2xl font-bold text-text-primary mt-1">${asCurrency(todayCompletedValue)}</p>
-        </article>
-
         <article>
           <header class="admin-panel-head"><div><h3>Agendamentos na fila (${label})</h3><small>Somente pendentes e confirmados</small></div><span>${sortedQueueRows.length} registros</span></header>
           <div class="grid gap-2">${queueList || '<article class="admin-list-item"><p>Sem agendamentos na fila.</p></article>'}</div>

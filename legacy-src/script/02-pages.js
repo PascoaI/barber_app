@@ -919,8 +919,6 @@ function initAdminDashboard() {
   const dashboardQueueStatuses = ['pending', 'confirmed'];
   const todayQueueAppointments = todayAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
   const weekQueueAppointments = weekAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
-  const todayCompletedAppointments = todayAppointments.filter((a) => a.status === 'completed');
-  const todayCompletedValue = todayCompletedAppointments.reduce((sum, a) => sum + Number(a.service_price || 0), 0);
   const queuePageSize = 3;
   let queuePage = 0;
 
@@ -949,11 +947,6 @@ function initAdminDashboard() {
 
     appointmentsRoot.innerHTML = `
       <div class="grid gap-3">
-        <article class="admin-list-item">
-          <header class="admin-panel-head"><div><h3>Agendamentos concluídos (hoje)</h3><small>Valor somado dos serviços concluídos no dia atual</small></div><span>${todayCompletedAppointments.length} concluídos</span></header>
-          <p class="text-2xl font-bold text-text-primary mt-1">${asCurrency(todayCompletedValue)}</p>
-        </article>
-
         <article>
           <header class="admin-panel-head"><div><h3>Agendamentos na fila (${label})</h3><small>Somente pendentes e confirmados</small></div><span>${sortedQueueRows.length} registros</span></header>
           <div class="grid gap-2">${queueList || '<article class="admin-list-item"><p>Sem agendamentos na fila.</p></article>'}</div>

@@ -1119,6 +1119,7 @@ function getDashboardMetrics() {
   const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
   const today = new Date().toISOString().slice(0, 10);
   const todayAppointments = appointments.filter((a) => a.appointment_date === today);
+  const todayCompletedAppointments = todayAppointments.filter((a) => a.status === 'completed');
   const todayPayments = payments.filter((p) => (p.paid_at || '').slice(0, 10) === today);
 
   const byHour = {};
@@ -1133,6 +1134,8 @@ function getDashboardMetrics() {
 
   return {
     totalToday: todayAppointments.length,
+    completedToday: todayCompletedAppointments.length,
+    completedRevenueToday: todayCompletedAppointments.reduce((sum, a) => sum + Number(a.service_price || 0), 0),
     revenueToday: todayPayments.reduce((s, p) => s + Number(p.amount || 0), 0),
     busiestHour: Object.entries(byHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
     topService: Object.entries(byService).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
@@ -1150,9 +1153,9 @@ function renderMetrics(container, metrics) {
 
   container.innerHTML = `
     <article class="admin-kpi-card">
-      <div class="admin-kpi-top">${metricIcon.calendar}<p>Agendamentos hoje</p></div>
-      <h3>${metrics.totalToday}</h3>
-      <small>Meta diária operacional</small>
+      <div class="admin-kpi-top">${metricIcon.calendar}<p>Concluídos hoje</p></div>
+      <h3>${asCurrency(metrics.completedRevenueToday || 0)}</h3>
+      <small>${Number(metrics.completedToday || 0)} concluídos no dia</small>
     </article>
     <article class="admin-kpi-card">
       <div class="admin-kpi-top">${metricIcon.wallet}<p>Faturamento do dia</p></div>
