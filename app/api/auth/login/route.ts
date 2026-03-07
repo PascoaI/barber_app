@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!csrf.ok) return NextResponse.json({ ok: false, message: csrf.message }, { status: 403 });
 
     const ip = getClientIp(req);
-    const genericLimit = checkRateLimit({
+    const genericLimit = await checkRateLimit({
       key: `auth:login:ip:${ip}`,
       limit: 20,
       windowMs: 60 * 1000,
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const identityKey = `${ip}:${email}`;
-    const lockState = isLocked(identityKey);
+    const lockState = await isLocked(identityKey);
     if (lockState.locked) {
       return NextResponse.json({ ok: false, message: 'Conta temporariamente bloqueada por tentativas invalidas.' }, { status: 429 });
     }
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const supabase = createSupabaseServerClient();
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError || !authData.user) {
-      registerFailure(identityKey, {
+      await registerFailure(identityKey, {
         maxAttempts: 5,
         windowMs: 15 * 60 * 1000,
         lockMs: 15 * 60 * 1000
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'Credenciais invalidas.' }, { status: 401 });
     }
 
-    resetFailures(identityKey);
+    await resetFailures(identityKey);
 
     const [{ data: superAdmin }, { data: profile }] = await Promise.all([
       supabase.from('super_admins').select('id').eq('id', authData.user.id).maybeSingle(),

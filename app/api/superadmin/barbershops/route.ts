@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
 
     const ip = getClientIp(req);
-    const limit = checkRateLimit({
+    const limit = await checkRateLimit({
       key: `api:superadmin:barbershops:create:${ip}`,
       limit: 20,
       windowMs: 60 * 1000,

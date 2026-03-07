@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: Params) {
     const csrf = validateCsrfFromRequest(req);
     if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
 
-    const limit = checkRateLimit({
+    const limit = await checkRateLimit({
       key: `api:superadmin:barbershop:reset-password:${getClientIp(req)}`,
       limit: 10,
       windowMs: 60 * 1000,

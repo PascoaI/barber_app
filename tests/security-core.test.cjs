@@ -18,18 +18,18 @@ test('senha fraca retorna motivos', () => {
   assert.equal(result.reasons.includes('missing_special'), true);
 });
 
-test('bloqueio apos multiplas tentativas falhas', () => {
+test('bloqueio apos multiplas tentativas falhas', async () => {
   const identity = 'ip:127.0.0.1:user@test.com';
-  resetFailures(identity);
+  await resetFailures(identity);
 
   for (let i = 0; i < 5; i += 1) {
-    registerFailure(identity, { maxAttempts: 5, windowMs: 60_000, lockMs: 60_000 });
+    await registerFailure(identity, { maxAttempts: 5, windowMs: 60_000, lockMs: 60_000 });
   }
 
-  const lockState = isLocked(identity);
+  const lockState = await isLocked(identity);
   assert.equal(lockState.locked, true);
 
-  resetFailures(identity);
-  const unlocked = isLocked(identity);
+  await resetFailures(identity);
+  const unlocked = await isLocked(identity);
   assert.equal(unlocked.locked, false);
 });

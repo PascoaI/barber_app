@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     const ip = getClientIp(req);
-    const genericLimit = checkRateLimit({
+    const genericLimit = await checkRateLimit({
       key: `auth:superadmin:ip:${ip}`,
       limit: 10,
       windowMs: 60 * 1000,
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'Informe email e senha.' }, { status: 400 });
     }
     const identityKey = `superadmin:${ip}:${String(email).trim().toLowerCase()}`;
-    if (isLocked(identityKey).locked) {
+    if ((await isLocked(identityKey)).locked) {
       return NextResponse.json({ ok: false, message: 'Acesso temporariamente bloqueado por tentativas invalidas.' }, { status: 429 });
     }
 
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     });
 
     if (signInError || !signInData.user) {
-      registerFailure(identityKey, {
+      await registerFailure(identityKey, {
         maxAttempts: 5,
         windowMs: 15 * 60 * 1000,
         lockMs: 15 * 60 * 1000
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     if (superAdminError) throw superAdminError;
     if (!superAdmin?.id) {
-      registerFailure(identityKey, {
+      await registerFailure(identityKey, {
         maxAttempts: 5,
         windowMs: 15 * 60 * 1000,
         lockMs: 15 * 60 * 1000
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'Acesso exclusivo do administrador da plataforma.' }, { status: 403 });
     }
 
-    resetFailures(identityKey);
+    await resetFailures(identityKey);
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ ok: false, message: error?.message || 'superadmin_login_failed' }, { status: 500 });

@@ -50,7 +50,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const csrf = validateCsrfFromRequest(req);
     if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
 
-    const limit = checkRateLimit({
+    const limit = await checkRateLimit({
       key: `api:superadmin:barbershop:update:${getClientIp(req)}`,
       limit: 30,
       windowMs: 60 * 1000,
@@ -132,7 +132,7 @@ export async function DELETE(req: Request, { params }: Params) {
     const csrf = validateCsrfFromRequest(req);
     if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
 
-    const limit = checkRateLimit({
+    const limit = await checkRateLimit({
       key: `api:superadmin:barbershop:delete:${getClientIp(req)}`,
       limit: 10,
       windowMs: 60 * 1000,

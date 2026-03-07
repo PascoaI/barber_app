@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const csrf = validateCsrfFromRequest(req);
     if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
 
-    const limit = checkRateLimit({
+    const limit = await checkRateLimit({
       key: `api:stripe:create-checkout:${getClientIp(req)}`,
       limit: 30,
       windowMs: 60 * 1000,

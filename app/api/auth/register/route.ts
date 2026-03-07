@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     if (!csrf.ok) return NextResponse.json({ ok: false, message: csrf.message }, { status: 403 });
 
     const ip = getClientIp(req);
-    const genericLimit = checkRateLimit({
+    const genericLimit = await checkRateLimit({
       key: `auth:register:ip:${ip}`,
       limit: 10,
       windowMs: 15 * 60 * 1000,
