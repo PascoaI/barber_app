@@ -21,6 +21,20 @@ type ConfirmAction = {
   mode: 'reset' | 'delete';
 };
 
+const STATUS_LABEL: Record<Barbershop['status'], string> = {
+  active: 'Ativa',
+  trial: 'Trial',
+  suspended: 'Suspensa',
+  disabled: 'Desativada'
+};
+
+const STATUS_STYLE: Record<Barbershop['status'], string> = {
+  active: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+  trial: 'border-sky-500/40 bg-sky-500/10 text-sky-300',
+  suspended: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+  disabled: 'border-red-500/40 bg-red-500/10 text-red-300'
+};
+
 export default function SuperAdminBarbershopsPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -111,11 +125,12 @@ export default function SuperAdminBarbershopsPage() {
             <div className="grid gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <strong className="text-base">{shop.name}</strong>
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] ${shop.status === 'active' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-red-500/40 bg-red-500/10 text-red-300'}`}>
-                  {shop.status === 'active' ? 'Ativa' : 'Desativada'}
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATUS_STYLE[shop.status]}`}>
+                  {STATUS_LABEL[shop.status]}
                 </span>
               </div>
               <small className="text-text-secondary">{shop.owner_name} | {shop.email} | {shop.phone}</small>
+              <small className="text-text-secondary">Plano: <strong className="text-text-primary">{shop.plan.toUpperCase()}</strong>{shop.plan_expires_at ? ` · Expira em ${new Date(shop.plan_expires_at).toLocaleDateString('pt-BR')}` : ''}</small>
               <small className="text-text-secondary">Criada em {new Date(shop.created_at).toLocaleDateString('pt-BR')}</small>
             </div>
 
@@ -124,7 +139,7 @@ export default function SuperAdminBarbershopsPage() {
                 <Pencil className="h-3.5 w-3.5" /> Editar
               </Button>
               <Button type="button" variant="outline" className="w-full gap-2 sm:w-auto" onClick={() => onToggle(shop.id)}>
-                <Power className="h-3.5 w-3.5" /> {shop.status === 'active' ? 'Desativar' : 'Ativar'}
+                <Power className="h-3.5 w-3.5" /> {shop.status === 'disabled' ? 'Ativar' : 'Desativar'}
               </Button>
               <Button type="button" variant="outline" className="w-full gap-2 sm:w-auto" onClick={() => setConfirmAction({ id: shop.id, mode: 'reset' })}>
                 <KeyRound className="h-3.5 w-3.5" /> Reset senha

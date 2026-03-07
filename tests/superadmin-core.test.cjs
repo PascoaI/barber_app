@@ -29,6 +29,12 @@ test('admin de barbearia desativada nao pode logar', () => {
   assert.equal(canAdminLoginForBarbershop(user, shops), false);
 });
 
+test('admin de barbearia suspensa nao pode logar', () => {
+  const user = { email: 'owner@shop.com', role: 'admin', unit_id: 'shop_1' };
+  const shops = [{ id: 'shop_1', email: 'owner@shop.com', status: 'suspended' }];
+  assert.equal(canAdminLoginForBarbershop(user, shops), false);
+});
+
 test('cria barbearia nova com dados saneados e status', () => {
   const result = createOrUpdateBarbershop({
     rows: [],
@@ -39,7 +45,9 @@ test('cria barbearia nova com dados saneados e status', () => {
       phone: '(51) 99999-0000',
       password: 'abc123',
       address: 'Rua A',
-      status: 'active'
+      status: 'trial',
+      plan: 'pro',
+      plan_expires_at: '2026-12-31T23:59:59.000Z'
     },
     editId: '',
     idFactory: () => 'shop_fixed'
@@ -48,6 +56,8 @@ test('cria barbearia nova com dados saneados e status', () => {
   assert.equal(result.ok, true);
   assert.equal(result.payload.id, 'shop_fixed');
   assert.equal(result.payload.owner_name.includes('<'), false);
+  assert.equal(result.payload.status, 'trial');
+  assert.equal(result.payload.plan, 'pro');
   assert.equal(result.rows.length, 1);
 });
 

@@ -26,6 +26,17 @@ const STORAGE_KEYS = {
   tenants: 'barberpro_tenants'
 } as const;
 
+const ALLOWED_STATUS = ['active', 'trial', 'suspended', 'disabled'] as const;
+const ALLOWED_PLAN = ['free', 'basic', 'pro', 'enterprise'] as const;
+
+function normalizeStatus(status: string) {
+  return ALLOWED_STATUS.includes(status as any) ? (status as Barbershop['status']) : 'active';
+}
+
+function normalizePlan(plan: string) {
+  return ALLOWED_PLAN.includes(plan as any) ? (plan as Barbershop['plan']) : 'basic';
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -91,7 +102,7 @@ function ensureSeed() {
         phone: '(51) 99999-0000',
         address: 'Rua Fernandes Vieira, 631 - Bom Fim, Porto Alegre, RS',
         status: 'active',
-        plan: 'starter',
+        plan: 'basic',
         plan_expires_at: null,
         created_at: nowIso(),
         updated_at: nowIso()
@@ -106,8 +117,8 @@ function syncTenant(shop: Barbershop) {
   const payload = {
     id: shop.id,
     name: shop.name,
-    subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || shop.plan || 'starter',
-    subscription_status: shop.status === 'disabled' ? 'disabled' : 'active',
+    subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || shop.plan || 'basic',
+    subscription_status: shop.status === 'disabled' ? 'disabled' : shop.status === 'suspended' ? 'suspended' : 'active',
     created_at: (tenants[idx] && tenants[idx].created_at) || shop.created_at || nowIso(),
     updated_at: nowIso()
   };
@@ -178,7 +189,12 @@ export function signOutPlatformSession() {
 
 export function listPlatformBarbershops() {
   ensureSeed();
-  const rows = getJson<Barbershop[]>(STORAGE_KEYS.barbershops, []);
+  const rows = getJson<Barbershop[]>(STORAGE_KEYS.barbershops, []).map((row) => ({
+    ...row,
+    status: normalizeStatus(String((row as any).status || 'active')),
+    plan: normalizePlan(String((row as any).plan || 'basic')),
+    plan_expires_at: (row as any).plan_expires_at || null
+  }));
   return rows.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 }
 
@@ -204,8 +220,8 @@ export function savePlatformBarbershop(input: BarbershopInput, editId?: string) 
     email: normalizedEmail,
     phone: String(input.phone || '').trim(),
     address: String(input.address || '').trim(),
-    status: input.status === 'disabled' ? 'disabled' : 'active',
-    plan: input.plan || existing?.plan || 'starter',
+    status: normalizeStatus(String(input.status || existing?.status || 'active')),
+    plan: normalizePlan(String(input.plan || existing?.plan || 'basic')),
     plan_expires_at: input.plan_expires_at || existing?.plan_expires_at || null,
     created_at: existing?.created_at || now,
     updated_at: now
@@ -221,7 +237,7 @@ export function savePlatformBarbershop(input: BarbershopInput, editId?: string) 
 export function togglePlatformBarbershopStatus(id: string) {
   const current = findPlatformBarbershop(id);
   if (!current) return { ok: false as const, message: 'Barbearia não encontrada.' };
-  return savePlatformBarbershop({ ...current, status: current.status === 'active' ? 'disabled' : 'active' }, id);
+  return savePlatformBarbershop({ ...current, status: current.status === 'disabled' ? 'active' : 'disabled' }, id);
 }
 
 export function resetPlatformBarbershopPassword(id: string, password = '123456') {

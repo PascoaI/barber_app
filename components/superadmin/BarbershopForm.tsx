@@ -20,9 +20,17 @@ type FormState = {
   phone: string;
   password: string;
   address: string;
-  status: 'active' | 'disabled';
-  plan: string;
+  status: 'active' | 'trial' | 'suspended' | 'disabled';
+  plan: 'free' | 'basic' | 'pro' | 'enterprise';
+  plan_expires_at: string;
 };
+
+function toDateInput(value?: string | null) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (!Number.isFinite(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
 
 export default function BarbershopForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
   const [form, setForm] = useState<FormState>({
@@ -32,8 +40,9 @@ export default function BarbershopForm({ initial, submitLabel, onSubmit, onCance
     phone: initial?.phone || '',
     password: initial?.password || '',
     address: initial?.address || '',
-    status: initial?.status === 'disabled' ? 'disabled' : 'active',
-    plan: initial?.plan || 'starter'
+    status: initial?.status === 'trial' ? 'trial' : initial?.status === 'suspended' ? 'suspended' : initial?.status === 'disabled' ? 'disabled' : 'active',
+    plan: initial?.plan === 'free' ? 'free' : initial?.plan === 'pro' ? 'pro' : initial?.plan === 'enterprise' ? 'enterprise' : 'basic',
+    plan_expires_at: toDateInput(initial?.plan_expires_at)
   });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -51,9 +60,9 @@ export default function BarbershopForm({ initial, submitLabel, onSubmit, onCance
         email: form.email,
         phone: form.phone,
         address: form.address,
-        status: form.status as 'active' | 'disabled',
+        status: form.status as 'active' | 'trial' | 'suspended' | 'disabled',
         plan: form.plan,
-        plan_expires_at: null,
+        plan_expires_at: form.plan_expires_at ? `${form.plan_expires_at}T23:59:59.000Z` : null,
         password: form.password
       });
     } catch (error: any) {
@@ -91,7 +100,7 @@ export default function BarbershopForm({ initial, submitLabel, onSubmit, onCance
         </div>
       </div>
 
-      <div className="grid gap-1.5 md:grid-cols-2 md:gap-3">
+      <div className="grid gap-1.5 md:grid-cols-3 md:gap-3">
         <div className="grid gap-1.5">
           <Label htmlFor="sb-password">Senha inicial / reset</Label>
           <Input id="sb-password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="123456" />
@@ -102,11 +111,17 @@ export default function BarbershopForm({ initial, submitLabel, onSubmit, onCance
             id="sb-plan"
             className="w-full min-h-11 rounded-xl border border-borderc bg-surface px-3 text-sm text-text-primary"
             value={form.plan}
-            onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, plan: (e.target.value as FormState['plan']) }))}
           >
-            <option value="starter">Starter</option>
-            <option value="growth">Growth</option>
+            <option value="free">Free</option>
+            <option value="basic">Basic</option>
+            <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
           </select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="sb-plan-exp">Expiracao do plano</Label>
+          <Input id="sb-plan-exp" type="date" value={form.plan_expires_at} onChange={(e) => setForm((f) => ({ ...f, plan_expires_at: e.target.value }))} />
         </div>
       </div>
 
@@ -121,9 +136,11 @@ export default function BarbershopForm({ initial, submitLabel, onSubmit, onCance
           id="sb-status"
           className="w-full min-h-11 rounded-xl border border-borderc bg-surface px-3 text-sm text-text-primary"
           value={form.status}
-          onChange={(e) => setForm((f) => ({ ...f, status: (e.target.value === 'disabled' ? 'disabled' : 'active') }))}
+          onChange={(e) => setForm((f) => ({ ...f, status: (e.target.value as FormState['status']) }))}
         >
           <option value="active">Ativa</option>
+          <option value="trial">Trial</option>
+          <option value="suspended">Suspensa</option>
           <option value="disabled">Desativada</option>
         </select>
       </div>

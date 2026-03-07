@@ -18,15 +18,16 @@ export default function SuperAdminDashboardPage() {
   const stats = useMemo(() => {
     const total = rows.length;
     const active = rows.filter((r) => r.status === 'active').length;
-    const disabled = rows.filter((r) => r.status === 'disabled').length;
-    return { total, active, disabled };
+    const trial = rows.filter((r) => r.status === 'trial').length;
+    const suspended = rows.filter((r) => r.status === 'suspended').length;
+    return { total, active, trial, suspended };
   }, [rows]);
 
   return (
     <SuperAdminShell title="Dashboard SuperAdmin" subtitle="Controle central da plataforma multi-barbearia.">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <article className="rounded-xl border border-borderc bg-slate-950/35 p-4">
-          <small className="text-text-secondary">Barbearias</small>
+          <small className="text-text-secondary">Barbearias cadastradas</small>
           <p className="text-2xl font-semibold">{stats.total}</p>
         </article>
         <article className="rounded-xl border border-borderc bg-slate-950/35 p-4">
@@ -34,8 +35,12 @@ export default function SuperAdminDashboardPage() {
           <p className="text-2xl font-semibold">{stats.active}</p>
         </article>
         <article className="rounded-xl border border-borderc bg-slate-950/35 p-4">
-          <small className="text-text-secondary">Desativadas</small>
-          <p className="text-2xl font-semibold">{stats.disabled}</p>
+          <small className="text-text-secondary">Trial</small>
+          <p className="text-2xl font-semibold">{stats.trial}</p>
+        </article>
+        <article className="rounded-xl border border-borderc bg-slate-950/35 p-4">
+          <small className="text-text-secondary">Suspensas</small>
+          <p className="text-2xl font-semibold">{stats.suspended}</p>
         </article>
       </div>
 

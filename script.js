@@ -256,6 +256,8 @@ function ensureSeed() {
         password_hash: 'plain:123456',
         address: 'Rua Fernandes Vieira, 631 - Bom Fim, Porto Alegre, RS',
         status: 'active',
+        plan: 'basic',
+        plan_expires_at: null,
         created_at: nowIso(),
         updated_at: nowIso()
       }
@@ -1199,8 +1201,8 @@ function initLoginPage() {
 
     if (user.role === 'admin') {
       const shop = getBarbershops().find((s) => s.email.toLowerCase() === user.email.toLowerCase() || s.id === user.unit_id);
-      if (shop && shop.status === 'disabled') {
-        if (feedback) feedback.textContent = 'Acesso desta barbearia está desativado.';
+      if (shop && ['suspended', 'disabled'].includes(shop.status)) {
+        if (feedback) feedback.textContent = shop.status === 'suspended' ? 'Acesso desta barbearia está suspenso.' : 'Acesso desta barbearia está desativado.';
         return;
       }
     }
@@ -2625,11 +2627,32 @@ function initSuperAdminTenantsPage() {
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
 
   const totalEl = document.getElementById('sa-total-barbershops');
+  const totalAllEl = document.getElementById('sa-total-all');
+  const totalActiveEl = document.getElementById('sa-total-active');
+  const totalTrialEl = document.getElementById('sa-total-trial');
+  const totalSuspendedEl = document.getElementById('sa-total-suspended');
 
   const asDateTime = (iso) => {
     const d = new Date(iso || 0);
     if (!Number.isFinite(d.getTime())) return '-';
     return d.toLocaleString('pt-BR');
+  };
+
+  const asDate = (iso) => {
+    const d = new Date(iso || 0);
+    if (!Number.isFinite(d.getTime())) return '-';
+    return d.toLocaleDateString('pt-BR');
+  };
+
+  const allowedStatus = new Set(['active', 'trial', 'suspended', 'disabled']);
+  const allowedPlan = new Set(['free', 'basic', 'pro', 'enterprise']);
+  const normalizeStatus = (value) => (allowedStatus.has(value) ? value : 'active');
+  const normalizePlan = (value) => (allowedPlan.has(value) ? value : 'basic');
+  const getStatusMeta = (status) => {
+    if (status === 'trial') return { label: 'Trial', css: 'status-trial' };
+    if (status === 'suspended') return { label: 'Suspensa', css: 'status-suspended' };
+    if (status === 'disabled') return { label: 'Desativada', css: 'status-canceled' };
+    return { label: 'Ativa', css: 'status-confirmed' };
   };
 
   const upsertAdminUserForShop = (shop, passwordOverride = '') => {
@@ -2659,8 +2682,8 @@ function initSuperAdminTenantsPage() {
     const payload = {
       id: shop.tenant_id || shop.id,
       name: shop.name,
-      subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || 'starter',
-      subscription_status: shop.status === 'disabled' ? 'disabled' : 'active',
+      subscription_plan_id: normalizePlan(shop.plan || (tenants[idx] && tenants[idx].subscription_plan_id) || 'basic'),
+      subscription_status: shop.status === 'disabled' ? 'disabled' : shop.status === 'suspended' ? 'suspended' : 'active',
       created_at: (tenants[idx] && tenants[idx].created_at) || shop.created_at || nowIso(),
       updated_at: nowIso()
     };
@@ -2674,8 +2697,19 @@ function initSuperAdminTenantsPage() {
   };
 
   const render = () => {
-    const rows = getBarbershops().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    const rows = getBarbershops()
+      .map((row) => ({
+        ...row,
+        status: normalizeStatus(row.status),
+        plan: normalizePlan(row.plan),
+        plan_expires_at: row.plan_expires_at || null
+      }))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     if (totalEl) totalEl.textContent = String(rows.length);
+    if (totalAllEl) totalAllEl.textContent = String(rows.length);
+    if (totalActiveEl) totalActiveEl.textContent = String(rows.filter((x) => x.status === 'active').length);
+    if (totalTrialEl) totalTrialEl.textContent = String(rows.filter((x) => x.status === 'trial').length);
+    if (totalSuspendedEl) totalSuspendedEl.textContent = String(rows.filter((x) => x.status === 'suspended').length);
 
     root.innerHTML = rows.length
       ? rows
@@ -2685,11 +2719,12 @@ function initSuperAdminTenantsPage() {
             <div>${sanitizeText(shop.owner_name || '-')}</div>
             <div>${sanitizeText(shop.email || '-')}</div>
             <div>${sanitizeText(shop.phone || '-')}</div>
-            <div><span class="status-badge ${shop.status === 'active' ? 'status-confirmed' : 'status-canceled'}">${shop.status === 'active' ? 'Ativa' : 'Desativada'}</span></div>
+            <div><span class="status-badge ${getStatusMeta(shop.status).css}">${getStatusMeta(shop.status).label}</span></div>
+            <div><strong>${String(shop.plan || 'basic').toUpperCase()}</strong><small>${shop.plan_expires_at ? `Expira em ${asDate(shop.plan_expires_at)}` : 'Sem expiracao'}</small></div>
             <div>${asDateTime(shop.created_at)}</div>
             <div class="superadmin-actions">
               <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="edit" data-id="${shop.id}">Editar</button>
-              <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="toggle" data-id="${shop.id}">${shop.status === 'active' ? 'Desativar' : 'Ativar'}</button>
+              <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="toggle" data-id="${shop.id}">${shop.status === 'disabled' ? 'Ativar' : 'Desativar'}</button>
               <button type="button" class="button button-secondary superadmin-action-btn" data-sa-action="reset" data-id="${shop.id}">Reset senha</button>
               <button type="button" class="button button-danger superadmin-action-btn superadmin-action-delete" data-sa-action="delete" data-id="${shop.id}">Excluir</button>
             </div>
@@ -2715,7 +2750,7 @@ function initSuperAdminTenantsPage() {
     }
 
     if (action === 'toggle') {
-      const toDisable = row.status === 'active';
+      const toDisable = row.status !== 'disabled';
       const ok = await confirmAction(toDisable ? 'Deseja desativar esta barbearia?' : 'Deseja reativar esta barbearia?', {
         title: toDisable ? 'Desativar barbearia' : 'Ativar barbearia',
         confirmText: toDisable ? 'Desativar' : 'Ativar'
@@ -2778,11 +2813,23 @@ function initSuperAdminBarbershopFormPage() {
   const phoneEl = document.getElementById('sa-phone');
   const passwordEl = document.getElementById('sa-password');
   const addressEl = document.getElementById('sa-address');
+  const planEl = document.getElementById('sa-plan');
+  const planExpiresEl = document.getElementById('sa-plan-expires-at');
   const statusEl = document.getElementById('sa-status');
   const submitBtn = document.getElementById('sa-submit');
   const cancelBtn = document.getElementById('sa-cancel');
 
-  if (!nameEl || !ownerEl || !emailEl || !phoneEl || !passwordEl || !statusEl || !submitBtn || !cancelBtn || !editIdEl) return;
+  if (!nameEl || !ownerEl || !emailEl || !phoneEl || !passwordEl || !statusEl || !planEl || !planExpiresEl || !submitBtn || !cancelBtn || !editIdEl) return;
+
+  const allowedStatus = new Set(['active', 'trial', 'suspended', 'disabled']);
+  const allowedPlan = new Set(['free', 'basic', 'pro', 'enterprise']);
+  const normalizeStatus = (value) => (allowedStatus.has(value) ? value : 'active');
+  const normalizePlan = (value) => (allowedPlan.has(value) ? value : 'basic');
+  const toDateInput = (iso) => {
+    const d = new Date(iso || 0);
+    if (!Number.isFinite(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  };
 
   const upsertAdminUserForShop = (shop, passwordOverride = '') => {
     const users = getPlatformUsers();
@@ -2807,8 +2854,8 @@ function initSuperAdminBarbershopFormPage() {
     const payload = {
       id: shop.tenant_id || shop.id,
       name: shop.name,
-      subscription_plan_id: (tenants[idx] && tenants[idx].subscription_plan_id) || 'starter',
-      subscription_status: shop.status === 'disabled' ? 'disabled' : 'active',
+      subscription_plan_id: normalizePlan(shop.plan || (tenants[idx] && tenants[idx].subscription_plan_id) || 'basic'),
+      subscription_status: shop.status === 'disabled' ? 'disabled' : shop.status === 'suspended' ? 'suspended' : 'active',
       created_at: (tenants[idx] && tenants[idx].created_at) || shop.created_at || nowIso(),
       updated_at: nowIso()
     };
@@ -2821,6 +2868,8 @@ function initSuperAdminBarbershopFormPage() {
     editIdEl.value = '';
     form.reset();
     statusEl.value = 'active';
+    planEl.value = 'basic';
+    planExpiresEl.value = '';
     submitBtn.textContent = 'Cadastrar barbearia';
   };
 
@@ -2839,7 +2888,9 @@ function initSuperAdminBarbershopFormPage() {
       phoneEl.value = current.phone || '';
       passwordEl.value = '';
       if (addressEl) addressEl.value = current.address || '';
-      statusEl.value = current.status || 'active';
+      planEl.value = normalizePlan(current.plan || 'basic');
+      planExpiresEl.value = toDateInput(current.plan_expires_at);
+      statusEl.value = normalizeStatus(current.status || 'active');
       submitBtn.textContent = 'Salvar alteracoes';
     }
   }
@@ -2877,7 +2928,9 @@ function initSuperAdminBarbershopFormPage() {
       phone: sanitizeText(phoneEl.value),
       password_hash: `plain:${passwordRaw}`,
       address: sanitizeText(addressEl?.value || ''),
-      status: statusEl.value === 'disabled' ? 'disabled' : 'active',
+      status: normalizeStatus(statusEl.value),
+      plan: normalizePlan(planEl.value),
+      plan_expires_at: planExpiresEl.value ? `${planExpiresEl.value}T23:59:59.000Z` : null,
       created_at: isEdit && existingIdx >= 0 ? rows[existingIdx].created_at : nowIso(),
       updated_at: nowIso()
     };

@@ -1,4 +1,5 @@
-export type BarbershopStatus = 'active' | 'disabled';
+export type BarbershopStatus = 'active' | 'trial' | 'suspended' | 'disabled';
+export type BarbershopPlan = 'free' | 'basic' | 'pro' | 'enterprise';
 
 export type Barbershop = {
   id: string;
@@ -8,7 +9,7 @@ export type Barbershop = {
   phone: string;
   address?: string | null;
   status: BarbershopStatus;
-  plan?: string | null;
+  plan: BarbershopPlan;
   plan_expires_at?: string | null;
   created_at: string;
   updated_at: string;

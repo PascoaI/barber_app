@@ -82,9 +82,22 @@
             <label for="sa-address">Endereco (opcional)</label>
             <input id="sa-address" type="text" />
 
+            <label for="sa-plan">Plano da barbearia</label>
+            <select id="sa-plan">
+              <option value="free">Free</option>
+              <option value="basic" selected>Basic</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+
+            <label for="sa-plan-expires-at">Expiracao do plano</label>
+            <input id="sa-plan-expires-at" type="date" />
+
             <label for="sa-status">Status</label>
             <select id="sa-status">
               <option value="active">Ativa</option>
+              <option value="trial">Trial</option>
+              <option value="suspended">Suspensa</option>
               <option value="disabled">Desativada</option>
             </select>
 
