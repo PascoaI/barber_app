@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,18 @@ export function SubscriptionProgress() {
     }
   };
 
-  useEffect(() => { void reload(); }, []);
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      try {
+        setPanel(await getClientSubscriptionPanel());
+      } catch {
+        toast('Falha ao carregar assinatura.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [toast]);
 
   const progress = useMemo(() => {
     const total = panel?.sessionsPerMonth || 0;
@@ -43,7 +54,7 @@ export function SubscriptionProgress() {
       </CardHeader>
       <CardContent className="grid gap-3">
         {subscription.status !== 'active' ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-100/20 p-2 text-sm">⚠ Plano vencido. Status: <strong>{subscription.status}</strong>. O consumo de sessões está bloqueado.</div>
+          <div className="rounded-lg border border-amber-500/40 bg-amber-100/20 p-2 text-sm">Plano vencido. Status: <strong>{subscription.status}</strong>. O consumo de sessões está bloqueado.</div>
         ) : null}
         <p className="text-sm">{subscription.subscription_plans?.name} · Status: <strong>{subscription.status}</strong></p>
         <p className="text-sm">Renovação: {subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString('pt-BR') : '—'}</p>

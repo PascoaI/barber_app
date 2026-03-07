@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { listClientHistory } from '@/lib/appointments';
@@ -21,7 +21,15 @@ export default function ClientHistoryPage() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void (async () => {
+      try {
+        setRows(await listClientHistory({ status: '', barber_id: '', from: '', to: '' }));
+      } catch {
+        toast('Erro ao carregar histórico.');
+      }
+    })();
+  }, [toast]);
 
   return (
     <div className="max-w-5xl mx-auto grid gap-4">
