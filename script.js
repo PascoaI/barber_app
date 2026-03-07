@@ -399,6 +399,10 @@ function sanitizeText(value) {
   return String(value || '').replace(/[<>]/g, '').trim();
 }
 
+function normalizeCredential(value) {
+  return String(value || '').normalize('NFC');
+}
+
 function hasRole(...roles) {
   return roles.includes(getSession()?.role);
 }
@@ -1173,11 +1177,13 @@ function initLoginPage() {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = document.getElementById('email')?.value || '';
-    const password = document.getElementById('password')?.value || '';
+    const emailRaw = document.getElementById('email')?.value || '';
+    const passwordRaw = document.getElementById('password')?.value || '';
+    const email = normalizeCredential(emailRaw).toLowerCase();
+    const password = normalizeCredential(passwordRaw);
 
-    const base = getPlatformUsers().find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    const barber = getBarbers().find((b) => b.email.toLowerCase() === email.toLowerCase() && b.password === password && b.active);
+    const base = getPlatformUsers().find((u) => normalizeCredential(u.email).toLowerCase() === email && normalizeCredential(u.password) === password);
+    const barber = getBarbers().find((b) => normalizeCredential(b.email).toLowerCase() === email && normalizeCredential(b.password) === password && b.active);
 
     const user = base || (barber ? { email: barber.email, password: barber.password, role: 'barber', name: barber.name, barberId: barber.id, unit_id: barber.unit_id } : null);
 
@@ -1217,10 +1223,12 @@ function initSuperAdminLoginPage() {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = document.getElementById('superadmin-email')?.value || '';
-    const password = document.getElementById('superadmin-password')?.value || '';
+    const emailRaw = document.getElementById('superadmin-email')?.value || '';
+    const passwordRaw = document.getElementById('superadmin-password')?.value || '';
+    const email = normalizeCredential(emailRaw).toLowerCase();
+    const password = normalizeCredential(passwordRaw);
 
-    const user = getPlatformUsers().find((u) => u.role === 'super_admin' && u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    const user = getPlatformUsers().find((u) => u.role === 'super_admin' && normalizeCredential(u.email).toLowerCase() === email && normalizeCredential(u.password) === password);
     if (!user) {
       if (feedback) feedback.textContent = 'Credenciais do SuperAdmin inválidas.';
       return;
