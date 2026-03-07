@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       id: sessionId,
       mode: 'test',
       simulate,
-      checkout_url: `/client-subscriptions?checkout_session_id=${sessionId}&simulate=${simulate}`
+      checkout_url: `/client/subscriptions?checkout_session_id=${sessionId}&simulate=${simulate}`
     });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to create checkout session' }, { status: 500 });
