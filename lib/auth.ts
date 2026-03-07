@@ -6,8 +6,9 @@ export type UserContext = {
   id: string;
   email?: string;
   role?: string;
-  tenant_id?: string | number;
-  unit_id?: string | number;
+  barbershop_id?: string | null;
+  tenant_id?: string | null;
+  unit_id?: string | null;
   blocked_until?: string | null;
 };
 
@@ -15,22 +16,26 @@ export async function getCurrentUserContext(): Promise<UserContext> {
   const supabase = supabaseClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
+
   const authUser = authData.user;
-  if (!authUser) throw new Error('Usuário não autenticado.');
+  if (!authUser) throw new Error('Usuario nao autenticado.');
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('id, email, role, tenant_id, unit_id, blocked_until')
+    .select('id,email,role,barbershop_id')
     .eq('id', authUser.id)
-    .single();
+    .maybeSingle();
 
   if (profileError) throw profileError;
+
+  const barbershopId = (profile as any)?.barbershop_id ?? null;
   return {
     id: profile?.id ?? authUser.id,
-    email: profile?.email ?? authUser.email,
-    role: profile?.role,
-    tenant_id: profile?.tenant_id,
-    unit_id: profile?.unit_id,
-    blocked_until: profile?.blocked_until ?? null
+    email: profile?.email ?? authUser.email ?? '',
+    role: (profile as any)?.role ?? 'client',
+    barbershop_id: barbershopId,
+    tenant_id: barbershopId,
+    unit_id: barbershopId,
+    blocked_until: (profile as any)?.blocked_until ?? null
   };
 }

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 const navItems = [
   { href: '/admin/home', label: 'Admin' },
   { href: '/client/home', label: 'Cliente' },
-  { href: '/barber-home', label: 'Barbeiro' }
+  { href: '/barber', label: 'Barbeiro' }
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const hideShell = useMemo(() => pathname === '/login' || pathname === '/register', [pathname]);
+  const hideShell = useMemo(() => pathname === '/login' || pathname === '/register' || pathname === '/superadmin/login', [pathname]);
   if (hideShell) return <>{children}</>;
 
   return (

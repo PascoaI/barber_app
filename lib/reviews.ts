@@ -5,12 +5,14 @@ import { supabaseClient } from '@/lib/supabaseClient';
 
 export async function submitAppointmentReview(input: { appointment_id: string; rating: number; comment?: string }) {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
 
   const { data: appointment, error: appointmentError } = await supabase
     .from('appointments')
-    .select('id,client_id,status,tenant_id,unit_id')
+    .select('id,client_id,status,barbershop_id,tenant_id,unit_id')
     .eq('id', input.appointment_id)
+    .eq('barbershop_id', scopeBarbershopId)
     .single();
 
   if (appointmentError) throw appointmentError;
@@ -24,9 +26,10 @@ export async function submitAppointmentReview(input: { appointment_id: string; r
     appointment_id: input.appointment_id,
     rating: input.rating,
     comment: input.comment || null,
+    barbershop_id: (appointment as any).barbershop_id || scopeBarbershopId,
     tenant_id: appointment.tenant_id,
     unit_id: appointment.unit_id,
     user_id: user.id
-  }).execute();
+  });
   if (error) throw error;
 }

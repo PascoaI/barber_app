@@ -1,9 +1,5 @@
-import { notFound } from 'next/navigation';
-import LegacyPage from './_components/LegacyPage';
-import { getLegacyBody } from '@/lib/legacy';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  const body = getLegacyBody('index');
-  if (!body) notFound();
-  return <LegacyPage bodyHtml={body} />;
+  redirect('/login');
 }

@@ -8,11 +8,20 @@ import { isSuperAdminSession, listPlatformBarbershops } from '@/services/superad
 
 export default function SuperAdminDashboardPage() {
   const router = useRouter();
-  const [rows, setRows] = useState(() => listPlatformBarbershops());
+  const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isSuperAdminSession()) router.replace('/superadmin/login');
-    setRows(listPlatformBarbershops());
+    void (async () => {
+      if (!(await isSuperAdminSession())) {
+        router.replace('/superadmin/login');
+        return;
+      }
+      try {
+        setRows(await listPlatformBarbershops());
+      } catch {
+        setRows([]);
+      }
+    })();
   }, [router]);
 
   const stats = useMemo(() => {

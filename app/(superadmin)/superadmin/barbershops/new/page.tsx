@@ -11,7 +11,9 @@ export default function SuperAdminBarbershopNewPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isSuperAdminSession()) router.replace('/superadmin/login');
+    void (async () => {
+      if (!(await isSuperAdminSession())) router.replace('/superadmin/login');
+    })();
   }, [router]);
 
   return (
@@ -19,7 +21,7 @@ export default function SuperAdminBarbershopNewPage() {
       <BarbershopForm
         submitLabel="Cadastrar barbearia"
         onSubmit={async (data) => {
-          const result = savePlatformBarbershop(data);
+          const result = await savePlatformBarbershop(data);
           if (!result.ok) throw new Error(result.message);
           toast('Barbearia cadastrada com sucesso.');
           router.push('/superadmin/barbershops');

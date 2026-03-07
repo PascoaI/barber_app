@@ -16,14 +16,16 @@ export default function SuperAdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isSuperAdminSession()) router.replace('/superadmin/dashboard');
+    void (async () => {
+      if (await isSuperAdminSession()) router.replace('/superadmin/dashboard');
+    })();
   }, [router]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setFeedback('');
-    const result = signInSuperAdmin(email.trim(), password);
+    const result = await signInSuperAdmin(email.trim(), password);
     if (!result.ok) {
       setFeedback(result.message);
       setLoading(false);

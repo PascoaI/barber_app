@@ -32,8 +32,8 @@ export default function SuperAdminShell({ title, subtitle, children }: Props) {
               type="button"
               variant="destructive"
               className="inline-flex items-center gap-2"
-              onClick={() => {
-                signOutPlatformSession();
+              onClick={async () => {
+                await signOutPlatformSession();
                 router.push('/superadmin/login');
               }}
             >

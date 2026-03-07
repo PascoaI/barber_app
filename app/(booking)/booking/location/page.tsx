@@ -1,5 +1,12 @@
-import LegacyRoutePage from '@/app/_components/LegacyRoutePage';
+import { ModernPlaceholder } from '@/components/common/ModernPlaceholder';
 
 export default function BookingLocationPage() {
-  return <LegacyRoutePage slug="booking-location" />;
+  return (
+    <ModernPlaceholder
+      title="Unidade e localizacao"
+      description="Etapa de localizacao em migracao para dados multi-tenant com barbershop_id."
+      ctaHref="/booking"
+      ctaLabel="Voltar ao inicio do booking"
+    />
+  );
 }

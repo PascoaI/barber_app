@@ -1,70 +1,88 @@
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+﻿import { NextResponse } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { validateAppointmentCreation } from '@/lib/server/appointment-core';
 import { getOptionalSessionProfile } from '@/lib/server/request-auth';
+import { logger } from '@/lib/observability/logger';
+import { startTrace } from '@/lib/observability/tracing';
+import { sendOperationalAlert } from '@/lib/observability/alerts';
 
 export async function POST(req: Request) {
+  const trace = startTrace('appointments.create');
   try {
     const body = await req.json();
     const session = await getOptionalSessionProfile(req);
-    const { idempotency_key, barber_id } = body || {};
+    if (!session?.id) {
+      return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 });
+    }
 
-    const tenant_id = session?.tenant_id ?? body?.tenant_id;
-    const unit_id = session?.unit_id ?? body?.unit_id;
+    const { idempotency_key, barber_id } = body || {};
+    const barbershop_id = session.barbershop_id || body?.barbershop_id || body?.tenant_id || body?.unit_id;
     const client_id = session?.role === 'client' ? session.id : (body?.client_id ?? session?.id);
 
-    if (!idempotency_key || !tenant_id || !unit_id || !barber_id) {
-      return NextResponse.json({ error: 'missing idempotency_key/tenant_id/unit_id/barber_id' }, { status: 400 });
+    if (!idempotency_key || !barbershop_id || !barber_id) {
+      return NextResponse.json({ error: 'missing idempotency_key/barbershop_id/barber_id' }, { status: 400 });
     }
 
     if (session?.role === 'client' && body?.client_id && String(body.client_id) !== String(session.id)) {
       return NextResponse.json({ error: 'client_scope_mismatch' }, { status: 403 });
     }
 
+    const supabase = createSupabaseServerClient();
+
     const scopedBody = {
       ...body,
-      tenant_id,
-      unit_id,
+      barbershop_id,
+      tenant_id: body?.tenant_id || barbershop_id,
+      unit_id: body?.unit_id || barbershop_id,
       client_id
     };
 
-    const tenant = encodeURIComponent(String(tenant_id));
-    const unit = encodeURIComponent(String(unit_id));
+    const { data: existingByIdempotency } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('barbershop_id', String(barbershop_id))
+      .eq('idempotency_key', String(idempotency_key))
+      .limit(1)
+      .maybeSingle();
 
-    const existingByIdempotency = await supabaseAdmin.select(
-      'appointments',
-      `select=*&tenant_id=eq.${tenant}&unit_id=eq.${unit}&idempotency_key=eq.${encodeURIComponent(String(idempotency_key))}&limit=1`
-    ) as any[];
-
-    if (existingByIdempotency?.[0]) {
-      return NextResponse.json({ ok: true, duplicated: true, appointment: existingByIdempotency[0] });
+    if (existingByIdempotency) {
+      return NextResponse.json({ ok: true, duplicated: true, appointment: existingByIdempotency });
     }
 
-    const [existingAppointments, blockedSlots] = await Promise.all([
-      supabaseAdmin.select(
-        'appointments',
-        `select=id,start_datetime,end_datetime,status&tenant_id=eq.${tenant}&unit_id=eq.${unit}&barber_id=eq.${encodeURIComponent(String(barber_id))}&status=in.(awaiting_payment,pending,confirmed)`
-      ) as Promise<any[]>,
-      supabaseAdmin.select(
-        'blocked_slots',
-        `select=start_datetime,end_datetime&tenant_id=eq.${tenant}&unit_id=eq.${unit}&barber_id=eq.${encodeURIComponent(String(barber_id))}`
-      ) as Promise<any[]>
+    const [{ data: existingAppointments }, { data: blockedSlots }] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('id,start_datetime,end_datetime,status')
+        .eq('barbershop_id', String(barbershop_id))
+        .eq('barber_id', String(barber_id))
+        .in('status', ['awaiting_payment', 'pending', 'confirmed']),
+      supabase
+        .from('blocked_slots')
+        .select('start_datetime,end_datetime')
+        .eq('barbershop_id', String(barbershop_id))
+        .eq('barber_id', String(barber_id))
     ]);
 
     let blockedUntil: string | null = null;
     let subscriptionStatus: string | null = null;
 
     if (client_id) {
-      const clientRows = await supabaseAdmin.select(
-        'users',
-        `select=blocked_until&id=eq.${encodeURIComponent(String(client_id))}&tenant_id=eq.${tenant}&unit_id=eq.${unit}&limit=1`
-      ) as any[];
-      blockedUntil = clientRows?.[0]?.blocked_until || null;
+      const { data: clientRow } = await supabase
+        .from('users')
+        .select('blocked_until')
+        .eq('id', String(client_id))
+        .eq('barbershop_id', String(barbershop_id))
+        .maybeSingle();
+      blockedUntil = (clientRow as any)?.blocked_until || null;
 
-      const subscriptions = await supabaseAdmin.select(
-        'subscriptions',
-        `select=status&user_id=eq.${encodeURIComponent(String(client_id))}&tenant_id=eq.${tenant}&unit_id=eq.${unit}&order=created_at.desc&limit=1`
-      ) as any[];
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('barbershop_id', String(barbershop_id))
+        .eq('user_id', String(client_id))
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .returns<Array<{ status: string }>>();
       subscriptionStatus = subscriptions?.[0]?.status || null;
     }
 
@@ -80,9 +98,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, reason: validation.reason }, { status: 409 });
     }
 
-    const created = await supabaseAdmin.insert('appointments', validation.normalized || scopedBody, 'representation') as any[];
-    return NextResponse.json({ ok: true, duplicated: false, appointment: created?.[0] || null });
+    const { data: created, error: createdError } = await supabase
+      .from('appointments')
+      .insert(validation.normalized || scopedBody)
+      .select('*')
+      .single();
+
+    if (createdError) throw createdError;
+
+    logger.info('Appointment created.', {
+      traceId: trace.traceId,
+      barbershopId: String(barbershop_id),
+      appointmentId: String(created?.id || ''),
+      clientId: String(client_id || '')
+    });
+
+    return NextResponse.json({ ok: true, duplicated: false, appointment: created || null });
   } catch (error: any) {
+    logger.error('Appointment create failed.', {
+      traceId: trace.traceId,
+      error: error?.message || 'create_failed'
+    });
+
+    await sendOperationalAlert('appointment_create_failed', {
+      traceId: trace.traceId,
+      error: error?.message || 'create_failed'
+    });
+
     return NextResponse.json({ error: error?.message || 'create_failed' }, { status: 500 });
+  } finally {
+    logger.info('Appointment create finished.', trace.end());
   }
 }

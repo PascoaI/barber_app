@@ -5,22 +5,23 @@ import { supabaseClient } from '@/lib/supabaseClient';
 
 export async function getClientSubscriptionPanel() {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
 
   const { data: subscription, error } = await supabase
     .from('subscriptions')
     .select('id,user_id,plan_id,remaining_sessions,expires_at,status,created_at,addon_sessions,paused_until,subscription_plans(name,price,sessions_per_month,max_members)')
 .eq('user_id', String(user.id))
-    .eq('tenant_id', String(user.tenant_id))
-    .eq('unit_id', String(user.unit_id))
+    .eq('barbershop_id', scopeBarbershopId)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
   if (error && !String(error.message || '').includes('0 rows')) throw error;
   if (!subscription) return null;
+  const subscriptionAny = subscription as any;
 
-  const sessionsPerMonth = Number(subscription.subscription_plans?.sessions_per_month || 0) + Number(subscription.addon_sessions || 0);
-  const used = Math.max(0, sessionsPerMonth - Number(subscription.remaining_sessions || 0));
+  const sessionsPerMonth = Number(subscriptionAny.subscription_plans?.sessions_per_month || 0) + Number(subscriptionAny.addon_sessions || 0);
+  const used = Math.max(0, sessionsPerMonth - Number(subscriptionAny.remaining_sessions || 0));
 
   const { data: usage } = await supabase
     .from('subscription_usage')
@@ -30,10 +31,10 @@ export async function getClientSubscriptionPanel() {
 
   const monthlySavings = (usage || [])
     .filter((u: any) => new Date(u.used_at).getMonth() === new Date().getMonth())
-    .reduce((acc: number, u: any) => acc + Number(u.service_price || 0), 0) - Number(subscription.subscription_plans?.price || 0);
+    .reduce((acc: number, u: any) => acc + Number(u.service_price || 0), 0) - Number(subscriptionAny.subscription_plans?.price || 0);
 
   return {
-    subscription,
+    subscription: subscriptionAny,
     usage: usage || [],
     sessionsPerMonth,
     used,
@@ -66,11 +67,12 @@ export async function applySubscriptionUsageOnCompleted(appointmentId: string) {
   const supabase = supabaseClient();
   const { data: appointment, error: appointmentError } = await supabase
     .from('appointments')
-    .select('id,client_id,service_id,status,tenant_id,unit_id,services(price)')
+    .select('id,client_id,service_id,status,barbershop_id,tenant_id,unit_id,services(price)')
     .eq('id', appointmentId)
     .single();
   if (appointmentError) throw appointmentError;
   if (appointment?.status !== 'completed') return;
+  const appointmentAny = appointment as any;
 
   const { data: subscription } = await supabase
     .from('subscriptions')
@@ -85,32 +87,37 @@ export async function applySubscriptionUsageOnCompleted(appointmentId: string) {
     await supabase.from('subscriptions').update({ remaining_sessions: Number(subscription.remaining_sessions) - 1 }).eq('id', String(subscription.id));
     await supabase.from('subscription_usage').insert({
       subscription_id: subscription.id,
-      appointment_id: appointment.id,
+      appointment_id: appointmentAny.id,
       sessions_used: 1,
-      service_price: appointment?.services?.price || 0,
-      used_at: new Date().toISOString()
-    }).execute();
+      service_price: appointmentAny?.services?.price || 0,
+      used_at: new Date().toISOString(),
+      barbershop_id: appointmentAny?.barbershop_id || appointmentAny?.tenant_id || appointmentAny?.unit_id || null
+    });
   }
 }
 
 
 export async function upsertFamilyPlan(input: { id?: string; unit_id: string; name: string; price: number; sessions_per_month: number; max_members: number }) {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const payload = {
     ...(input.id ? { id: input.id } : {}),
-    unit_id: input.unit_id,
+    barbershop_id: scopeBarbershopId,
     name: input.name,
     price: input.price,
     sessions_per_month: input.sessions_per_month,
     max_members: input.max_members
   };
-  const { error } = await supabase.from('subscription_plans').upsert(payload, { onConflict: 'id' }).execute();
+  const { error } = await supabase.from('subscription_plans').upsert(payload, { onConflict: 'id' });
   if (error) throw error;
 }
 
 export async function listFamilyPlans(unitId: string) {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
-  const { data, error } = await supabase.from('subscription_plans').select('id,name,price,sessions_per_month,max_members').eq('unit_id', unitId).gte('max_members', '2');
+  const { data, error } = await supabase.from('subscription_plans').select('id,name,price,sessions_per_month,max_members').eq('barbershop_id', scopeBarbershopId).gte('max_members', '2');
   if (error) throw error;
   return data || [];
 }
@@ -121,7 +128,7 @@ export async function applyTenureBenefits(subscriptionId: string) {
   if (error || !sub || sub.status !== 'active') return;
   const months = Math.floor((Date.now() - new Date(sub.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000));
   if (months >= 3) {
-    await supabase.from('subscription_rewards').insert({ subscription_id: sub.id, user_id: sub.user_id, reward_type: months >= 6 ? 'temporary_upgrade' : 'bonus_session', granted_at: new Date().toISOString() }).execute();
+    await supabase.from('subscription_rewards').insert({ subscription_id: sub.id, user_id: sub.user_id, reward_type: months >= 6 ? 'temporary_upgrade' : 'bonus_session', granted_at: new Date().toISOString() });
   }
 }
 

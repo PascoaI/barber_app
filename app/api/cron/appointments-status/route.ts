@@ -3,20 +3,26 @@ import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { deriveOverdueStatus } from '@/lib/appointments-policy';
 import { isValidStatusTransition } from '@/lib/server/appointment-core';
 
+function isAuthorized(req: Request) {
+  const expected = process.env.CRON_SECRET || '';
+  if (!expected) return false;
+  return (req.headers.get('x-cron-secret') || '') === expected;
+}
+
 export async function POST(req: Request) {
   try {
+    if (!isAuthorized(req)) return NextResponse.json({ error: 'Unauthorized cron call.' }, { status: 401 });
+
     const body = await req.json().catch(() => ({}));
-    const tenantId = body.tenant_id;
-    const unitId = body.unit_id;
-    if (!tenantId || !unitId) return NextResponse.json({ error: 'tenant_id and unit_id are required' }, { status: 400 });
+    const barbershopId = body.barbershop_id || body.tenant_id || body.unit_id;
+    if (!barbershopId) return NextResponse.json({ error: 'barbershop_id is required' }, { status: 400 });
 
     const nowIso = new Date().toISOString();
-    const tenant = encodeURIComponent(String(tenantId));
-    const unit = encodeURIComponent(String(unitId));
+    const barbershop = encodeURIComponent(String(barbershopId));
 
     const appointments = await supabaseAdmin.select(
       'appointments',
-      `select=id,client_id,status,start_datetime,tenant_id,unit_id&tenant_id=eq.${tenant}&unit_id=eq.${unit}&status=in.(pending,confirmed)&start_datetime=lt.${encodeURIComponent(nowIso)}`
+      `select=id,client_id,status,start_datetime,barbershop_id&barbershop_id=eq.${barbershop}&status=in.(pending,confirmed)&start_datetime=lt.${encodeURIComponent(nowIso)}`
     ) as any[];
 
     let completed = 0;
@@ -31,7 +37,7 @@ export async function POST(req: Request) {
 
       await supabaseAdmin.update(
         'appointments',
-        `id=eq.${encodeURIComponent(String(apt.id))}&tenant_id=eq.${tenant}&unit_id=eq.${unit}&status=eq.${encodeURIComponent(String(apt.status))}`,
+        `id=eq.${encodeURIComponent(String(apt.id))}&barbershop_id=eq.${barbershop}&status=eq.${encodeURIComponent(String(apt.status))}`,
         { status: nextStatus, updated_at: nowIso, updated_by: 'cron_auto_status' }
       );
       if (nextStatus === 'completed') completed += 1;
@@ -40,7 +46,7 @@ export async function POST(req: Request) {
 
     const noShowRows = await supabaseAdmin.select(
       'appointments',
-      `select=client_id,status&tenant_id=eq.${tenant}&unit_id=eq.${unit}&status=eq.no_show`
+      `select=client_id,status&barbershop_id=eq.${barbershop}&status=eq.no_show`
     ) as any[];
 
     const grouped: Record<string, number> = {};
@@ -49,7 +55,7 @@ export async function POST(req: Request) {
     for (const [clientId, total] of Object.entries(grouped)) {
       if (total < 3) continue;
       const blockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await supabaseAdmin.update('users', `id=eq.${encodeURIComponent(clientId)}&tenant_id=eq.${tenant}&unit_id=eq.${unit}`, { blocked_until: blockedUntil, updated_at: nowIso });
+      await supabaseAdmin.update('users', `id=eq.${encodeURIComponent(clientId)}&barbershop_id=eq.${barbershop}`, { blocked_until: blockedUntil, updated_at: nowIso });
     }
 
     return NextResponse.json({ ok: true, updated: appointments.length, completed, noShows, skipped });

@@ -1,56 +1,48 @@
-import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 type SessionProfile = {
   id: string;
   email?: string;
   role?: string;
-  tenant_id?: string | number | null;
-  unit_id?: string | number | null;
+  barbershop_id?: string | null;
+  tenant_id?: string | null;
+  unit_id?: string | null;
   blocked_until?: string | null;
 };
 
-type SupabaseAuthUser = {
-  id: string;
-  email?: string;
-};
+export async function getOptionalSessionProfile(_req?: Request): Promise<SessionProfile | null> {
+  const supabase = createSupabaseServerClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) return null;
 
-function getBearerToken(req: Request) {
-  const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
-  const [scheme, token] = auth.split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || !token) return null;
-  return token;
-}
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('id,email,role,barbershop_id')
+    .eq('id', authData.user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
 
-async function fetchSupabaseAuthUser(accessToken: string): Promise<SupabaseAuthUser | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const publicAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const apiKey = publicAnonKey || serviceKey;
+  if (!profile) {
+    return {
+      id: authData.user.id,
+      email: authData.user.email || '',
+      role: 'client',
+      barbershop_id: null,
+      tenant_id: null,
+      unit_id: null,
+      blocked_until: null
+    };
+  }
 
-  if (!supabaseUrl || !apiKey) return null;
-
-  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: {
-      apikey: apiKey,
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-  if (!res.ok) return null;
-  const data = (await res.json()) as SupabaseAuthUser | null;
-  return data?.id ? data : null;
-}
-
-export async function getOptionalSessionProfile(req: Request): Promise<SessionProfile | null> {
-  const accessToken = getBearerToken(req);
-  if (!accessToken) return null;
-
-  const authUser = await fetchSupabaseAuthUser(accessToken);
-  if (!authUser?.id) return null;
-
-  const rows = await supabaseAdmin.select(
-    'users',
-    `select=id,email,role,tenant_id,unit_id,blocked_until&id=eq.${encodeURIComponent(String(authUser.id))}&limit=1`
-  ) as SessionProfile[];
-
-  return rows?.[0] || null;
+  const barbershopId = (profile as any).barbershop_id || null;
+  return {
+    id: profile.id,
+    email: profile.email || authData.user.email || '',
+    role: (profile as any).role || 'client',
+    barbershop_id: barbershopId,
+    tenant_id: barbershopId,
+    unit_id: barbershopId,
+    blocked_until: (profile as any).blocked_until || null
+  };
 }

@@ -1,5 +1,10 @@
-import LegacyRoutePage from '@/app/_components/LegacyRoutePage';
+import { ModernPlaceholder } from '@/components/common/ModernPlaceholder';
 
 export default function AdminStockPage() {
-  return <LegacyRoutePage slug="admin-stock" />;
+  return (
+    <ModernPlaceholder
+      title="Estoque"
+      description="Controle de estoque em migracao do legado para componentes React nativos."
+    />
+  );
 }

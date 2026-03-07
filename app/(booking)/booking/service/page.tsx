@@ -1,5 +1,12 @@
-import LegacyRoutePage from '@/app/_components/LegacyRoutePage';
+import { ModernPlaceholder } from '@/components/common/ModernPlaceholder';
 
 export default function BookingServicePage() {
-  return <LegacyRoutePage slug="booking-service" />;
+  return (
+    <ModernPlaceholder
+      title="Escolha de servico"
+      description="Etapa de servicos sera migrada para componentes tipados e validacao server-side."
+      ctaHref="/booking"
+      ctaLabel="Voltar ao inicio do booking"
+    />
+  );
 }

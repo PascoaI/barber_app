@@ -1,5 +1,10 @@
-import LegacyRoutePage from '@/app/_components/LegacyRoutePage';
+import { ModernPlaceholder } from '@/components/common/ModernPlaceholder';
 
 export default function AdminFinancePage() {
-  return <LegacyRoutePage slug="admin-finance" />;
+  return (
+    <ModernPlaceholder
+      title="Financeiro"
+      description="Painel financeiro em migracao para consultas seguras e observabilidade de faturamento."
+    />
+  );
 }

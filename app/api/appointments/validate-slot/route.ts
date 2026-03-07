@@ -1,24 +1,21 @@
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+﻿import { NextResponse } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { overlaps, toUtcIso } from '@/lib/server/appointment-core';
 import { getOptionalSessionProfile } from '@/lib/server/request-auth';
+import { logger } from '@/lib/observability/logger';
+import { startTrace } from '@/lib/observability/tracing';
 
 export async function POST(req: Request) {
+  const trace = startTrace('appointments.validate_slot');
   try {
     const body = await req.json();
     const session = await getOptionalSessionProfile(req);
-    const { tenant_id, unit_id, barber_id, start_datetime, duration_minutes, editing_appointment_id = null } = body || {};
-    const scopedTenantId = session?.tenant_id ?? tenant_id;
-    const scopedUnitId = session?.unit_id ?? unit_id;
+    if (!session?.id) return NextResponse.json({ valid: false, reason: 'not_authenticated' }, { status: 401 });
 
-    if (session?.tenant_id && tenant_id && String(tenant_id) !== String(session.tenant_id)) {
-      return NextResponse.json({ valid: false, reason: 'tenant_scope_mismatch' }, { status: 403 });
-    }
-    if (session?.unit_id && unit_id && String(unit_id) !== String(session.unit_id)) {
-      return NextResponse.json({ valid: false, reason: 'unit_scope_mismatch' }, { status: 403 });
-    }
+    const { barber_id, start_datetime, duration_minutes, editing_appointment_id = null } = body || {};
+    const barbershop_id = session.barbershop_id || body?.barbershop_id || body?.tenant_id || body?.unit_id;
 
-    if (!scopedTenantId || !scopedUnitId || !barber_id || !start_datetime || !duration_minutes) {
+    if (!barbershop_id || !barber_id || !start_datetime || !duration_minutes) {
       return NextResponse.json({ valid: false, reason: 'missing_required_fields' }, { status: 400 });
     }
 
@@ -31,7 +28,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ valid: false, reason: 'invalid_datetime_range' }, { status: 400 });
     }
 
-    const settingsRows = await supabaseAdmin.select('unit_settings', `select=opening_time,closing_time,min_advance_minutes,buffer_between_appointments_minutes&unit_id=eq.${encodeURIComponent(String(scopedUnitId))}&limit=1`);
+    const supabase = createSupabaseServerClient();
+    const { data: settingsRows } = await supabase
+      .from('unit_settings')
+      .select('opening_time,closing_time,min_advance_minutes,buffer_between_appointments_minutes,timezone_offset_minutes')
+      .eq('barbershop_id', String(barbershop_id))
+      .limit(1);
+
     const settings = (settingsRows as any[])?.[0] || {};
     const minAdvanceMinutes = Number(settings.min_advance_minutes || 60);
     const bufferMinutes = Number(settings.buffer_between_appointments_minutes || 0);
@@ -60,12 +63,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ valid: false, reason: 'outside_working_hours' });
     }
 
-    const appts = await supabaseAdmin.select(
-      'appointments',
-      `select=id,start_datetime,end_datetime,status,barber_id&tenant_id=eq.${encodeURIComponent(String(scopedTenantId))}&unit_id=eq.${encodeURIComponent(String(scopedUnitId))}&barber_id=eq.${encodeURIComponent(String(barber_id))}&status=in.(awaiting_payment,pending,confirmed)`
-    ) as any[];
+    const { data: appts } = await supabase
+      .from('appointments')
+      .select('id,start_datetime,end_datetime,status,barber_id')
+      .eq('barbershop_id', String(barbershop_id))
+      .eq('barber_id', String(barber_id))
+      .in('status', ['awaiting_payment', 'pending', 'confirmed']);
 
-    const conflicts = (appts || []).some((a) => {
+    const conflicts = (appts || []).some((a: any) => {
       if (editing_appointment_id && String(a.id) === String(editing_appointment_id)) return false;
       const aStart = new Date(new Date(a.start_datetime).getTime() - bufferMinutes * 60000);
       const aEnd = new Date(new Date(a.end_datetime).getTime() + bufferMinutes * 60000);
@@ -73,16 +78,23 @@ export async function POST(req: Request) {
     });
     if (conflicts) return NextResponse.json({ valid: false, reason: 'appointment_overlap' });
 
-    const blocked = await supabaseAdmin.select(
-      'blocked_slots',
-      `select=id,start_datetime,end_datetime,barber_id&tenant_id=eq.${encodeURIComponent(String(scopedTenantId))}&unit_id=eq.${encodeURIComponent(String(scopedUnitId))}&barber_id=eq.${encodeURIComponent(String(barber_id))}`
-    ) as any[];
+    const { data: blocked } = await supabase
+      .from('blocked_slots')
+      .select('id,start_datetime,end_datetime,barber_id')
+      .eq('barbershop_id', String(barbershop_id))
+      .eq('barber_id', String(barber_id));
 
-    const blockedConflict = (blocked || []).some((b) => overlaps(start, end, new Date(b.start_datetime), new Date(b.end_datetime)));
+    const blockedConflict = (blocked || []).some((b: any) => overlaps(start, end, new Date(b.start_datetime), new Date(b.end_datetime)));
     if (blockedConflict) return NextResponse.json({ valid: false, reason: 'blocked_slot_conflict' });
 
     return NextResponse.json({ valid: true, normalized_start_datetime: start.toISOString(), normalized_end_datetime: end.toISOString() });
   } catch (error: any) {
+    logger.error('Slot validation failed.', {
+      traceId: trace.traceId,
+      error: error?.message || 'validation_failed'
+    });
     return NextResponse.json({ valid: false, reason: 'validation_failed', error: error?.message }, { status: 500 });
+  } finally {
+    logger.info('Slot validation finished.', trace.end());
   }
 }

@@ -138,7 +138,7 @@ export default function AdminSettingsPage() {
         updated_by: user.id
       };
 
-      const { error: upsertError } = await supabase.from('unit_settings').upsert(payload, { onConflict: 'unit_id' }).execute();
+      const { error: upsertError } = await supabase.from('unit_settings').upsert(payload, { onConflict: 'unit_id' });
       if (upsertError) throw upsertError;
 
       await loadSettings();

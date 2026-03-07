@@ -1,17 +1,9 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { isAdminRole, isSuperAdminRole } from './roles';
+import { requireAppSession } from '@/lib/auth/server-session';
 
-export function getRoleFromCookie() {
-  return cookies().get('barberpro_role')?.value || '';
+export async function requireAdminRoute() {
+  await requireAppSession(['admin', 'super_admin']);
 }
 
-export function requireAdminRoute() {
-  const role = getRoleFromCookie();
-  if (!isAdminRole(role)) redirect('/login');
-}
-
-export function requireSuperAdminRoute() {
-  const role = getRoleFromCookie();
-  if (!isSuperAdminRole(role)) redirect('/superadmin/login');
+export async function requireSuperAdminRoute() {
+  await requireAppSession(['super_admin']);
 }

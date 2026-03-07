@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound, Pencil, PlusCircle, Power, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,20 +41,28 @@ export default function SuperAdminBarbershopsPage() {
   const [rows, setRows] = useState<Barbershop[]>([]);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
-  const load = () => setRows(listPlatformBarbershops());
+  const load = useCallback(async () => {
+    try {
+      setRows(await listPlatformBarbershops());
+    } catch (error: any) {
+      toast(error?.message || 'Falha ao carregar barbearias.');
+    }
+  }, [toast]);
 
   useEffect(() => {
-    if (!isSuperAdminSession()) {
-      router.replace('/superadmin/login');
-      return;
-    }
-    load();
-  }, [router]);
+    void (async () => {
+      if (!(await isSuperAdminSession())) {
+        router.replace('/superadmin/login');
+        return;
+      }
+      await load();
+    })();
+  }, [router, load]);
 
-  const onToggle = (id: string) => {
-    const res = togglePlatformBarbershopStatus(id);
+  const onToggle = async (id: string) => {
+    const res = await togglePlatformBarbershopStatus(id);
     if (!res.ok) return toast(res.message);
-    load();
+    await load();
     toast('Status atualizado.');
   };
 
@@ -74,21 +82,21 @@ export default function SuperAdminBarbershopsPage() {
     };
   }, [confirmAction]);
 
-  const runConfirm = () => {
+  const runConfirm = async () => {
     if (!confirmAction) return;
 
     if (confirmAction.mode === 'reset') {
-      const res = resetPlatformBarbershopPassword(confirmAction.id);
+      const res = await resetPlatformBarbershopPassword(confirmAction.id);
       setConfirmAction(null);
       if (!res.ok) return toast(res.message);
       toast('Senha redefinida para 123456.');
       return;
     }
 
-    const res = removePlatformBarbershop(confirmAction.id);
+    const res = await removePlatformBarbershop(confirmAction.id);
     setConfirmAction(null);
     if (!res.ok) return toast(res.message);
-    load();
+    await load();
     toast('Barbearia excluida.');
   };
 

@@ -9,15 +9,16 @@ function minutesBetween(start: string, end: string) {
 
 export async function getAdminKpis() {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
   const [subscriptionsRes, plansRes, appointmentsRes] = await Promise.all([
-    supabase.from('subscriptions').select('id,plan_id,status,subscription_plans(price,name)').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id)),
-    supabase.from('subscription_plans').select('id,name').eq('unit_id', String(user.unit_id)),
-    supabase.from('appointments').select('id,status,start_datetime,end_datetime,barber_id,client_id,service_id,services(price)').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id)).gte('start_datetime', monthStart).lte('start_datetime', monthEnd)
+    supabase.from('subscriptions').select('id,plan_id,status,subscription_plans(price,name)').eq('barbershop_id', scopeBarbershopId),
+    supabase.from('subscription_plans').select('id,name').eq('barbershop_id', scopeBarbershopId),
+    supabase.from('appointments').select('id,status,start_datetime,end_datetime,barber_id,client_id,service_id,services(price)').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', monthStart).lte('start_datetime', monthEnd)
   ]);
   if (subscriptionsRes.error) throw subscriptionsRes.error;
   if (plansRes.error) throw plansRes.error;
@@ -53,16 +54,17 @@ export async function getAdminKpis() {
 
 export async function getOccupancyByBarber() {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const today = new Date();
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - 6);
 
   const [barbersRes, apptRes, blockedRes, settingsRes] = await Promise.all([
-    supabase.from('barbers').select('id,users(name)').eq('unit_id', String(user.unit_id)),
-    supabase.from('appointments').select('id,barber_id,start_datetime,end_datetime,status').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id)).gte('start_datetime', weekStart.toISOString()).in('status', ['pending', 'confirmed', 'awaiting_payment', 'completed']),
-    supabase.from('blocked_slots').select('barber_id,start_datetime,end_datetime').eq('unit_id', String(user.unit_id)).gte('start_datetime', weekStart.toISOString()),
-    supabase.from('unit_settings').select('opening_time,closing_time').eq('unit_id', String(user.unit_id)).single()
+    supabase.from('barbers').select('id,users(name)').eq('barbershop_id', scopeBarbershopId),
+    supabase.from('appointments').select('id,barber_id,start_datetime,end_datetime,status').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', weekStart.toISOString()).in('status', ['pending', 'confirmed', 'awaiting_payment', 'completed']),
+    supabase.from('blocked_slots').select('barber_id,start_datetime,end_datetime').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', weekStart.toISOString()),
+    supabase.from('unit_settings').select('opening_time,closing_time').eq('barbershop_id', scopeBarbershopId).single()
   ]);
   if (barbersRes.error) throw barbersRes.error;
   if (apptRes.error) throw apptRes.error;
@@ -89,14 +91,15 @@ export async function getOccupancyByBarber() {
 
 export async function getRetentionReport(daysWithoutBooking = 30) {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const cutoff = new Date(Date.now() - daysWithoutBooking * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: clients, error } = await supabase.from('users').select('id,name,email').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id)).eq('role', 'client');
+  const { data: clients, error } = await supabase.from('users').select('id,name,email').eq('barbershop_id', scopeBarbershopId).eq('role', 'client');
   if (error) throw error;
 
-  const { data: appointments } = await supabase.from('appointments').select('client_id,start_datetime').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id)).order('start_datetime', { ascending: false });
-  const { data: subscriptions } = await supabase.from('subscriptions').select('user_id,expires_at,status').eq('tenant_id', String(user.tenant_id)).eq('unit_id', String(user.unit_id));
+  const { data: appointments } = await supabase.from('appointments').select('client_id,start_datetime').eq('barbershop_id', scopeBarbershopId).order('start_datetime', { ascending: false });
+  const { data: subscriptions } = await supabase.from('subscriptions').select('user_id,expires_at,status').eq('barbershop_id', scopeBarbershopId);
 
   const staleClients = (clients || []).filter((client: any) => {
     const last = (appointments || []).find((a: any) => String(a.client_id) === String(client.id));
@@ -111,12 +114,12 @@ export async function getRetentionReport(daysWithoutBooking = 30) {
 
 export async function getRecurringNoShowClients(limit = 10) {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const { data, error } = await supabase
     .from('appointments')
     .select('client_id,status,users(name,email)')
-    .eq('tenant_id', String(user.tenant_id))
-    .eq('unit_id', String(user.unit_id))
+    .eq('barbershop_id', scopeBarbershopId)
     .eq('status', 'no_show');
   if (error) throw error;
   const grouped: Record<string, { client_id: string; total: number; name?: string; email?: string }> = {};
@@ -129,14 +132,18 @@ export async function getRecurringNoShowClients(limit = 10) {
 }
 
 export async function blockClientUntil(clientId: string, blockedUntil: string) {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
-  const { error } = await supabase.from('users').update({ blocked_until: blockedUntil }).eq('id', clientId);
+  const { error } = await supabase.from('users').update({ blocked_until: blockedUntil }).eq('id', clientId).eq('barbershop_id', scopeBarbershopId);
   if (error) throw error;
 }
 
 
 export async function unblockClient(clientId: string) {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
-  const { error } = await supabase.from('users').update({ blocked_until: null }).eq('id', clientId);
+  const { error } = await supabase.from('users').update({ blocked_until: null }).eq('id', clientId).eq('barbershop_id', scopeBarbershopId);
   if (error) throw error;
 }

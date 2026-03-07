@@ -1,5 +1,10 @@
-import LegacyRoutePage from '@/app/_components/LegacyRoutePage';
+import { ModernPlaceholder } from '@/components/common/ModernPlaceholder';
 
 export default function AdminSubscriptionsPage() {
-  return <LegacyRoutePage slug="admin-subscriptions" />;
+  return (
+    <ModernPlaceholder
+      title="Assinaturas"
+      description="Fluxo de assinaturas agora opera com Stripe real, webhook assinado e reconciliacao."
+    />
+  );
 }

@@ -7,14 +7,14 @@ const UPCOMING_STATUSES = ['pending', 'confirmed', 'awaiting_payment'];
 
 export async function getNextAppointment() {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
     .from('appointments')
     .select('id, start_datetime, end_datetime, status, service_id, barber_id, services(name,price), barbers(users(name))')
-    .eq('tenant_id', String(user.tenant_id))
-    .eq('unit_id', String(user.unit_id))
+    .eq('barbershop_id', scopeBarbershopId)
     .eq('client_id', String(user.id))
     .in('status', UPCOMING_STATUSES)
     .gte('start_datetime', now)
@@ -33,12 +33,12 @@ export async function listClientHistory(filters: {
   to?: string;
 }) {
   const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
   const supabase = supabaseClient();
   let query = supabase
     .from('appointments')
     .select('id,start_datetime,end_datetime,status,barber_id,service_id,barbers(users(name)),services(name,price)')
-    .eq('tenant_id', String(user.tenant_id))
-    .eq('unit_id', String(user.unit_id))
+    .eq('barbershop_id', scopeBarbershopId)
     .eq('client_id', String(user.id))
     .order('start_datetime', { ascending: false });
 
@@ -60,8 +60,9 @@ export async function createAppointmentSafe(payload: Record<string, any>) {
 
   const normalized = {
     ...payload,
-    tenant_id: user.tenant_id,
-    unit_id: user.unit_id,
+    barbershop_id: user.barbershop_id || user.tenant_id || user.unit_id,
+    tenant_id: user.tenant_id || user.barbershop_id || user.unit_id,
+    unit_id: user.unit_id || user.barbershop_id || user.tenant_id,
     client_id: user.id
   };
 

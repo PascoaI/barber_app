@@ -18,7 +18,7 @@ export async function createBarbershop(input: BarbershopInput) {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
-  const { error } = await supabase.from(TABLE).insert(payload).execute();
+  const { error } = await supabase.from(TABLE).insert(payload);
   if (error) throw error;
 }
 
