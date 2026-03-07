@@ -1,3 +1,5 @@
+// AUTO-GENERATED FILE. Source: legacy-src/script/*.js
+
 ﻿const DEFAULT_UNIT_ID = 'unit_bom_fim';
 const DEFAULT_TENANT_ID = 'tenant_barberpro_demo';
 
@@ -1172,7 +1174,7 @@ function renderMetrics(container, metrics) {
   `;
 }
 
-function initLoginPage() {
+﻿function initLoginPage() {
   const form = document.querySelector('form.auth-form');
   if (!form) return;
   const feedback = document.getElementById('login-feedback');
@@ -2621,7 +2623,7 @@ function initSubscriptionsPage() {
   `;
 }
 
-function initSuperAdminTenantsPage() {
+﻿function initSuperAdminTenantsPage() {
   const root = document.getElementById('tenants-root');
   if (!root) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -2800,7 +2802,7 @@ function initSuperAdminTenantsPage() {
   render();
 }
 
-function initSuperAdminBarbershopFormPage() {
+﻿function initSuperAdminBarbershopFormPage() {
   const form = document.getElementById('superadmin-barbershop-form');
   if (!form) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -2967,8 +2969,7 @@ function ensureDbSchemaNote() {
   }
 }
 
-
-function initGlobalNavigation() {
+﻿function initGlobalNavigation() {
   const session = getSession();
   const iconSvg = {
     home: '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg></span>',
@@ -3140,7 +3141,7 @@ function initGlobalNavigation() {
   });
 }
 
-ensureSeed();
+﻿ensureSeed();
 checkOverduePrepayments();
 autoUpdateAppointmentStatuses();
 applyBrandTheme();
@@ -3173,4 +3174,3 @@ initSuperAdminBarbershopFormPage();
 initAdminFinanceModuleCards();
 initBarberHomePage();
 initGlobalNavigation();
-
