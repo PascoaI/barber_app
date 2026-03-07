@@ -1574,9 +1574,47 @@ textarea:focus {
 }
 
 .superadmin-create-btn {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.9rem;
+  padding: 0.72rem 1.1rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--primary, #d4a24f) 84%, #fff 7%);
+  background:
+    radial-gradient(circle at 82% -50%, rgba(255, 255, 255, 0.42), transparent 46%),
+    linear-gradient(135deg, #f4ce76 0%, #d7a84e 52%, #bb8432 100%);
+  color: #0d1528 !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 26px rgba(181, 124, 31, 0.34);
+}
+
+.superadmin-create-btn .nav-icon {
+  width: 1.28rem;
+  height: 1.28rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(13, 21, 40, 0.14);
+}
+
+.superadmin-create-btn .nav-icon svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.superadmin-create-btn:hover {
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(181, 124, 31, 0.4);
+}
+
+.superadmin-create-btn:active {
+  transform: translateY(0) scale(0.985);
 }
 
 .superadmin-table-wrap {
@@ -1646,5 +1684,10 @@ textarea:focus {
   .superadmin-table-head-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .superadmin-create-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
