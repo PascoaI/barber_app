@@ -5,6 +5,13 @@
 - Middleware de autorizacao agora valida sessao JWT com Supabase (`auth.getUser()`), sem uso de cookie de role.
 - Fluxo SuperAdmin removido de `localStorage` e migrado para APIs seguras em `app/api/superadmin/*`.
 - Login/register publico agora e App Router nativo (`app/(public)/login`, `app/(public)/register`) sem `script.js`.
+- Login protegido com:
+  - rate limit por IP
+  - lockout por tentativas falhas
+  - validacao CSRF e same-origin
+- Registro protegido com:
+  - politica de senha forte
+  - consentimento obrigatorio (termos + privacidade)
 
 ## 2) Fim da dependencia de espelho legado
 
@@ -26,6 +33,8 @@
 - Escopo tenant padronizado para `barbershop_id` com fallback de compatibilidade legado.
 - Migracao SQL adicionada para billing tenant-aware e politicas RLS:
   - `supabase/migrations/20260307113000_billing_stripe_runtime.sql`
+- Migracao SQL de compliance e trilha LGPD:
+  - `supabase/migrations/20260307123000_compliance_security.sql`
 
 ## 5) Observabilidade
 
@@ -33,6 +42,33 @@
 - Tracing basico: `lib/observability/tracing.ts`
 - Alertas operacionais (webhook): `lib/observability/alerts.ts`
 - Eventos criticos (billing/agendamento) ja emitem logs e alertas.
+
+## 6) Hardening web
+
+- Headers de seguranca via middleware:
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - `Strict-Transport-Security` (prod)
+- Cookie CSRF emitido no middleware e validado em rotas mutaveis.
+- Rate limiting em endpoints criticos.
+- Brute force mitigado com lockout.
+
+## 7) UX para falhas
+
+- Outbox offline de agendamento:
+  - solicitações de agendamento sao enfileiradas localmente em falhas de rede/5xx
+  - reenvio automatico quando conexao retorna.
+
+## 8) CI/CD e release
+
+- Pipeline CI com lint, typecheck, testes, build e verificacao de migrations:
+  - `.github/workflows/ci.yml`
+- Preview em PR (quando segredos Vercel estiverem configurados):
+  - `.github/workflows/preview.yml`
+- Rollback manual por SHA para producao:
+  - `.github/workflows/rollback.yml`
 
 ## 6) Variaveis obrigatorias
 

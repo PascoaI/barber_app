@@ -1,10 +1,25 @@
 import { NextResponse } from 'next/server';
 import { assertSuperAdminSession, getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
+import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 type Params = { params: { id: string } };
 
 export async function POST(req: Request, { params }: Params) {
   try {
+    const sameOrigin = validateSameOrigin(req);
+    if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
+    const csrf = validateCsrfFromRequest(req);
+    if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
+
+    const limit = checkRateLimit({
+      key: `api:superadmin:barbershop:reset-password:${getClientIp(req)}`,
+      limit: 10,
+      windowMs: 60 * 1000,
+      blockMs: 10 * 60 * 1000
+    });
+    if (!limit.allowed) return NextResponse.json({ error: 'Muitas requisicoes. Aguarde.' }, { status: 429 });
+
     const check = await assertSuperAdminSession();
     if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
 

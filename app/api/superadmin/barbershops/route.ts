@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { assertSuperAdminSession, getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
+import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import type { Barbershop } from '@/types/barbershop';
 
 const ALLOWED_STATUS: Array<Barbershop['status']> = ['active', 'trial', 'suspended', 'disabled'];
@@ -39,6 +41,23 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const sameOrigin = validateSameOrigin(req);
+    if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
+
+    const csrf = validateCsrfFromRequest(req);
+    if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
+
+    const ip = getClientIp(req);
+    const limit = checkRateLimit({
+      key: `api:superadmin:barbershops:create:${ip}`,
+      limit: 20,
+      windowMs: 60 * 1000,
+      blockMs: 5 * 60 * 1000
+    });
+    if (!limit.allowed) {
+      return NextResponse.json({ error: 'Muitas requisicoes. Aguarde um pouco.' }, { status: 429 });
+    }
+
     const check = await assertSuperAdminSession();
     if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
 

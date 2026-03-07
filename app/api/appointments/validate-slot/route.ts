@@ -4,10 +4,25 @@ import { overlaps, toUtcIso } from '@/lib/server/appointment-core';
 import { getOptionalSessionProfile } from '@/lib/server/request-auth';
 import { logger } from '@/lib/observability/logger';
 import { startTrace } from '@/lib/observability/tracing';
+import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.validate_slot');
   try {
+    const sameOrigin = validateSameOrigin(req);
+    if (!sameOrigin.ok) return NextResponse.json({ valid: false, reason: sameOrigin.message }, { status: 403 });
+    const csrf = validateCsrfFromRequest(req);
+    if (!csrf.ok) return NextResponse.json({ valid: false, reason: csrf.message }, { status: 403 });
+
+    const limit = checkRateLimit({
+      key: `api:appointments:validate-slot:${getClientIp(req)}`,
+      limit: 120,
+      windowMs: 60 * 1000,
+      blockMs: 2 * 60 * 1000
+    });
+    if (!limit.allowed) return NextResponse.json({ valid: false, reason: 'rate_limited' }, { status: 429 });
+
     const body = await req.json();
     const session = await getOptionalSessionProfile(req);
     if (!session?.id) return NextResponse.json({ valid: false, reason: 'not_authenticated' }, { status: 401 });

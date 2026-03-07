@@ -5,10 +5,28 @@ import { getOptionalSessionProfile } from '@/lib/server/request-auth';
 import { logger } from '@/lib/observability/logger';
 import { startTrace } from '@/lib/observability/tracing';
 import { sendOperationalAlert } from '@/lib/observability/alerts';
+import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.create');
   try {
+    const sameOrigin = validateSameOrigin(req);
+    if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
+
+    const csrf = validateCsrfFromRequest(req);
+    if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
+
+    const limit = checkRateLimit({
+      key: `api:appointments:create:${getClientIp(req)}`,
+      limit: 60,
+      windowMs: 60 * 1000,
+      blockMs: 5 * 60 * 1000
+    });
+    if (!limit.allowed) {
+      return NextResponse.json({ error: 'Muitas tentativas de agendamento. Aguarde alguns instantes.' }, { status: 429 });
+    }
+
     const body = await req.json();
     const session = await getOptionalSessionProfile(req);
     if (!session?.id) {

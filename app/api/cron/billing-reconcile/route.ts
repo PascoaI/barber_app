@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
 import { getStripeClient } from '@/lib/billing/stripe';
 import { logger } from '@/lib/observability/logger';
+import { mapStripeStatusToTenantStatus } from '@/lib/server/billing-core';
 
 function getCronSecret() {
   return process.env.CRON_SECRET || '';
@@ -12,14 +13,6 @@ function isAuthorized(req: Request) {
   if (!expected) return false;
   const incoming = req.headers.get('x-cron-secret') || '';
   return incoming === expected;
-}
-
-function mapStripeStatus(status: string) {
-  if (status === 'trialing') return 'trial';
-  if (status === 'active') return 'active';
-  if (['past_due', 'unpaid', 'paused'].includes(status)) return 'suspended';
-  if (['canceled', 'incomplete_expired'].includes(status)) return 'disabled';
-  return 'trial';
 }
 
 export async function POST(req: Request) {
@@ -42,7 +35,7 @@ export async function POST(req: Request) {
     try {
       const subscriptionResponse = await stripe.subscriptions.retrieve(String(row.stripe_subscription_id));
       const subscription = subscriptionResponse as unknown as { status: string; current_period_end?: number; cancel_at_period_end?: boolean };
-      const mapped = mapStripeStatus(subscription.status);
+      const mapped = mapStripeStatusToTenantStatus(subscription.status);
       const currentPeriodEnd = subscription.current_period_end
         ? new Date(subscription.current_period_end * 1000).toISOString()
         : null;

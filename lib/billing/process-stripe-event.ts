@@ -1,20 +1,13 @@
 import Stripe from 'stripe';
 import { getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
+import { mapStripeStatusToTenantStatus } from '@/lib/server/billing-core';
 
 function mapStripeStatusToShopStatus(status: string) {
-  if (status === 'trialing') return 'trial';
-  if (status === 'active') return 'active';
-  if (['past_due', 'unpaid', 'paused'].includes(status)) return 'suspended';
-  if (['canceled', 'incomplete_expired'].includes(status)) return 'disabled';
-  return 'trial';
+  return mapStripeStatusToTenantStatus(status);
 }
 
 function mapStripeStatusToSubscriptionStatus(status: string) {
-  if (status === 'trialing') return 'trial';
-  if (status === 'active') return 'active';
-  if (['past_due', 'unpaid', 'paused'].includes(status)) return 'suspended';
-  if (['canceled', 'incomplete_expired'].includes(status)) return 'disabled';
-  return 'trial';
+  return mapStripeStatusToTenantStatus(status);
 }
 
 async function resolveBarbershopId(service: ReturnType<typeof getServiceClientForPrivilegedOps>, payload: Stripe.Event['data']['object']) {

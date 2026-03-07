@@ -4,10 +4,27 @@ import { getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
 import { getStripeClient } from '@/lib/billing/stripe';
 import { logger } from '@/lib/observability/logger';
 import { startTrace } from '@/lib/observability/tracing';
+import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('stripe.create_checkout_session');
   try {
+    const sameOrigin = validateSameOrigin(req);
+    if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
+    const csrf = validateCsrfFromRequest(req);
+    if (!csrf.ok) return NextResponse.json({ error: csrf.message }, { status: 403 });
+
+    const limit = checkRateLimit({
+      key: `api:stripe:create-checkout:${getClientIp(req)}`,
+      limit: 30,
+      windowMs: 60 * 1000,
+      blockMs: 5 * 60 * 1000
+    });
+    if (!limit.allowed) {
+      return NextResponse.json({ error: 'Muitas requisicoes de checkout. Aguarde.' }, { status: 429 });
+    }
+
     const session = await getRouteAppSession();
     if (!session || !['admin', 'super_admin'].includes(session.role)) {
       return NextResponse.json({ error: 'Nao autorizado.' }, { status: 401 });

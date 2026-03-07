@@ -2,6 +2,8 @@
 
 import { getCurrentUserContext } from '@/lib/auth';
 import { supabaseClient } from '@/lib/supabaseClient';
+import { withCsrfHeaders } from '@/lib/security/csrf-client';
+import { enqueuePendingBooking } from '@/lib/booking/offline-outbox';
 
 const UPCOMING_STATUSES = ['pending', 'confirmed', 'awaiting_payment'];
 
@@ -66,14 +68,24 @@ export async function createAppointmentSafe(payload: Record<string, any>) {
     client_id: user.id
   };
 
-  const response = await fetch('/api/appointments/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(normalized)
-  });
+  let response: Response;
+  try {
+    response = await fetch('/api/appointments/create', withCsrfHeaders({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(normalized)
+    }));
+  } catch {
+    enqueuePendingBooking(normalized);
+    throw new Error('Sem conexao. Agendamento salvo localmente e sera reenviado automaticamente.');
+  }
 
   const result = await response.json();
   if (!response.ok || !result?.ok) {
+    if (response.status >= 500) {
+      enqueuePendingBooking(normalized);
+      throw new Error('Instabilidade no servidor. Agendamento salvo localmente para reenvio automatico.');
+    }
     throw new Error(result?.reason || result?.error || 'create_appointment_failed');
   }
 

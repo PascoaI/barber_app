@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Popover, PopoverContent } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useAdminAccessAudit } from '@/hooks/useAdminAccessAudit';
+import { flushPendingBookings, getPendingBookingsCount } from '@/lib/booking/offline-outbox';
 
 const navItems = [
   { href: '/admin/home', label: 'Admin' },
@@ -20,6 +22,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [pendingSync, setPendingSync] = useState(0);
+  useAdminAccessAudit(pathname);
+
+  useEffect(() => {
+    const runFlush = async () => {
+      const count = getPendingBookingsCount();
+      setPendingSync(count);
+      if (!count) return;
+      const result = await flushPendingBookings();
+      setPendingSync(result.failed);
+    };
+
+    void runFlush();
+    const onOnline = () => { void runFlush(); };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   const hideShell = useMemo(() => pathname === '/login' || pathname === '/register' || pathname === '/superadmin/login', [pathname]);
   if (hideShell) return <>{children}</>;
@@ -30,6 +49,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3">
           <Link href="/" className="font-semibold tracking-wide">BarberPro</Link>
           <Badge>UI shadcn-style</Badge>
+          {pendingSync > 0 ? <Badge>{pendingSync} sync pendente</Badge> : null}
         </div>
         <div className="relative flex items-center gap-2">
           <Popover>

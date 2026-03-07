@@ -72,3 +72,12 @@ npm run cron:appointments:status
    - vinculo em `public.users`.
 3. Gere checkout real e confirme chegada no webhook.
 4. Verifique `billing_events` processando com status `processed`.
+
+## 6) Rollback
+
+- Workflow manual: `Rollback Production` (GitHub Actions)
+- Input: `target_sha` (commit que deve ser reimplantado em producao).
+- Estrategia:
+  1. Selecionar ultimo commit estavel.
+  2. Executar workflow de rollback.
+  3. Monitorar logs e alertas operacionais por 15 minutos.

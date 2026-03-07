@@ -1,6 +1,7 @@
 'use client';
 
 import type { Barbershop, BarbershopInput } from '@/types/barbershop';
+import { withCsrfHeaders } from '@/lib/security/csrf-client';
 
 type ApiResult<T> = { ok: true; data: T } | { ok: false; message: string; status: number };
 
@@ -28,18 +29,18 @@ export async function isSuperAdminSession() {
 }
 
 export async function signInSuperAdmin(email: string, password: string) {
-  const res = await fetch('/api/superadmin/login', {
+  const res = await fetch('/api/superadmin/login', withCsrfHeaders({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
-  });
+  }));
   const result = await parseApiResult<{ ok: boolean }>(res);
   if (isApiError(result)) return { ok: false as const, message: result.message };
   return { ok: true as const };
 }
 
 export async function signOutPlatformSession() {
-  await fetch('/api/superadmin/logout', { method: 'POST' });
+  await fetch('/api/superadmin/logout', withCsrfHeaders({ method: 'POST' }));
 }
 
 export async function listPlatformBarbershops() {
@@ -60,11 +61,11 @@ export async function findPlatformBarbershop(id: string) {
 export async function savePlatformBarbershop(input: BarbershopInput & { password?: string }, editId?: string) {
   const method = editId ? 'PATCH' : 'POST';
   const url = editId ? `/api/superadmin/barbershops/${encodeURIComponent(editId)}` : '/api/superadmin/barbershops';
-  const res = await fetch(url, {
+  const res = await fetch(url, withCsrfHeaders({
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
-  });
+  }));
 
   const result = await parseApiResult<{ row: Barbershop }>(res);
   if (isApiError(result)) return { ok: false as const, message: result.message };
@@ -79,18 +80,18 @@ export async function togglePlatformBarbershopStatus(id: string) {
 }
 
 export async function resetPlatformBarbershopPassword(id: string, password = '123456') {
-  const res = await fetch(`/api/superadmin/barbershops/${encodeURIComponent(id)}/reset-password`, {
+  const res = await fetch(`/api/superadmin/barbershops/${encodeURIComponent(id)}/reset-password`, withCsrfHeaders({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password })
-  });
+  }));
   const result = await parseApiResult<{ ok: boolean }>(res);
   if (isApiError(result)) return { ok: false as const, message: result.message };
   return { ok: true as const };
 }
 
 export async function removePlatformBarbershop(id: string) {
-  const res = await fetch(`/api/superadmin/barbershops/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const res = await fetch(`/api/superadmin/barbershops/${encodeURIComponent(id)}`, withCsrfHeaders({ method: 'DELETE' }));
   const result = await parseApiResult<{ ok: boolean }>(res);
   if (isApiError(result)) return { ok: false as const, message: result.message };
   return { ok: true as const };
