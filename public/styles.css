@@ -1617,6 +1617,65 @@ textarea:focus {
   transform: translateY(0) scale(0.985);
 }
 
+.superadmin-form-actions {
+  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.superadmin-submit-btn,
+.superadmin-cancel-btn {
+  min-height: 3rem;
+  border-radius: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.48rem;
+  padding: 0.78rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.superadmin-submit-btn {
+  border: 1px solid color-mix(in srgb, var(--primary, #d4a24f) 84%, #fff 7%);
+  background:
+    radial-gradient(circle at 82% -50%, rgba(255, 255, 255, 0.42), transparent 46%),
+    linear-gradient(135deg, #f4ce76 0%, #d7a84e 52%, #bb8432 100%);
+  color: #0d1528 !important;
+  box-shadow: 0 10px 24px rgba(181, 124, 31, 0.28);
+}
+
+.superadmin-submit-btn .nav-icon,
+.superadmin-cancel-btn .nav-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.superadmin-submit-btn .nav-icon {
+  background: rgba(13, 21, 40, 0.16);
+}
+
+.superadmin-submit-btn .nav-icon svg,
+.superadmin-cancel-btn .nav-icon svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.superadmin-cancel-btn {
+  border: 1px solid rgba(138, 157, 204, 0.5) !important;
+  background: linear-gradient(180deg, rgba(16, 25, 49, 0.9), rgba(11, 18, 38, 0.82));
+  color: #e9efff !important;
+}
+
+.superadmin-cancel-btn .nav-icon {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .superadmin-table-wrap {
   display: grid;
   gap: 0.5rem;
@@ -1689,5 +1748,9 @@ textarea:focus {
   .superadmin-create-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .superadmin-form-actions {
+    grid-template-columns: 1fr;
   }
 }
