@@ -2951,6 +2951,7 @@ function initGlobalNavigation() {
   }
 
   document.querySelectorAll('.quick-nav').forEach((nav) => {
+    nav.closest('.booking-card, .hero-card, .form-card, .auth-card')?.classList.add('quick-nav-host-open');
     nav.classList.remove('justify-end');
     nav.classList.add('justify-between', 'items-center');
 
