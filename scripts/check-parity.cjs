@@ -4,6 +4,12 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 let status = 0;
+const legacyParityEnabled = process.env.ENABLE_LEGACY_PARITY_CHECK !== 'false';
+
+if (!legacyParityEnabled) {
+  console.log('[parity] skipped: ENABLE_LEGACY_PARITY_CHECK=false');
+  process.exit(0);
+}
 
 function fail(msg) {
   console.error(msg);

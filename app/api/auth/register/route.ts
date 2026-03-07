@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { validateStrongPassword } from '@/lib/server/security-core';
-
-const DEFAULT_BARBERSHOP_ID = process.env.NEXT_PUBLIC_DEFAULT_BARBERSHOP_ID || '11111111-1111-1111-1111-111111111111';
+import { resolveTenantForRegistration } from '@/lib/auth/tenant-resolver';
 
 export async function POST(req: Request) {
   try {
@@ -45,11 +44,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: `Senha fraca: ${strong.reasons.join(', ')}` }, { status: 400 });
     }
 
+    const service = createSupabaseServiceClient();
+    const tenantResolution = await resolveTenantForRegistration({
+      req,
+      body,
+      service
+    });
+    if (tenantResolution.ok === false) {
+      return NextResponse.json({ ok: false, message: tenantResolution.message }, { status: 400 });
+    }
+
     const supabase = createSupabaseServerClient();
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: {
+        data: {
+          name,
+          barbershop_id: tenantResolution.barbershopId,
+          tenant_source: tenantResolution.source
+        }
+      }
     });
     if (signUpError) {
       return NextResponse.json({ ok: false, message: signUpError.message || 'Nao foi possivel criar conta.' }, { status: 400 });
@@ -57,9 +72,9 @@ export async function POST(req: Request) {
 
     const userId = signUpData.user?.id;
     if (userId) {
-      const { error: profileError } = await supabase.from('users').upsert({
+      const { error: profileError } = await service.from('users').upsert({
         id: userId,
-        barbershop_id: DEFAULT_BARBERSHOP_ID,
+        barbershop_id: tenantResolution.barbershopId,
         name,
         email,
         role: 'client'
@@ -68,9 +83,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, message: profileError.message || 'Falha ao vincular perfil.' }, { status: 400 });
       }
 
-      await supabase.from('consent_events').insert({
+      await service.from('consent_events').insert({
         user_id: userId,
-        barbershop_id: DEFAULT_BARBERSHOP_ID,
+        barbershop_id: tenantResolution.barbershopId,
         terms_version: 'v1',
         privacy_version: 'v1',
         accepted_terms: true,
@@ -83,7 +98,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      requiresEmailConfirmation: !signUpData.session
+      requiresEmailConfirmation: !signUpData.session,
+      tenantSource: tenantResolution.source
     });
   } catch (error: any) {
     return NextResponse.json({ ok: false, message: error?.message || 'register_failed' }, { status: 500 });

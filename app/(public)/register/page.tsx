@@ -14,6 +14,8 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [tenantSlug, setTenantSlug] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,8 @@ export default function RegisterPage() {
           name,
           email: email.trim(),
           password,
+          tenant_slug: tenantSlug.trim() || undefined,
+          invite_code: inviteCode.trim() || undefined,
           termsAccepted,
           privacyAccepted
         })
@@ -76,6 +80,15 @@ export default function RegisterPage() {
               <Label htmlFor="register-pass">Senha</Label>
               <Input id="register-pass" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <small className="text-xs text-text-secondary">Use ao menos 10 caracteres com maiuscula, minuscula, numero e simbolo.</small>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="register-invite">Código de convite (opcional)</Label>
+              <Input id="register-invite" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="Ex: INVAB12CD" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="register-tenant">Slug da barbearia (opcional)</Label>
+              <Input id="register-tenant" value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} placeholder="Ex: barbearia-xz" />
+              <small className="text-xs text-text-secondary">Você pode usar código de convite, slug ou cadastro via subdomínio da barbearia.</small>
             </div>
 
             <label className="flex items-start gap-2 text-sm text-text-secondary">

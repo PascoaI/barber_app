@@ -1,14 +1,11 @@
 import Stripe from 'stripe';
 import { getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
-import { mapStripeStatusToTenantStatus } from '@/lib/server/billing-core';
-
-function mapStripeStatusToShopStatus(status: string) {
-  return mapStripeStatusToTenantStatus(status);
-}
-
-function mapStripeStatusToSubscriptionStatus(status: string) {
-  return mapStripeStatusToTenantStatus(status);
-}
+import {
+  getConfiguredGraceDays,
+  resolveBillingCycle,
+  resolvePlanFromPriceId,
+  resolveSubscriptionLifecycle
+} from '@/lib/billing/lifecycle';
 
 async function resolveBarbershopId(service: ReturnType<typeof getServiceClientForPrivilegedOps>, payload: Stripe.Event['data']['object']) {
   const metadataBarbershopId = (payload as any)?.metadata?.barbershop_id;
@@ -48,32 +45,59 @@ export async function processStripeSubscriptionEvent(params: {
   if (!barbershopId) throw new Error('Missing barbershop context in Stripe webhook event.');
 
   const stripeStatus = subscriptionAny.status || 'trialing';
-  const shopStatus = mapStripeStatusToShopStatus(stripeStatus);
-  const internalSubscriptionStatus = mapStripeStatusToSubscriptionStatus(stripeStatus);
   const priceId = subscriptionAny.items?.data?.[0]?.price?.id || null;
+  const recurring = subscriptionAny.items?.data?.[0]?.price?.recurring || null;
+  const plan = resolvePlanFromPriceId(priceId);
+  const cycle = resolveBillingCycle(recurring);
+
+  const { data: currentBilling } = await service
+    .from('billing_subscriptions')
+    .select('grace_until,grace_days')
+    .eq('barbershop_id', barbershopId)
+    .maybeSingle();
+
+  const graceDays = Number(currentBilling?.grace_days || getConfiguredGraceDays());
+  const lifecycle = resolveSubscriptionLifecycle({
+    stripeStatus,
+    existingGraceUntil: currentBilling?.grace_until || null,
+    graceDays
+  });
+
   const currentPeriodEnd = subscriptionAny.current_period_end
     ? new Date(subscriptionAny.current_period_end * 1000).toISOString()
     : null;
+  const currentPeriodStart = subscriptionAny.current_period_start
+    ? new Date(subscriptionAny.current_period_start * 1000).toISOString()
+    : null;
+  const nowIso = new Date().toISOString();
 
   await service.from('billing_subscriptions').upsert({
     barbershop_id: barbershopId,
     stripe_subscription_id: subscriptionAny.id,
     stripe_price_id: priceId,
-    status: internalSubscriptionStatus,
+    plan,
+    billing_cycle: cycle,
+    status: lifecycle.internalSubscriptionStatus,
+    grace_days: graceDays,
+    grace_until: lifecycle.graceUntil,
+    current_period_start: currentPeriodStart,
     current_period_end: currentPeriodEnd,
-    cancel_at_period_end: Boolean(subscriptionAny.cancel_at_period_end)
+    cancel_at_period_end: Boolean(subscriptionAny.cancel_at_period_end),
+    last_payment_failed_at: ['past_due', 'unpaid'].includes(String(stripeStatus).toLowerCase()) ? nowIso : null,
+    last_payment_succeeded_at: ['active', 'trialing'].includes(String(stripeStatus).toLowerCase()) ? nowIso : null
   });
 
   await service.from('barbershops').update({
-    status: shopStatus,
+    status: lifecycle.shopStatus,
+    plan,
     plan_expires_at: currentPeriodEnd
   }).eq('id', barbershopId);
 
   await service.from('subscriptions').insert({
     barbershop_id: barbershopId,
-    plan: 'basic',
-    status: internalSubscriptionStatus,
-    started_at: new Date().toISOString(),
+    plan,
+    status: lifecycle.internalSubscriptionStatus,
+    started_at: nowIso,
     expires_at: currentPeriodEnd
   });
 }

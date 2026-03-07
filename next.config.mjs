@@ -16,6 +16,8 @@ function assertProductionBootEnv() {
 
 assertProductionBootEnv();
 
+const enableLegacyHtmlRewrites = process.env.ENABLE_LEGACY_HTML_REWRITES !== 'false';
+
 const nextConfig = {
   async headers() {
     return [
@@ -31,6 +33,7 @@ const nextConfig = {
     ];
   },
   async rewrites() {
+    if (!enableLegacyHtmlRewrites) return [];
     return [
       { source: '/:path*.html', destination: '/:path*' },
       { source: '/index.html', destination: '/' }

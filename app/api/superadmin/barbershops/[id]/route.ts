@@ -21,6 +21,59 @@ function normalizePlan(value: unknown, fallback: Barbershop['plan']) {
   return ALLOWED_PLAN.includes(normalized) ? normalized : fallback;
 }
 
+function normalizeSlug(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function normalizeInviteCode(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+async function ensureUniqueSlug(
+  service: ReturnType<typeof getServiceClientForPrivilegedOps>,
+  baseSlug: string,
+  currentId: string
+) {
+  const seed = normalizeSlug(baseSlug) || `barbershop-${Date.now().toString(36)}`;
+  for (let i = 0; i < 25; i += 1) {
+    const candidate = i === 0 ? seed : `${seed}-${i + 1}`;
+    const { data } = await service
+      .from('barbershops')
+      .select('id')
+      .eq('slug', candidate)
+      .neq('id', currentId)
+      .maybeSingle();
+    if (!data?.id) return candidate;
+  }
+  throw new Error('Falha ao gerar slug unico da barbearia.');
+}
+
+async function ensureUniqueInviteCode(
+  service: ReturnType<typeof getServiceClientForPrivilegedOps>,
+  preferred: string,
+  currentId: string
+) {
+  const explicit = normalizeInviteCode(preferred);
+  if (!explicit) return null;
+
+  const { data } = await service
+    .from('barbershops')
+    .select('id')
+    .eq('invite_code', explicit)
+    .neq('id', currentId)
+    .maybeSingle();
+  if (!data?.id) return explicit;
+  throw new Error('Invite code ja utilizado. Informe outro.');
+}
+
 type Params = { params: { id: string } };
 
 export async function GET(_: Request, { params }: Params) {
@@ -31,7 +84,7 @@ export async function GET(_: Request, { params }: Params) {
     const service = getServiceClientForPrivilegedOps();
     const { data, error } = await service
       .from('barbershops')
-      .select('id,name,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
+      .select('id,name,slug,invite_code,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
       .eq('id', params.id)
       .maybeSingle();
 
@@ -64,7 +117,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const service = getServiceClientForPrivilegedOps();
     const { data: current, error: currentError } = await service
       .from('barbershops')
-      .select('id,name,owner_name,email,phone,address,status,plan,plan_expires_at')
+      .select('id,name,slug,invite_code,owner_name,email,phone,address,status,plan,plan_expires_at')
       .eq('id', params.id)
       .maybeSingle();
     if (currentError) throw currentError;
@@ -74,9 +127,13 @@ export async function PATCH(req: Request, { params }: Params) {
     const nextEmail = sanitizeText(body?.email || current.email).toLowerCase();
     const nextOwner = sanitizeText(body?.owner_name || current.owner_name);
     const password = sanitizeText(body?.password);
+    const nextSlug = await ensureUniqueSlug(service, sanitizeText(body?.slug || current.slug || current.name), params.id);
+    const nextInviteCode = await ensureUniqueInviteCode(service, body?.invite_code || body?.inviteCode || current.invite_code, params.id);
 
     const patch = {
       name: sanitizeText(body?.name || current.name),
+      slug: nextSlug,
+      invite_code: nextInviteCode,
       owner_name: nextOwner,
       email: nextEmail,
       phone: sanitizeText(body?.phone || current.phone),
@@ -91,7 +148,7 @@ export async function PATCH(req: Request, { params }: Params) {
       .from('barbershops')
       .update(patch)
       .eq('id', params.id)
-      .select('id,name,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
+      .select('id,name,slug,invite_code,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
       .single();
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 });
 

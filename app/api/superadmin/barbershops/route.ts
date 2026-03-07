@@ -21,6 +21,53 @@ function normalizePlan(value: unknown): Barbershop['plan'] {
   return ALLOWED_PLAN.includes(normalized) ? normalized : 'basic';
 }
 
+function normalizeSlug(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function normalizeInviteCode(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+async function ensureUniqueSlug(service: ReturnType<typeof getServiceClientForPrivilegedOps>, baseSlug: string) {
+  const seed = normalizeSlug(baseSlug) || `barbershop-${Date.now().toString(36)}`;
+  for (let i = 0; i < 25; i += 1) {
+    const candidate = i === 0 ? seed : `${seed}-${i + 1}`;
+    const { data } = await service
+      .from('barbershops')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle();
+    if (!data?.id) return candidate;
+  }
+  throw new Error('Falha ao gerar slug unico da barbearia.');
+}
+
+async function ensureUniqueInviteCode(service: ReturnType<typeof getServiceClientForPrivilegedOps>, preferred?: string) {
+  const explicit = normalizeInviteCode(preferred);
+  if (explicit) {
+    const { data } = await service.from('barbershops').select('id').eq('invite_code', explicit).maybeSingle();
+    if (!data?.id) return explicit;
+    throw new Error('Invite code ja utilizado. Informe outro.');
+  }
+
+  for (let i = 0; i < 25; i += 1) {
+    const candidate = `INV${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const { data } = await service.from('barbershops').select('id').eq('invite_code', candidate).maybeSingle();
+    if (!data?.id) return candidate;
+  }
+
+  throw new Error('Falha ao gerar invite code unico da barbearia.');
+}
+
 export async function GET() {
   try {
     const check = await assertSuperAdminSession();
@@ -29,7 +76,7 @@ export async function GET() {
     const service = getServiceClientForPrivilegedOps();
     const { data, error } = await service
       .from('barbershops')
-      .select('id,name,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
+      .select('id,name,slug,invite_code,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -77,10 +124,15 @@ export async function POST(req: Request) {
     }
 
     const service = getServiceClientForPrivilegedOps();
+    const slug = await ensureUniqueSlug(service, sanitizeText(body?.slug) || name);
+    const inviteCode = await ensureUniqueInviteCode(service, body?.invite_code || body?.inviteCode);
+
     const { data: created, error: insertError } = await service
       .from('barbershops')
       .insert({
         name,
+        slug,
+        invite_code: inviteCode,
         owner_name: ownerName,
         email,
         phone,
@@ -89,7 +141,7 @@ export async function POST(req: Request) {
         plan,
         plan_expires_at: planExpiresAt
       })
-      .select('id,name,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
+      .select('id,name,slug,invite_code,owner_name,email,phone,address,status,plan,plan_expires_at,created_at,updated_at')
       .single();
 
     if (insertError || !created?.id) {

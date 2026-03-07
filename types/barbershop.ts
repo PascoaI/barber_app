@@ -4,6 +4,8 @@ export type BarbershopPlan = 'free' | 'basic' | 'pro' | 'enterprise';
 export type Barbershop = {
   id: string;
   name: string;
+  slug?: string | null;
+  invite_code?: string | null;
   owner_name: string;
   email: string;
   phone: string;

@@ -1,5 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
+const enableLegacySlugRedirects = process.env.ENABLE_LEGACY_SLUG_REDIRECTS !== 'false';
+
 const LEGACY_REDIRECTS: Record<string, string> = {
   login: '/login',
   register: '/register',
@@ -33,6 +35,7 @@ export function generateStaticParams() {
 }
 
 export default function GenericLegacyRoute({ params }: { params: { slug: string } }) {
+  if (!enableLegacySlugRedirects) notFound();
   const target = LEGACY_REDIRECTS[params.slug];
   if (!target) notFound();
   redirect(target);
