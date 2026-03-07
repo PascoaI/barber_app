@@ -19,8 +19,13 @@ function applySecurityHeaders(res: NextResponse) {
 }
 
 export async function middleware(req: NextRequest) {
-  const { res, session } = await getMiddlewareSession(req);
   const { pathname } = req.nextUrl;
+
+  if (pathname === '/api/healthz') {
+    return NextResponse.next();
+  }
+
+  const { res, session, authAvailable, reason } = await getMiddlewareSession(req);
   const csrfToken = req.cookies.get(CSRF_COOKIE_NAME)?.value;
 
   if (!csrfToken) {
@@ -31,6 +36,10 @@ export async function middleware(req: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 12
     });
+  }
+
+  if (!authAvailable) {
+    res.headers.set('x-auth-fallback', reason || 'auth_unavailable');
   }
 
   if (pathname.startsWith('/superadmin')) {
@@ -50,5 +59,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/healthz).*)']
 };
