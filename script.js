@@ -2092,20 +2092,61 @@ function initAdminDashboard() {
     const d = new Date(a.start_datetime);
     return d >= startOfWeek && d < endOfWeek;
   });
-  const dashboardAgendaStatuses = ['pending', 'confirmed'];
-  const todayAgendaAppointments = todayAppointments.filter((a) => dashboardAgendaStatuses.includes(a.status));
-  const weekAgendaAppointments = weekAppointments.filter((a) => dashboardAgendaStatuses.includes(a.status));
+  const dashboardQueueStatuses = ['pending', 'confirmed'];
+  const todayQueueAppointments = todayAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
+  const weekQueueAppointments = weekAppointments.filter((a) => dashboardQueueStatuses.includes(a.status));
+  const todayCompletedAppointments = todayAppointments.filter((a) => a.status === 'completed');
+  const todayCompletedValue = todayCompletedAppointments.reduce((sum, a) => sum + Number(a.service_price || 0), 0);
+  const queuePageSize = 3;
+  let queuePage = 0;
 
-  const renderAppointments = (rows, title) => {
+  const renderAppointments = (queueRows, label) => {
     if (!appointmentsRoot) return;
-    const list = rows
-      .slice(0, 5)
+
+    const sortedQueueRows = [...queueRows].sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+    const totalPages = Math.max(1, Math.ceil(sortedQueueRows.length / queuePageSize));
+    queuePage = Math.max(0, Math.min(queuePage, totalPages - 1));
+    const pageStart = queuePage * queuePageSize;
+    const pageRows = sortedQueueRows.slice(pageStart, pageStart + queuePageSize);
+
+    const queueList = pageRows
       .map((a) => `<article class="admin-list-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)}</p><small>${a.barber_name} · ${getBookingStatusLabel(a.status)}</small></article>`)
       .join('');
+
+    const queueControls = sortedQueueRows.length > queuePageSize
+      ? `
+        <div class="mt-2 flex items-center justify-between gap-2">
+          <button type="button" class="button button-secondary !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-queue-prev ${queuePage === 0 ? 'disabled' : ''}>Anterior</button>
+          <small class="text-text-secondary">Parte ${queuePage + 1} de ${totalPages}</small>
+          <button type="button" class="button button-primary !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-queue-next ${queuePage >= totalPages - 1 ? 'disabled' : ''}>Próximos 3</button>
+        </div>
+      `
+      : '';
+
     appointmentsRoot.innerHTML = `
-      <header class="admin-panel-head"><div><h3>${title}</h3><small>Agenda filtrada do período</small></div><span>${rows.length} registros</span></header>
-      <div class="grid gap-2">${list || '<article class="admin-list-item"><p>Sem agendamentos no período.</p></article>'}</div>
+      <div class="grid gap-3">
+        <article class="admin-list-item">
+          <header class="admin-panel-head"><div><h3>Agendamentos concluídos (hoje)</h3><small>Valor somado dos serviços concluídos no dia atual</small></div><span>${todayCompletedAppointments.length} concluídos</span></header>
+          <p class="text-2xl font-bold text-text-primary mt-1">${asCurrency(todayCompletedValue)}</p>
+        </article>
+
+        <article>
+          <header class="admin-panel-head"><div><h3>Agendamentos na fila (${label})</h3><small>Somente pendentes e confirmados</small></div><span>${sortedQueueRows.length} registros</span></header>
+          <div class="grid gap-2">${queueList || '<article class="admin-list-item"><p>Sem agendamentos na fila.</p></article>'}</div>
+          ${queueControls}
+        </article>
+      </div>
     `;
+
+    appointmentsRoot.querySelector('[data-queue-prev]')?.addEventListener('click', () => {
+      queuePage = Math.max(0, queuePage - 1);
+      renderAppointments(sortedQueueRows, label);
+    });
+
+    appointmentsRoot.querySelector('[data-queue-next]')?.addEventListener('click', () => {
+      queuePage = Math.min(totalPages - 1, queuePage + 1);
+      renderAppointments(sortedQueueRows, label);
+    });
   };
 
   const payments = getJson(STORAGE_KEYS.payments, []).filter((p) => p.unit_id === APP_CONFIG.unitId && p.status === 'paid');
@@ -2147,11 +2188,12 @@ function initAdminDashboard() {
       btn.classList.toggle('opacity-90', !isActive);
     });
 
+    queuePage = 0;
     if (tab === 'today') {
-      renderAppointments(todayAgendaAppointments, 'Agendamentos de hoje');
+      renderAppointments(todayQueueAppointments, 'Hoje');
       renderFinance(revenueToday, todayAppointments.length, 'Hoje');
     } else {
-      renderAppointments(weekAgendaAppointments, 'Agendamentos da semana');
+      renderAppointments(weekQueueAppointments, 'Esta semana');
       renderFinance(revenueWeek, weekAppointments.length, 'Semana');
     }
   };
