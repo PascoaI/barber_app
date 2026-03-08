@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 
 export async function POST(req: Request) {
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     }
 
     const supabase = createSupabaseServerClient();
+    const service = createSupabaseServiceClient();
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return NextResponse.json({ ok: false, message: 'Nao autenticado.' }, { status: 401 });
 
@@ -26,14 +27,43 @@ export async function POST(req: Request) {
       .eq('id', authData.user.id)
       .maybeSingle();
 
-    await supabase.from('client_privacy_requests').insert({
+    const { data: existingPending } = await service
+      .from('client_privacy_requests')
+      .select('id')
+      .eq('user_id', authData.user.id)
+      .eq('request_type', requestType)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (existingPending?.id) {
+      return NextResponse.json({ ok: true, duplicated: true, requestId: existingPending.id });
+    }
+
+    const { data: requestRow, error: requestError } = await service
+      .from('client_privacy_requests')
+      .insert({
+        user_id: authData.user.id,
+        barbershop_id: profile?.barbershop_id || null,
+        request_type: requestType,
+        status: 'pending'
+      })
+      .select('id')
+      .single();
+
+    if (requestError) throw requestError;
+
+    await service.from('audit_logs').insert({
       user_id: authData.user.id,
       barbershop_id: profile?.barbershop_id || null,
-      request_type: requestType,
-      status: 'pending'
+      action: 'privacy_request_created',
+      entity: 'client_privacy_requests',
+      entity_id: requestRow.id,
+      metadata: {
+        request_type: requestType
+      }
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, requestId: requestRow.id });
   } catch (error: any) {
     return NextResponse.json({ ok: false, message: error?.message || 'privacy_request_failed' }, { status: 500 });
   }

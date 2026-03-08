@@ -6,6 +6,7 @@ import {
   resolvePlanFromPriceId,
   resolveSubscriptionLifecycle
 } from '@/lib/billing/lifecycle';
+import { recordBusinessMetric } from '@/lib/observability/metrics';
 
 async function resolveBarbershopId(service: ReturnType<typeof getServiceClientForPrivilegedOps>, payload: Stripe.Event['data']['object']) {
   const metadataBarbershopId = (payload as any)?.metadata?.barbershop_id;
@@ -100,4 +101,16 @@ export async function processStripeSubscriptionEvent(params: {
     started_at: nowIso,
     expires_at: currentPeriodEnd
   });
+
+  if (event.type === 'invoice.payment_failed') {
+    await recordBusinessMetric({
+      metricType: 'payment_failure',
+      metricName: 'billing.invoice_payment_failed',
+      value: 1,
+      barbershopId,
+      tags: {
+        stripeStatus: String(stripeStatus || '')
+      }
+    });
+  }
 }

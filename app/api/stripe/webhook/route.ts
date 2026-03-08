@@ -5,6 +5,7 @@ import { processStripeSubscriptionEvent } from '@/lib/billing/process-stripe-eve
 import { sendOperationalAlert } from '@/lib/observability/alerts';
 import { logger } from '@/lib/observability/logger';
 import { startTrace } from '@/lib/observability/tracing';
+import { recordBusinessMetric } from '@/lib/observability/metrics';
 import { getStripeClient, getStripeWebhookSecret } from '@/lib/billing/stripe';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,8 @@ function getNextRetryAt(retries: number) {
 
 export async function POST(req: Request) {
   const trace = startTrace('stripe.webhook');
+  let traceStatus: 'ok' | 'error' = 'ok';
+  let traceBarbershopId: string | null = null;
   const stripe = getStripeClient();
   const service = getServiceClientForPrivilegedOps();
 
@@ -58,6 +61,7 @@ export async function POST(req: Request) {
     }
 
     await processStripeSubscriptionEvent({ stripe, service, event });
+    traceBarbershopId = String((event.data.object as any)?.metadata?.barbershop_id || '');
 
     await service
       .from('billing_events')
@@ -74,8 +78,22 @@ export async function POST(req: Request) {
       eventId: event.id,
       eventType: event.type
     });
+
+    if (event.type === 'invoice.payment_failed') {
+      await recordBusinessMetric({
+        metricType: 'payment_failure',
+        metricName: 'billing.invoice_payment_failed',
+        value: 1,
+        barbershopId: traceBarbershopId || null,
+        tags: {
+          eventType: event.type
+        }
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error: any) {
+    traceStatus = 'error';
     const { data: current } = await service
       .from('billing_events')
       .select('retries')
@@ -108,8 +126,25 @@ export async function POST(req: Request) {
       error: error?.message || 'unknown_error'
     });
 
+    await recordBusinessMetric({
+      metricType: 'payment_failure',
+      metricName: 'billing.webhook_failed',
+      value: 1,
+      barbershopId: traceBarbershopId || null,
+      tags: {
+        eventType: event.type,
+        retries
+      }
+    });
+
     return NextResponse.json({ error: 'Webhook processing failed.' }, { status: 500 });
   } finally {
-    logger.info('Stripe webhook finished.', trace.end());
+    logger.info(
+      'Stripe webhook finished.',
+      trace.end({
+        status: traceStatus,
+        barbershopId: traceBarbershopId
+      })
+    );
   }
 }

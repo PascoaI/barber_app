@@ -9,6 +9,8 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.validate_slot');
+  let traceStatus: 'ok' | 'error' = 'ok';
+  let traceBarbershopId: string | null = null;
   try {
     const sameOrigin = validateSameOrigin(req);
     if (!sameOrigin.ok) return NextResponse.json({ valid: false, reason: sameOrigin.message }, { status: 403 });
@@ -29,6 +31,7 @@ export async function POST(req: Request) {
 
     const { barber_id, start_datetime, duration_minutes, editing_appointment_id = null } = body || {};
     const barbershop_id = session.barbershop_id || body?.barbershop_id || body?.tenant_id || body?.unit_id;
+    traceBarbershopId = barbershop_id ? String(barbershop_id) : null;
 
     if (!barbershop_id || !barber_id || !start_datetime || !duration_minutes) {
       return NextResponse.json({ valid: false, reason: 'missing_required_fields' }, { status: 400 });
@@ -104,12 +107,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ valid: true, normalized_start_datetime: start.toISOString(), normalized_end_datetime: end.toISOString() });
   } catch (error: any) {
+    traceStatus = 'error';
     logger.error('Slot validation failed.', {
       traceId: trace.traceId,
       error: error?.message || 'validation_failed'
     });
     return NextResponse.json({ valid: false, reason: 'validation_failed', error: error?.message }, { status: 500 });
   } finally {
-    logger.info('Slot validation finished.', trace.end());
+    logger.info(
+      'Slot validation finished.',
+      trace.end({
+        status: traceStatus,
+        barbershopId: traceBarbershopId
+      })
+    );
   }
 }

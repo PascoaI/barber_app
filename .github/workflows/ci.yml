@@ -34,5 +34,69 @@ jobs:
       - name: Migration naming and ordering check
         run: npm run check:migrations
 
+      - name: Environment matrix check (dev)
+        env:
+          TARGET_ENV: dev
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dev-anon-key
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:4173
+        run: npm run env:check:matrix
+
+      - name: Environment matrix check (staging)
+        if: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL != '' && secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STAGING_STRIPE_SECRET_KEY != '' && secrets.STAGING_STRIPE_WEBHOOK_SECRET != '' && secrets.STAGING_STRIPE_PRICE_BASIC != '' && secrets.STAGING_STRIPE_PRICE_PRO != '' && secrets.STAGING_STRIPE_PRICE_ENTERPRISE != '' && secrets.STAGING_CRON_SECRET != '' && secrets.STAGING_UPSTASH_REDIS_REST_URL != '' && secrets.STAGING_UPSTASH_REDIS_REST_TOKEN != '' && secrets.STAGING_SENTRY_DSN != '' }}
+        env:
+          TARGET_ENV: staging
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STAGING_STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_BASIC: ${{ secrets.STAGING_STRIPE_PRICE_BASIC }}
+          STRIPE_PRICE_PRO: ${{ secrets.STAGING_STRIPE_PRICE_PRO }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STAGING_STRIPE_PRICE_ENTERPRISE }}
+          CRON_SECRET: ${{ secrets.STAGING_CRON_SECRET }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.STAGING_UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.STAGING_UPSTASH_REDIS_REST_TOKEN }}
+          SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.STAGING_NEXT_PUBLIC_APP_URL }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.STAGING_OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OPS_ALERT_WEBHOOK_URL: ${{ secrets.STAGING_OPS_ALERT_WEBHOOK_URL }}
+        run: npm run env:check:matrix
+
+      - name: Environment matrix check (staging skipped)
+        if: ${{ !(secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL != '' && secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STAGING_STRIPE_SECRET_KEY != '' && secrets.STAGING_STRIPE_WEBHOOK_SECRET != '' && secrets.STAGING_STRIPE_PRICE_BASIC != '' && secrets.STAGING_STRIPE_PRICE_PRO != '' && secrets.STAGING_STRIPE_PRICE_ENTERPRISE != '' && secrets.STAGING_CRON_SECRET != '' && secrets.STAGING_UPSTASH_REDIS_REST_URL != '' && secrets.STAGING_UPSTASH_REDIS_REST_TOKEN != '' && secrets.STAGING_SENTRY_DSN != '') }}
+        run: echo "Staging env matrix skipped: missing staging secrets."
+
+      - name: Environment matrix check (prod)
+        if: ${{ github.ref == 'refs/heads/main' && secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STRIPE_SECRET_KEY != '' && secrets.STRIPE_WEBHOOK_SECRET != '' && secrets.STRIPE_PRICE_BASIC != '' && secrets.STRIPE_PRICE_PRO != '' && secrets.STRIPE_PRICE_ENTERPRISE != '' && secrets.CRON_SECRET != '' && secrets.UPSTASH_REDIS_REST_URL != '' && secrets.UPSTASH_REDIS_REST_TOKEN != '' && secrets.SENTRY_DSN != '' && secrets.OTEL_EXPORTER_OTLP_ENDPOINT != '' && secrets.OPS_ALERT_WEBHOOK_URL != '' }}
+        env:
+          TARGET_ENV: prod
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_BASIC: ${{ secrets.STRIPE_PRICE_BASIC }}
+          STRIPE_PRICE_PRO: ${{ secrets.STRIPE_PRICE_PRO }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+        run: npm run env:check:matrix
+
+      - name: Environment matrix check (prod skipped)
+        if: ${{ github.ref == 'refs/heads/main' && !(secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STRIPE_SECRET_KEY != '' && secrets.STRIPE_WEBHOOK_SECRET != '' && secrets.STRIPE_PRICE_BASIC != '' && secrets.STRIPE_PRICE_PRO != '' && secrets.STRIPE_PRICE_ENTERPRISE != '' && secrets.CRON_SECRET != '' && secrets.UPSTASH_REDIS_REST_URL != '' && secrets.UPSTASH_REDIS_REST_TOKEN != '' && secrets.SENTRY_DSN != '' && secrets.OTEL_EXPORTER_OTLP_ENDPOINT != '' && secrets.OPS_ALERT_WEBHOOK_URL != '') }}
+        run: echo "Prod env matrix skipped: missing production secrets."
+
       - name: Production build
         run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E critical interface flows
+        run: npm run test:e2e

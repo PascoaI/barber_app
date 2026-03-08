@@ -9,6 +9,8 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('stripe.create_checkout_session');
+  let traceStatus: 'ok' | 'error' = 'ok';
+  let traceBarbershopId: string | null = null;
   try {
     const sameOrigin = validateSameOrigin(req);
     if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
@@ -35,6 +37,7 @@ export async function POST(req: Request) {
     const barbershopId = session.role === 'super_admin'
       ? incomingBarbershopId
       : (session.barbershopId || incomingBarbershopId);
+    traceBarbershopId = barbershopId ? String(barbershopId) : null;
 
     const explicitPriceId = String(body?.price_id || '').trim();
     const planKey = String(body?.plan || body?.plan_id || '').trim().toUpperCase();
@@ -96,12 +99,19 @@ export async function POST(req: Request) {
       checkout_url: checkoutSession.url
     });
   } catch (error: any) {
+    traceStatus = 'error';
     logger.error('Stripe checkout session failed.', {
       traceId: trace.traceId,
       error: error?.message || 'unknown_error'
     });
     return NextResponse.json({ error: error?.message || 'stripe_checkout_failed' }, { status: 500 });
   } finally {
-    logger.info('Stripe checkout session finished.', trace.end());
+    logger.info(
+      'Stripe checkout session finished.',
+      trace.end({
+        status: traceStatus,
+        barbershopId: traceBarbershopId
+      })
+    );
   }
 }

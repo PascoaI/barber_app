@@ -5,11 +5,14 @@ import { getOptionalSessionProfile } from '@/lib/server/request-auth';
 import { logger } from '@/lib/observability/logger';
 import { startTrace } from '@/lib/observability/tracing';
 import { sendOperationalAlert } from '@/lib/observability/alerts';
+import { recordBusinessMetric } from '@/lib/observability/metrics';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.create');
+  let traceStatus: 'ok' | 'error' = 'ok';
+  let traceBarbershopId: string | null = null;
   try {
     const sameOrigin = validateSameOrigin(req);
     if (!sameOrigin.ok) return NextResponse.json({ error: sameOrigin.message }, { status: 403 });
@@ -35,6 +38,7 @@ export async function POST(req: Request) {
 
     const { idempotency_key, barber_id } = body || {};
     const barbershop_id = session.barbershop_id || body?.barbershop_id || body?.tenant_id || body?.unit_id;
+    traceBarbershopId = barbershop_id ? String(barbershop_id) : null;
     const client_id = session?.role === 'client' ? session.id : (body?.client_id ?? session?.id);
 
     if (!idempotency_key || !barbershop_id || !barber_id) {
@@ -130,9 +134,19 @@ export async function POST(req: Request) {
       appointmentId: String(created?.id || ''),
       clientId: String(client_id || '')
     });
+    await recordBusinessMetric({
+      metricType: 'booking_conversion',
+      metricName: 'appointments.created',
+      value: 1,
+      barbershopId: String(barbershop_id),
+      tags: {
+        status: String((created as any)?.status || 'unknown')
+      }
+    });
 
     return NextResponse.json({ ok: true, duplicated: false, appointment: created || null });
   } catch (error: any) {
+    traceStatus = 'error';
     logger.error('Appointment create failed.', {
       traceId: trace.traceId,
       error: error?.message || 'create_failed'
@@ -145,6 +159,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: error?.message || 'create_failed' }, { status: 500 });
   } finally {
-    logger.info('Appointment create finished.', trace.end());
+    logger.info(
+      'Appointment create finished.',
+      trace.end({
+        status: traceStatus,
+        barbershopId: traceBarbershopId
+      })
+    );
   }
 }
