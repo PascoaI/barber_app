@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { assertSuperAdminSession, getServiceClientForPrivilegedOps } from '@/lib/auth/superadmin-api';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { validateStrongPassword } from '@/lib/server/security-core';
 import type { Barbershop } from '@/types/barbershop';
 
 const ALLOWED_STATUS: Array<Barbershop['status']> = ['active', 'trial', 'suspended', 'disabled'];
@@ -114,7 +113,7 @@ export async function POST(req: Request) {
     const ownerName = sanitizeText(body?.owner_name);
     const email = sanitizeText(body?.email).toLowerCase();
     const phone = sanitizeText(body?.phone);
-    const password = sanitizeText(body?.password);
+    const password = sanitizeText(body?.password) || '123456';
     const address = sanitizeText(body?.address) || null;
     const status = normalizeStatus(body?.status);
     const plan = normalizePlan(body?.plan);
@@ -123,14 +122,6 @@ export async function POST(req: Request) {
     if (!name || !ownerName || !email || !phone) {
       return NextResponse.json({ error: 'Campos obrigatorios: nome, responsavel, email e telefone.' }, { status: 400 });
     }
-    if (!password) {
-      return NextResponse.json({ error: 'Senha inicial obrigatoria para criar a barbearia.' }, { status: 400 });
-    }
-    const passwordCheck = validateStrongPassword(password);
-    if (!passwordCheck.ok) {
-      return NextResponse.json({ error: `Senha fraca: ${passwordCheck.reasons.join(', ')}` }, { status: 400 });
-    }
-
     const service = getServiceClientForPrivilegedOps();
     const slug = await ensureUniqueSlug(service, sanitizeText(body?.slug) || name);
     const inviteCode = await ensureUniqueInviteCode(service, body?.invite_code || body?.inviteCode);
