@@ -86,7 +86,15 @@ export async function checkRateLimit(input: {
   blockMs?: number;
 }) {
   const cfg = getRedisConfig();
-  if (!cfg) return checkRateLimitLocal(input);
+  if (!cfg) {
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        allowed: false,
+        retryAfterMs: Math.max(1_000, Number(input.blockMs || input.windowMs || 60_000))
+      };
+    }
+    return checkRateLimitLocal(input);
+  }
 
   const key = String(input.key || 'unknown');
   const countKey = `rl:count:${key}`;
@@ -126,6 +134,12 @@ export async function checkRateLimit(input: {
       retryAfterMs: 0
     };
   } catch {
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        allowed: false,
+        retryAfterMs: Math.max(1_000, Number(input.blockMs || input.windowMs || 60_000))
+      };
+    }
     return checkRateLimitLocal(input);
   }
 }

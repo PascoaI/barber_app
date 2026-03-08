@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
-const enableLegacySlugRedirects = process.env.ENABLE_LEGACY_SLUG_REDIRECTS !== 'false';
+const enableLegacySlugRedirects = process.env.ENABLE_LEGACY_SLUG_REDIRECTS === 'true';
 
 const LEGACY_REDIRECTS: Record<string, string> = {
   login: '/login',
@@ -31,6 +31,7 @@ const LEGACY_REDIRECTS: Record<string, string> = {
 };
 
 export function generateStaticParams() {
+  if (!enableLegacySlugRedirects) return [];
   return Object.keys(LEGACY_REDIRECTS).map((slug) => ({ slug }));
 }
 

@@ -38,7 +38,7 @@ test('agendamento completo e cancelamento via interface', async ({ page }) => {
 
   const totalDateOptions = await page.locator('#date option').count();
   let slotSelected = false;
-  for (let optionIndex = 1; optionIndex < totalDateOptions; optionIndex += 1) {
+  for (let optionIndex = totalDateOptions - 1; optionIndex >= 1; optionIndex -= 1) {
     await page.selectOption('#date', { index: optionIndex });
     await page.waitForTimeout(150);
     const availableSlots = page.locator('#time-grid .time-slot:not(:disabled)');
@@ -60,9 +60,11 @@ test('agendamento completo e cancelamento via interface', async ({ page }) => {
   await page.goto('/my-schedules.html');
   const cancelButton = page.locator('[data-cancel]').first();
   await expect(cancelButton).toBeVisible();
+  const canceledAppointmentId = await cancelButton.getAttribute('data-cancel');
   await cancelButton.click();
   await page.click('[data-modal-confirm]');
-  await expect(page.locator('[data-cancel]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(`[data-cancel="${canceledAppointmentId}"]`)).toHaveCount(0);
 });
 
 test('no-show automatico para agendamento confirmado no passado', async ({ page }) => {

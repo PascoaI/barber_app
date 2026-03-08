@@ -25,6 +25,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (process.env.NODE_ENV === 'production' && pathname.endsWith('.html')) {
+    const normalized = pathname === '/index.html' ? '/' : pathname.replace(/\.html$/i, '');
+    return redirectTo(normalized || '/', req);
+  }
+
   const { res, session, authAvailable, reason } = await getMiddlewareSession(req);
   const csrfToken = req.cookies.get(CSRF_COOKIE_NAME)?.value;
 
