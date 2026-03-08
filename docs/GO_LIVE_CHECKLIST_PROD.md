@@ -4,6 +4,22 @@ Este checklist cobre o que falta para operar em produção com segurança, billi
 
 ## 1) Ambientes e segredos (GitHub + Vercel/Supabase)
 
+### Setup rápido (automatizado)
+1. Copiar `.env.prod.example` para `.env.prod` e preencher valores reais.
+2. Fazer login CLIs:
+```bash
+gh auth login
+vercel.cmd login
+```
+3. Sincronizar segredos (GitHub + Vercel production):
+```bash
+npm run secrets:sync:prod
+```
+4. Validar:
+```bash
+npm run env:check:prod
+```
+
 ### Obrigatórios em `prod`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -149,4 +165,3 @@ Pipeline obrigatório antes de deploy:
   - SHA restaurado
   - motivo
   - impacto
-

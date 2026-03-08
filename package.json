@@ -26,7 +26,8 @@
     "check:agenda:full": "node scripts/run-agenda-blindada.cjs",
     "check:supabase": "node scripts/check-supabase-readiness.cjs",
     "check:go-live": "node scripts/check-go-live.cjs",
-    "env:check:matrix": "node scripts/check-env-matrix.cjs"
+    "env:check:matrix": "node scripts/check-env-matrix.cjs",
+    "secrets:sync:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/sync-prod-secrets.ps1 -EnvFile .env.prod"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
