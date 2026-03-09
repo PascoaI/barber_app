@@ -2,6 +2,9 @@
 
 import { getCurrentUserContext } from '@/lib/auth';
 import { supabaseClient } from '@/lib/supabaseClient';
+import { buildFinanceSnapshot, buildSubscriptionSnapshot } from '@/lib/server/finance-core';
+
+export type FinancePeriod = 'today' | 'week' | 'month';
 
 function minutesBetween(start: string, end: string) {
   return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 60000);
@@ -137,6 +140,61 @@ export async function blockClientUntil(clientId: string, blockedUntil: string) {
   const supabase = supabaseClient();
   const { error } = await supabase.from('users').update({ blocked_until: blockedUntil }).eq('id', clientId).eq('barbershop_id', scopeBarbershopId);
   if (error) throw error;
+}
+
+export async function getAdminFinanceSnapshot(period: FinancePeriod = 'today') {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
+  const supabase = supabaseClient();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id,status,start_datetime,appointment_date,created_at,service_price,service_name,barber_name,services(name,price),barbers(name)')
+    .eq('barbershop_id', scopeBarbershopId);
+  if (error) throw error;
+
+  return buildFinanceSnapshot({
+    appointments: data || [],
+    period,
+    now: new Date()
+  });
+}
+
+export async function getAdminSubscriptionSnapshot(period: FinancePeriod = 'today') {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
+  const supabase = supabaseClient();
+
+  const [subscriptionsRes, plansRes] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select('id,status,plan,plan_id,created_at,started_at,expires_at,subscription_plans(name,price)')
+      .eq('barbershop_id', scopeBarbershopId),
+    supabase
+      .from('subscription_plans')
+      .select('id,name,price')
+      .eq('barbershop_id', scopeBarbershopId)
+  ]);
+
+  if (subscriptionsRes.error) throw subscriptionsRes.error;
+
+  const planPrices: Record<string, number> = {};
+  (plansRes.data || []).forEach((plan: any) => {
+    const price = Number(plan.price || 0);
+    if (!Number.isFinite(price) || price <= 0) return;
+    if (plan.id) planPrices[String(plan.id)] = price;
+    if (plan.name) {
+      planPrices[String(plan.name)] = price;
+      planPrices[String(plan.name).toLowerCase()] = price;
+    }
+  });
+
+  return buildSubscriptionSnapshot({
+    subscriptions: subscriptionsRes.data || [],
+    period,
+    now: new Date(),
+    planPrices
+  });
 }
 
 
