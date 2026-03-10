@@ -52,4 +52,6 @@ test('E2E: permissoes por perfil bloqueiam acesso indevido', () => {
   assert.equal(canAccessRoute({ role: 'admin', pathname: '/admin/home' }), true);
   assert.equal(canAccessRoute({ role: 'admin', pathname: '/superadmin/dashboard' }), false);
   assert.equal(canAccessRoute({ role: 'super_admin', pathname: '/superadmin/dashboard' }), true);
+  assert.equal(canAccessRoute({ role: 'barber', pathname: '/barber' }), true);
+  assert.equal(canAccessRoute({ role: 'client', pathname: '/barber' }), false);
 });

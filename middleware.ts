@@ -59,6 +59,10 @@ export async function middleware(req: NextRequest) {
     if (!session || !['admin', 'super_admin'].includes(session.role)) return redirectTo('/login', req);
   }
 
+  if (pathname.startsWith('/barber')) {
+    if (!session || session.role !== 'barber') return redirectTo('/login', req);
+  }
+
   applySecurityHeaders(res);
   return res;
 }

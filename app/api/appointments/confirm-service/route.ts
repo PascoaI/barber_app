@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const supabase = createSupabaseServerClient();
     const { data: appointment, error: fetchError } = await supabase
       .from('appointments')
-      .select('id,barbershop_id,status,start_datetime,check_in_time,check_in_by')
+      .select('id,barbershop_id,status,start_datetime,check_in_time,check_in_by,barber_id')
       .eq('id', appointmentId)
       .eq('barbershop_id', barbershopId)
       .maybeSingle();
@@ -49,6 +49,27 @@ export async function POST(req: Request) {
 
     if (String(appointment.status || '') === 'completed') {
       return NextResponse.json({ ok: true, already_completed: true, appointment });
+    }
+
+    if (session.role === 'barber') {
+      const directMatch = String(appointment.barber_id || '') === String(session.id);
+      if (!directMatch) {
+        const { data: barberRow, error: barberFetchError } = await supabase
+          .from('barbers')
+          .select('id,users(id,email)')
+          .eq('id', String(appointment.barber_id || ''))
+          .eq('barbershop_id', barbershopId)
+          .maybeSingle();
+        if (barberFetchError) throw barberFetchError;
+
+        const linkedUserId = String((barberRow as any)?.users?.id || '');
+        const linkedUserEmail = String((barberRow as any)?.users?.email || '').toLowerCase();
+        const sessionEmail = String(session.email || '').toLowerCase();
+        const isOwner = linkedUserId === String(session.id) || (linkedUserEmail && linkedUserEmail === sessionEmail);
+        if (!isOwner) {
+          return NextResponse.json({ error: 'Barbeiro sem permissao para concluir este agendamento.' }, { status: 403 });
+        }
+      }
     }
 
     if (!['pending', 'confirmed'].includes(String(appointment.status || ''))) {
