@@ -3,14 +3,16 @@ function getLegacyLoginHints() {
     .filter((u) => u && u.role !== 'super_admin')
     .map((u) => ({
       email: String(u.email || '').trim().toLowerCase(),
-      role: String(u.role || '').trim().toLowerCase()
+      role: String(u.role || '').trim().toLowerCase(),
+      password: String(u.password || '')
     }));
 
   const barberHints = getBarbers()
     .filter((b) => b && b.active && b.email)
     .map((b) => ({
       email: String(b.email || '').trim().toLowerCase(),
-      role: 'barber'
+      role: 'barber',
+      password: String(b.password || '')
     }));
 
   const byEmail = new Map();
@@ -42,10 +44,10 @@ function renderLegacyLoginHints() {
       <p class="text-xs uppercase tracking-wide text-text-secondary font-semibold">Dicas de login (sem SuperAdmin)</p>
       <div class="grid gap-1.5">
         ${hints.map((item) => `
-          <div class="flex items-center justify-between gap-2 rounded-lg border border-borderc/70 bg-slate-900/40 px-2 py-1.5">
+          <button type="button" class="legacy-login-hint-btn flex w-full items-center justify-between gap-2 rounded-lg border border-borderc/70 bg-slate-900/40 px-2 py-1.5 text-left transition hover:border-primary/50 hover:bg-slate-900/65" data-login-email="${item.email}" data-login-password="${item.password || ''}">
             <span class="text-xs text-text-secondary truncate">${item.email}</span>
             <span class="text-[10px] uppercase tracking-wide rounded-full border border-borderc/80 px-2 py-0.5 text-text-secondary">${roleHintLabel(item.role)}</span>
-          </div>
+          </button>
         `).join('')}
       </div>
     </div>
@@ -58,10 +60,7 @@ function initLoginPage() {
   const feedback = document.getElementById('login-feedback');
   renderLegacyLoginHints();
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const emailRaw = document.getElementById('email')?.value || '';
-    const passwordRaw = document.getElementById('password')?.value || '';
+  const attemptLogin = (emailRaw, passwordRaw) => {
     const email = normalizeCredential(emailRaw).toLowerCase();
     const password = normalizeCredential(passwordRaw);
 
@@ -96,6 +95,25 @@ function initLoginPage() {
     else if (user.role === 'barber') window.location.href = 'barber-home.html';
     else if (user.role === 'super_admin') window.location.href = 'super-admin-tenants.html';
     else window.location.href = 'admin-home.html';
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const emailRaw = document.getElementById('email')?.value || '';
+    const passwordRaw = document.getElementById('password')?.value || '';
+    attemptLogin(emailRaw, passwordRaw);
+  });
+
+  document.querySelectorAll('.legacy-login-hint-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const emailRaw = button.getAttribute('data-login-email') || '';
+      const passwordRaw = button.getAttribute('data-login-password') || '';
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      if (emailInput) emailInput.value = emailRaw;
+      if (passwordInput) passwordInput.value = passwordRaw;
+      attemptLogin(emailRaw, passwordRaw);
+    });
   });
 }
 

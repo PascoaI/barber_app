@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [quickLoadingEmail, setQuickLoadingEmail] = useState('');
   const [feedback, setFeedback] = useState('');
   const [hints, setHints] = useState<LoginHint[]>([]);
 
@@ -71,6 +72,27 @@ export default function LoginPage() {
     }
   };
 
+  const onQuickLogin = async (emailHint: string) => {
+    setQuickLoadingEmail(emailHint);
+    setFeedback('');
+    try {
+      const response = await fetch('/api/auth/quick-login', withCsrfHeaders({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailHint })
+      }));
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || 'Nao foi possivel autenticar automaticamente.');
+      }
+      router.replace(result.redirectPath || '/client/home');
+    } catch (error: any) {
+      setFeedback(error?.message || 'Nao foi possivel autenticar automaticamente.');
+    } finally {
+      setQuickLoadingEmail('');
+    }
+  };
+
   return (
     <div className="mx-auto grid w-full max-w-md gap-4">
       <Card className="border-borderc/80 bg-gradient-to-br from-slate-950/75 via-slate-900/70 to-slate-950/80">
@@ -105,11 +127,21 @@ export default function LoginPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Dicas de login (exceto SuperAdmin)</p>
                 <ul className="mt-2 grid gap-1.5 text-xs text-text-secondary">
                   {hints.map((item) => (
-                    <li key={item.email} className="flex items-center justify-between gap-2 rounded-md border border-borderc/70 bg-slate-900/40 px-2 py-1.5">
-                      <span className="truncate">{item.email}</span>
-                      <span className="shrink-0 rounded-full border border-borderc/80 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                        {roleLabel(item.role)}
-                      </span>
+                    <li key={item.email}>
+                      <button
+                        type="button"
+                        onClick={() => onQuickLogin(item.email)}
+                        disabled={Boolean(quickLoadingEmail)}
+                        className="flex w-full items-center justify-between gap-2 rounded-md border border-borderc/70 bg-slate-900/40 px-2 py-1.5 text-left transition hover:border-primary/50 hover:bg-slate-900/65 disabled:opacity-60"
+                      >
+                        <span className="truncate">
+                          {item.email}
+                          {quickLoadingEmail === item.email ? ' (entrando...)' : ''}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-borderc/80 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                          {roleLabel(item.role)}
+                        </span>
+                      </button>
                     </li>
                   ))}
                 </ul>
