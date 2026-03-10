@@ -19,6 +19,7 @@
     "cron:privacy:process": "node scripts/trigger-cron.cjs /api/cron/privacy-process",
     "cron:appointments:status": "node scripts/trigger-cron.cjs /api/cron/appointments-status",
     "check:parity": "node scripts/check-parity.cjs",
+    "parity:sync": "node scripts/sync-parity-mirrors.cjs",
     "check:agenda": "node scripts/check-agenda-core.cjs",
     "test": "node --test tests/*.test.cjs",
     "test:e2e": "playwright test",

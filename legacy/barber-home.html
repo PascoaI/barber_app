@@ -40,15 +40,39 @@
   <body>
     <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
       <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
-        <h1>Painel do barbeiro</h1>
-        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Acesse sua agenda pessoal de atendimentos.</p>
+        <p class="text-xs uppercase tracking-[0.22em] text-primary/90 font-semibold">Operacao barber</p>
+        <h1 class="mt-2">Agenda do barbeiro</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Visualize seus atendimentos, acompanhe status e conclua serviços direto da home.</p>
 
-        <div class="admin-grid grid grid-cols-1 md:grid-cols-2 gap-3">
-          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-schedules.html">
-            <strong>Minha agenda</strong>
-            <span>Visualizar apenas horários vinculados ao seu nome</span>
-          </a>
+        <div class="barber-sections-grid mb-4">
+          <article class="barber-section-card barber-section-earnings-today">
+            <p class="text-xs uppercase tracking-wide text-emerald-100/85">Ganhos de hoje</p>
+            <strong id="barber-earnings-today" class="barber-kpi-value block mt-1">R$ 0,00</strong>
+            <small class="text-emerald-100/80">Somente serviços concluidos.</small>
+          </article>
+          <article class="barber-section-card barber-section-earnings-week">
+            <p class="text-xs uppercase tracking-wide text-sky-100/85">Ganhos da semana</p>
+            <strong id="barber-earnings-week" class="barber-kpi-value block mt-1">R$ 0,00</strong>
+            <small class="text-sky-100/80">Soma semanal dos atendimentos concluidos.</small>
+          </article>
         </div>
+
+        <section class="barber-section-card barber-agenda-section">
+          <header class="barber-agenda-header">
+            <div>
+              <h2>Agenda do barbeiro</h2>
+              <p>Cards detalhados para leitura rápida e ação imediata.</p>
+            </div>
+            <div class="barber-agenda-tools">
+              <label class="sr-only" for="barber-agenda-date-filter">Filtrar por data</label>
+              <input id="barber-agenda-date-filter" type="date" />
+              <button id="barber-agenda-today-btn" type="button" class="button button-secondary">Hoje</button>
+              <button id="barber-agenda-yesterday-btn" type="button" class="button button-secondary">Ontem</button>
+              <span id="barber-agenda-count" class="barber-agenda-count">0 agendamentos</span>
+            </div>
+          </header>
+          <div id="barber-home-agenda" class="grid gap-3"></div>
+        </section>
       </section>
     </main>
 

@@ -1799,3 +1799,203 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Barber home refinement */
+.barber-sections-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.barber-section-card {
+  border: 1px solid rgba(90, 111, 158, 0.38);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(14, 22, 42, 0.88), rgba(10, 17, 33, 0.84));
+  box-shadow: 0 10px 28px rgba(2, 8, 24, 0.24);
+  padding: 1rem;
+}
+
+.barber-kpi-value {
+  font-size: clamp(1.75rem, 2.6vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: -0.015em;
+}
+
+.barber-section-earnings-today {
+  border-color: rgba(16, 185, 129, 0.36);
+  background: linear-gradient(135deg, rgba(5, 46, 33, 0.56), rgba(10, 17, 33, 0.92));
+}
+
+.barber-section-earnings-week {
+  border-color: rgba(56, 189, 248, 0.36);
+  background: linear-gradient(135deg, rgba(7, 41, 58, 0.55), rgba(10, 17, 33, 0.92));
+}
+
+.barber-agenda-section {
+  padding: 1rem;
+}
+
+.barber-agenda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.barber-agenda-header h2 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.barber-agenda-header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #9da8c3);
+}
+
+.barber-agenda-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(90, 111, 158, 0.45);
+  background: rgba(10, 18, 34, 0.62);
+  color: #cdd8f1;
+  font-size: 0.74rem;
+  padding: 0.35rem 0.62rem;
+  white-space: nowrap;
+}
+
+.barber-agenda-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.barber-agenda-tools input[type='date'] {
+  min-height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(90, 111, 158, 0.55);
+  background: rgba(10, 18, 34, 0.72);
+  color: #e7eeff;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.barber-agenda-tools input[type='date']:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 72%, #fff 10%);
+}
+
+.barber-appointment-card {
+  border: 1px solid rgba(90, 111, 158, 0.36);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(12, 20, 40, 0.88), rgba(9, 15, 29, 0.84));
+  box-shadow: 0 8px 24px rgba(2, 8, 24, 0.2);
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.barber-appointment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.barber-appointment-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.barber-meta-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.barber-meta-item,
+.barber-notes-item {
+  border: 1px solid rgba(90, 111, 158, 0.3);
+  border-radius: 0.7rem;
+  background: rgba(8, 14, 28, 0.62);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8rem;
+  color: #a9b9de;
+}
+
+.barber-meta-item strong,
+.barber-notes-item strong {
+  color: #e8f0ff;
+}
+
+.barber-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(90, 111, 158, 0.45);
+  padding: 0.25rem 0.58rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.barber-badge.status-completed {
+  border-color: rgba(16, 185, 129, 0.52);
+  background: rgba(16, 185, 129, 0.15);
+  color: #b7ffe0;
+}
+
+.barber-badge.status-confirmed {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: rgba(56, 189, 248, 0.14);
+  color: #c8f1ff;
+}
+
+.barber-badge.status-pending,
+.barber-badge.status-awaiting_payment {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.14);
+  color: #ffe5bb;
+}
+
+.barber-badge.status-no_show,
+.barber-badge.status-canceled {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.14);
+  color: #ffd1d1;
+}
+
+.barber-appointment-actions {
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.barber-appointment-actions p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #98a9cf;
+}
+
+@media (min-width: 768px) {
+  .barber-sections-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .barber-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .barber-appointment-actions {
+    align-items: center;
+    grid-template-columns: 1fr auto;
+  }
+}
