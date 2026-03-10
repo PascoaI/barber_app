@@ -1,5 +1,11 @@
 # Plano de Descomissionamento do Legado (.html + script.js)
 
+## Status atual (Sprint 2)
+- `app/[slug]/page.tsx` removido.
+- Redirecionamentos legados centralizados em `next.config.mjs` (`/foo` e `/foo.html` -> rota canonica App Router).
+- Rewrites legados de `.html` removidos.
+- Proxima etapa: remover artefatos `legacy/`, `legacy-src/` e bundles espelhados quando os checks de paridade deixarem de ser necessarios.
+
 ## Objetivo
 Encerrar a arquitetura hibrida (HTML estatico + App Router) sem downtime, removendo dependencias de:
 - rewrites de `*.html`

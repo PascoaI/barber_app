@@ -29,24 +29,62 @@ function assertProductionBootEnv() {
     throw new Error(`[boot-env] missing required env for production boot: ${missing.join(', ')}`);
   }
 
-  if (process.env.ENABLE_LEGACY_HTML_REWRITES === 'true' || process.env.ENABLE_LEGACY_SLUG_REDIRECTS === 'true') {
-    throw new Error('[boot-env] legacy HTML rewrites/slug redirects must stay disabled in production.');
-  }
 }
 
 assertProductionBootEnv();
 
-const enableLegacyHtmlRewrites = process.env.ENABLE_LEGACY_HTML_REWRITES === 'true';
+const LEGACY_CANONICAL_REDIRECTS = [
+  { source: '/index.html', destination: '/' },
+  { source: '/booking-location', destination: '/booking/location' },
+  { source: '/booking-service', destination: '/booking/service' },
+  { source: '/booking-professional', destination: '/booking/professional' },
+  { source: '/booking-datetime', destination: '/booking/datetime' },
+  { source: '/booking-review', destination: '/booking/review' },
+  { source: '/client-home', destination: '/client/home' },
+  { source: '/my-schedules', destination: '/client/history' },
+  { source: '/client-history', destination: '/client/history' },
+  { source: '/client-profile', destination: '/client/profile' },
+  { source: '/client-subscriptions', destination: '/client/subscriptions' },
+  { source: '/client-loyalty', destination: '/client/loyalty' },
+  { source: '/client-notifications', destination: '/client/notifications' },
+  { source: '/barber-home', destination: '/barber' },
+  { source: '/admin-home', destination: '/admin/home' },
+  { source: '/admin-schedules', destination: '/admin/home' },
+  { source: '/admin-barbers', destination: '/admin/barbers' },
+  { source: '/admin-blocked-slots', destination: '/admin/blocked-slots' },
+  { source: '/admin-finance', destination: '/admin/finance' },
+  { source: '/admin-settings', destination: '/admin/settings' },
+  { source: '/admin-unit-settings', destination: '/admin/settings' },
+  { source: '/admin-stock', destination: '/admin/stock' },
+  { source: '/admin-subscriptions', destination: '/admin/subscriptions' },
+  { source: '/super-admin-login', destination: '/superadmin/login' },
+  { source: '/super-admin-tenants', destination: '/superadmin/barbershops' },
+  { source: '/super-admin-barbershop-form', destination: '/superadmin/barbershops/new' }
+];
 
 const nextConfig = {
   async redirects() {
+    const redirects = [
+      { source: '/:path*.html', destination: '/:path*', permanent: false }
+    ];
+
+    for (const route of LEGACY_CANONICAL_REDIRECTS) {
+      redirects.push({
+        source: route.source,
+        destination: route.destination,
+        permanent: false
+      });
+      if (!route.source.endsWith('.html')) {
+        redirects.push({
+          source: `${route.source}.html`,
+          destination: route.destination,
+          permanent: false
+        });
+      }
+    }
+
     return [
-      { source: '/admin-home', destination: '/admin/home', permanent: false },
-      { source: '/admin-settings', destination: '/admin/settings', permanent: false },
-      { source: '/client-home', destination: '/client/home', permanent: false },
-      { source: '/client-history', destination: '/client/history', permanent: false },
-      { source: '/client-profile', destination: '/client/profile', permanent: false },
-      { source: '/client-subscriptions', destination: '/client/subscriptions', permanent: false }
+      ...redirects
     ];
   },
   async headers() {
@@ -63,11 +101,7 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    if (!enableLegacyHtmlRewrites) return [];
-    return [
-      { source: '/:path*.html', destination: '/:path*' },
-      { source: '/index.html', destination: '/' }
-    ];
+    return [];
   }
 };
 
