@@ -803,11 +803,14 @@ function autoUpdateAppointmentStatuses() {
     noShowByClient[a.client_email] = (noShowByClient[a.client_email] || 0) + 1;
   });
 
-  Object.entries(noShowByClient).forEach(([email, total]) => {
-    if (total < limit) return;
-    const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
-    setUserBlockedUntil(email, blockedUntil);
-  });
+  const legacyBlockingEnabled = false;
+  if (legacyBlockingEnabled) {
+    Object.entries(noShowByClient).forEach(([email, total]) => {
+      if (total < limit) return;
+      const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
+      setUserBlockedUntil(email, blockedUntil);
+    });
+  }
 }
 
 function checkOverduePrepayments() {
@@ -830,8 +833,9 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
+  const legacyBlockingEnabled = false;
   const blockedUntil = getUserBlockedUntil(session?.email || "");
-  if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
+  if (legacyBlockingEnabled && blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
   if (!service) return null;
   const barbers = getBarbers(true);
