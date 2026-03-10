@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, CircleDollarSign, Scissors, UserRound } from 'lucide-react';
+import { BadgeInfo, CalendarClock, CalendarDays, CircleDollarSign, Clock3, Scissors, UserRound } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -11,6 +11,13 @@ import { useToast } from '@/components/ui/toast';
 
 function asCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+}
+
+function asDateTime(value?: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('pt-BR');
 }
 
 function statusLabel(status: string) {
@@ -59,43 +66,86 @@ export default function BarberEntryPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-4">
-      <Card className="border-borderc/80 bg-gradient-to-br from-slate-950/80 via-slate-900/75 to-slate-950/80">
+      <Card className="border-borderc/80 bg-[radial-gradient(circle_at_0%_0%,rgba(198,154,69,0.18),transparent_36%),radial-gradient(circle_at_100%_0%,rgba(56,189,248,0.16),transparent_42%),linear-gradient(135deg,rgba(2,6,23,0.95),rgba(10,18,40,0.92))]">
         <CardHeader>
-          <CardTitle>Painel do barbeiro</CardTitle>
-          <p className="text-sm text-text-secondary">Visualize seus agendamentos, conclua atendimentos e acompanhe seus ganhos.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/90">OPERACAO BARBER</p>
+          <CardTitle className="text-2xl md:text-3xl">Agenda do dia a dia</CardTitle>
+          <p className="text-sm text-text-secondary">Visualize rapidamente seus atendimentos, acompanhe status e conclua servicos sem sair da home.</p>
         </CardHeader>
         <CardContent className="grid gap-4">
           {loading || !dashboard ? (
             <CardSkeleton />
           ) : (
             <>
+              <section className="grid gap-3 md:grid-cols-2">
+                <article className="rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4">
+                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-emerald-100/90">
+                    <CircleDollarSign className="h-4 w-4" />
+                    Ganhos de hoje
+                  </p>
+                  <p className="text-3xl font-extrabold text-emerald-50">{asCurrency(Number(dashboard.earningsToday || 0))}</p>
+                  <small className="text-emerald-100/80">Somente atendimentos concluidos do barbeiro logado.</small>
+                </article>
+                <article className="rounded-2xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4">
+                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-100/90">
+                    <Scissors className="h-4 w-4" />
+                    Ganhos da semana
+                  </p>
+                  <p className="text-3xl font-extrabold text-sky-50">{asCurrency(Number(dashboard.earningsWeek || 0))}</p>
+                  <small className="text-sky-100/80">Soma semanal dos servicos concluidos por voce.</small>
+                </article>
+              </section>
+
               <section className="grid gap-3">
-                <h2 className="text-base font-semibold">Agendamentos vinculados a voce</h2>
+                <h2 className="text-base font-semibold uppercase tracking-wide text-text-secondary">Seus agendamentos</h2>
                 {appointments.length === 0 ? (
                   <EmptyState title="Sem agendamentos para este barbeiro" description="Quando houver novos horarios vinculados, eles aparecerao aqui." />
                 ) : (
-                  <div className="grid gap-2">
+                  <div className="grid gap-3">
                     {appointments.map((row: any) => {
                       const canConclude = ['pending', 'confirmed'].includes(String(row.status || '').toLowerCase());
+                      const appointmentDate = asDateTime(row.start_datetime);
+                      const createdAt = asDateTime(row.created_at);
                       return (
-                        <article key={row.id} className="rounded-xl border border-borderc/80 bg-slate-950/35 p-3">
-                          <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
-                            <div className="grid gap-1">
-                              <p className="text-sm font-semibold">{row._displayService}</p>
-                              <p className="flex items-center gap-2 text-xs text-text-secondary">
-                                <UserRound className="h-3.5 w-3.5" />
-                                {row._displayClient}
-                              </p>
-                              <p className="flex items-center gap-2 text-xs text-text-secondary">
-                                <CalendarClock className="h-3.5 w-3.5" />
-                                {new Date(row.start_datetime).toLocaleString('pt-BR')}
-                              </p>
-                              <p className="text-sm font-semibold text-primary">{asCurrency(row._displayPrice)}</p>
+                        <article key={row.id} className="relative overflow-hidden rounded-2xl border border-borderc/80 bg-slate-950/55 p-4 shadow-[0_18px_55px_rgba(2,6,23,0.35)]">
+                          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" aria-hidden="true" />
+                          <div className="grid gap-3">
+                            <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
+                              <div className="grid gap-2">
+                                <p className="text-base font-semibold text-text-primary">{row._displayService}</p>
+                                <div className="grid gap-1.5 text-xs text-text-secondary md:grid-cols-2">
+                                  <p className="flex items-center gap-1.5">
+                                    <UserRound className="h-3.5 w-3.5 text-primary" />
+                                    Cliente: <strong className="text-text-primary">{row._displayClient}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-1.5">
+                                    <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                                    Atendimento: <strong className="text-text-primary">{appointmentDate}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-1.5">
+                                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                    Criado em: <strong className="text-text-primary">{createdAt}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-1.5">
+                                    <Clock3 className="h-3.5 w-3.5 text-primary" />
+                                    Valor: <strong className="text-primary">{asCurrency(row._displayPrice)}</strong>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-start gap-2 md:items-end">
+                                <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide ${statusStyle(row.status)}`}>
+                                  {statusLabel(row.status)}
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full border border-borderc/80 bg-slate-900/50 px-2 py-1 text-[11px] text-text-secondary">
+                                  <BadgeInfo className="h-3.5 w-3.5" />
+                                  ID: {String(row.id || '-').slice(0, 8)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide ${statusStyle(row.status)}`}>
-                                {statusLabel(row.status)}
-                              </span>
+                            <div className="grid gap-2 pt-1 md:grid-cols-[1fr_auto] md:items-center">
+                              <p className="text-xs text-text-secondary">
+                                Apenas status <strong className="text-text-primary">PENDENTE</strong> ou <strong className="text-text-primary">CONFIRMADO</strong> podem ser concluídos.
+                              </p>
                               <Button
                                 disabled={!canConclude || busyId === String(row.id)}
                                 onClick={async () => {
@@ -110,9 +160,9 @@ export default function BarberEntryPage() {
                                     setBusyId('');
                                   }
                                 }}
-                                className="min-h-10"
+                                className="min-h-10 w-full bg-primary text-zinc-900 hover:bg-primary-dark md:w-auto"
                               >
-                                Concluir servico
+                                {busyId === String(row.id) ? 'Concluindo...' : 'Concluir Servico'}
                               </Button>
                             </div>
                           </div>
@@ -121,25 +171,6 @@ export default function BarberEntryPage() {
                     })}
                   </div>
                 )}
-              </section>
-
-              <section className="grid gap-3 md:grid-cols-2">
-                <article className="rounded-xl border border-borderc/80 bg-slate-950/35 p-4">
-                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-text-secondary">
-                    <CircleDollarSign className="h-4 w-4 text-primary" />
-                    Ganhos de hoje
-                  </p>
-                  <p className="text-3xl font-extrabold">{asCurrency(Number(dashboard.earningsToday || 0))}</p>
-                  <small className="text-text-secondary">Somente servicos com status CONCLUIDO.</small>
-                </article>
-                <article className="rounded-xl border border-borderc/80 bg-slate-950/35 p-4">
-                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-text-secondary">
-                    <Scissors className="h-4 w-4 text-primary" />
-                    Ganhos da semana
-                  </p>
-                  <p className="text-3xl font-extrabold">{asCurrency(Number(dashboard.earningsWeek || 0))}</p>
-                  <small className="text-text-secondary">Soma da semana atual para o barbeiro logado.</small>
-                </article>
               </section>
             </>
           )}

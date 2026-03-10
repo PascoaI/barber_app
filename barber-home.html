@@ -40,15 +40,24 @@
   <body>
     <main class="page booking-page min-h-screen grid place-items-center p-4 md:p-8 bg-background text-text-primary font-sans py-4 md:py-8">
       <section class="booking-card w-full max-w-4xl rounded-2xl border border-borderc bg-surface shadow-soft p-4 md:p-8">
-        <h1>Painel do barbeiro</h1>
-        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Acesse sua agenda pessoal de atendimentos.</p>
+        <p class="text-xs uppercase tracking-[0.22em] text-primary/90 font-semibold">Operacao barber</p>
+        <h1 class="mt-2">Agenda do barbeiro</h1>
+        <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Visualize seus atendimentos, acompanhe status e conclua serviços direto da home.</p>
 
-        <div class="admin-grid grid grid-cols-1 md:grid-cols-2 gap-3">
-          <a class="admin-tile rounded-xl border border-borderc bg-slate-900/40 p-4 grid gap-1.5 no-underline hover:shadow-md hover:scale-[1.01] transition-all" href="admin-schedules.html">
-            <strong>Minha agenda</strong>
-            <span>Visualizar apenas horários vinculados ao seu nome</span>
-          </a>
+        <div class="grid gap-3 md:grid-cols-2 mb-4">
+          <article class="rounded-xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4">
+            <p class="text-xs uppercase tracking-wide text-emerald-100/85">Ganhos de hoje</p>
+            <strong id="barber-earnings-today" class="block text-2xl mt-1">R$ 0,00</strong>
+            <small class="text-emerald-100/80">Somente serviços concluidos.</small>
+          </article>
+          <article class="rounded-xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4">
+            <p class="text-xs uppercase tracking-wide text-sky-100/85">Ganhos da semana</p>
+            <strong id="barber-earnings-week" class="block text-2xl mt-1">R$ 0,00</strong>
+            <small class="text-sky-100/80">Soma semanal dos atendimentos concluidos.</small>
+          </article>
         </div>
+
+        <div id="barber-home-agenda" class="grid gap-3"></div>
       </section>
     </main>
 

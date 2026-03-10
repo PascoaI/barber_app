@@ -3049,7 +3049,123 @@ function initAdminFinanceModuleCards() {
 
 function initBarberHomePage() {
   if (!document.title.includes('Painel Barbeiro')) return;
-  requireRole(['barber'], 'login.html');
+  if (!requireRole(['barber'], 'login.html')) return;
+
+  const agendaRoot = document.getElementById('barber-home-agenda');
+  const todayEl = document.getElementById('barber-earnings-today');
+  const weekEl = document.getElementById('barber-earnings-week');
+  if (!agendaRoot) return;
+
+  const session = getSession();
+  const now = new Date();
+
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const weekStart = new Date(dayStart);
+  weekStart.setDate(dayStart.getDate() - ((dayStart.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const toDate = (value) => {
+    const parsed = new Date(value || '');
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const statusBadgeClass = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'completed') return 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100';
+    if (normalized === 'confirmed') return 'border-sky-400/50 bg-sky-500/15 text-sky-100';
+    if (normalized === 'pending') return 'border-amber-400/50 bg-amber-500/15 text-amber-100';
+    if (normalized === 'awaiting_payment') return 'border-violet-400/50 bg-violet-500/15 text-violet-100';
+    if (normalized === 'no_show') return 'border-rose-400/50 bg-rose-500/15 text-rose-100';
+    return 'border-borderc bg-slate-900/40 text-text-secondary';
+  };
+
+  const activeBarber = getBarbers().find((b) => {
+    const sameId = String(b.id || '') === String(session?.barberId || session?.id || '');
+    const sameEmail = String(b.email || '').toLowerCase() === String(session?.email || '').toLowerCase();
+    return sameId || sameEmail;
+  });
+
+  const render = () => {
+    const rows = getAppointments()
+      .filter((a) => {
+        const sameBarberId = String(a.barber_id || '') === String(activeBarber?.id || session?.barberId || '');
+        const sameBarberName = String(a.barber_name || '').toLowerCase() === String(activeBarber?.name || '').toLowerCase();
+        return sameBarberId || sameBarberName;
+      })
+      .sort((a, b) => new Date(a.start_datetime || 0) - new Date(b.start_datetime || 0));
+
+    const completedRows = rows.filter((a) => String(a.status || '').toLowerCase() === 'completed');
+    const earningsToday = completedRows
+      .filter((a) => {
+        const date = toDate(a.start_datetime);
+        return date && date >= dayStart && date < dayEnd;
+      })
+      .reduce((sum, a) => sum + Number(a.service_price || 0), 0);
+
+    const earningsWeek = completedRows
+      .filter((a) => {
+        const date = toDate(a.start_datetime);
+        return date && date >= weekStart && date < weekEnd;
+      })
+      .reduce((sum, a) => sum + Number(a.service_price || 0), 0);
+
+    if (todayEl) todayEl.textContent = asCurrency(earningsToday);
+    if (weekEl) weekEl.textContent = asCurrency(earningsWeek);
+
+    if (!rows.length) {
+      agendaRoot.innerHTML = `
+        <article class="rounded-xl border border-borderc/80 bg-slate-950/35 p-4">
+          <h3 class="text-base font-semibold">Sem agendamentos vinculados</h3>
+          <p class="text-sm text-text-secondary mt-1">Quando novos atendimentos forem vinculados ao seu nome, eles aparecerao aqui.</p>
+        </article>
+      `;
+      return;
+    }
+
+    agendaRoot.innerHTML = rows.map((a) => {
+      const canConclude = ['pending', 'confirmed'].includes(String(a.status || '').toLowerCase());
+      return `
+        <article class="relative overflow-hidden rounded-2xl border border-borderc/80 bg-slate-950/55 p-4 shadow-[0_16px_45px_rgba(2,6,23,0.32)]">
+          <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/75 to-transparent" aria-hidden="true"></div>
+          <div class="grid gap-3">
+            <div class="grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
+              <div class="grid gap-1.5">
+                <p class="text-base font-semibold text-text-primary">${a.service_name || 'Servico'}</p>
+                <p class="text-xs text-text-secondary">Cliente: <strong class="text-text-primary">${a.client_name || '-'}</strong></p>
+                <p class="text-xs text-text-secondary">Atendimento: <strong class="text-text-primary">${formatBookingDateTime(a.appointment_date, a.start_time)}</strong></p>
+                <p class="text-xs text-text-secondary">Criado em: <strong class="text-text-primary">${new Date(a.created_at || a.start_datetime || 0).toLocaleString('pt-BR')}</strong></p>
+                <p class="text-xs text-text-secondary">Valor: <strong class="text-primary">${asCurrency(a.service_price || 0)}</strong></p>
+              </div>
+              <div class="flex flex-col items-start gap-2 md:items-end">
+                <span class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide ${statusBadgeClass(a.status)}">${getBookingStatusLabel(a.status).toUpperCase()}</span>
+                <span class="inline-flex items-center gap-1 rounded-full border border-borderc/80 bg-slate-900/50 px-2 py-1 text-[11px] text-text-secondary">ID: ${String(a.id || '').slice(0, 8)}</span>
+              </div>
+            </div>
+            <div class="grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
+              <p class="text-xs text-text-secondary">Conclua atendimentos pendentes/confirmados para contabilizar no financeiro.</p>
+              <button type="button" class="button button-primary min-h-10 w-full md:w-auto" data-barber-conclude="${a.id}" ${canConclude ? '' : 'disabled'}>${canConclude ? 'Concluir Servico' : 'Servico finalizado'}</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    agendaRoot.querySelectorAll('[data-barber-conclude]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-conclude');
+        if (!id) return;
+        updateAppointmentStatus(id, 'completed');
+        await alertAction('Servico concluido com sucesso.', { title: 'Atendimento finalizado' });
+        render();
+      });
+    });
+  };
+
+  render();
 }
 
 function dbEnabled() {

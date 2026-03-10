@@ -7,6 +7,7 @@ import { withCsrfHeaders } from '@/lib/security/csrf-client';
 export type BarberAppointmentRow = {
   id: string;
   start_datetime: string;
+  created_at?: string | null;
   status: string;
   barber_id: string;
   service_price?: number | null;
@@ -80,7 +81,7 @@ export async function getBarberDashboardData() {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select('id,start_datetime,status,barber_id,service_price,service_name,client_name,users(name,email),services(name,price)')
+    .select('id,start_datetime,created_at,status,barber_id,service_price,service_name,client_name,users(name,email),services(name,price)')
     .eq('barbershop_id', barbershopId)
     .eq('barber_id', barberId)
     .order('start_datetime', { ascending: true })
