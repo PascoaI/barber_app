@@ -59,9 +59,9 @@ export async function POST(req: Request) {
 
     const now = new Date();
     const minutesToStart = getMinutesToStart(String(appointment.start_datetime), now);
-    if (!isCheckInWindowOpen(String(appointment.start_datetime), now, 20, 30)) {
+    if (!isCheckInWindowOpen(String(appointment.start_datetime), now, 15, 30)) {
       return NextResponse.json({
-        error: 'Janela de check-in indisponivel. Disponivel somente entre 20 e 30 minutos antes.',
+        error: 'Janela de check-in indisponivel. Disponivel somente entre 15 e 30 minutos antes.',
         reason: 'check_in_window_closed',
         minutes_to_start: minutesToStart
       }, { status: 409 });

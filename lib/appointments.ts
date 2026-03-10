@@ -14,7 +14,7 @@ export function getCheckInWindowState(startDatetime: string, now = new Date()) {
     return { available: false, minutesToStart: null as number | null };
   }
   const minutesToStart = (start.getTime() - now.getTime()) / 60000;
-  const available = minutesToStart >= 20 && minutesToStart <= 30;
+  const available = minutesToStart >= 15 && minutesToStart <= 30;
   return { available, minutesToStart };
 }
 

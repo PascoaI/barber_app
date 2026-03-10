@@ -101,14 +101,14 @@ test('proximo agendamento some apos passar do horario (timezone-safe UTC)', () =
   assert.equal(isFutureOrPresentUtc(start, after), false);
 });
 
-test('janela de check-in fica aberta apenas entre 20 e 30 minutos antes', () => {
+test('janela de check-in fica aberta apenas entre 15 e 30 minutos antes', () => {
   const start = '2026-03-10T16:00:00.000Z';
 
   const beforeWindow = new Date('2026-03-10T15:29:00.000Z');
   const openWindowStart = new Date('2026-03-10T15:30:00.000Z');
   const openWindowMiddle = new Date('2026-03-10T15:35:00.000Z');
-  const openWindowEnd = new Date('2026-03-10T15:40:00.000Z');
-  const afterWindow = new Date('2026-03-10T15:41:00.000Z');
+  const openWindowEnd = new Date('2026-03-10T15:45:00.000Z');
+  const afterWindow = new Date('2026-03-10T15:46:00.000Z');
 
   assert.equal(isCheckInWindowOpen(start, beforeWindow), false);
   assert.equal(isCheckInWindowOpen(start, openWindowStart), true);

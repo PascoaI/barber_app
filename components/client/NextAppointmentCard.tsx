@@ -8,10 +8,12 @@ import { CardSkeleton } from '@/components/common/Skeletons';
 import { getCheckInWindowState, getNextAppointment, performClientCheckIn } from '@/lib/appointments';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export function NextAppointmentCard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [next, setNext] = useState<any>(null);
   const { toast } = useToast();
 
@@ -50,6 +52,20 @@ export function NextAppointmentCard() {
 
   const checkInSupportedStatus = ['pending', 'confirmed'].includes(status);
   const canCheckIn = checkInSupportedStatus && checkInState.available;
+
+  const confirmCheckIn = async () => {
+    try {
+      setBusy(true);
+      await performClientCheckIn(String(next.id));
+      toast('Check-in realizado com sucesso. Atendimento confirmado.');
+      setConfirmOpen(false);
+      await loadNextAppointment();
+    } catch (error: any) {
+      toast(error?.message || 'Nao foi possivel realizar check-in.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (loading) return <CardSkeleton />;
 
@@ -91,7 +107,7 @@ export function NextAppointmentCard() {
 
             {checkInSupportedStatus && !canCheckIn && checkInState.minutesToStart !== null ? (
               <p className="text-xs text-text-secondary">
-                Check-in habilita automaticamente entre 20 e 30 minutos antes do horario.
+                Check-in habilita automaticamente entre 15 e 30 minutos antes do horario.
               </p>
             ) : null}
 
@@ -99,18 +115,7 @@ export function NextAppointmentCard() {
               <button
                 type="button"
                 disabled={busy}
-                onClick={async () => {
-                  try {
-                    setBusy(true);
-                    await performClientCheckIn(String(next.id));
-                    toast('Check-in realizado com sucesso. Atendimento confirmado.');
-                    await loadNextAppointment();
-                  } catch (error: any) {
-                    toast(error?.message || 'Nao foi possivel realizar check-in.');
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
+                onClick={() => setConfirmOpen(true)}
                 className="relative inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-emerald-400/60 bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 px-4 font-extrabold uppercase tracking-wide text-slate-950 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition duration-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span className="absolute inset-0 animate-pulse bg-white/10" />
@@ -118,6 +123,55 @@ export function NextAppointmentCard() {
                 <span className="relative">Realizar check-in</span>
               </button>
             ) : null}
+
+            <Dialog open={confirmOpen}>
+              <DialogContent className="border-emerald-400/35 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-0 shadow-[0_22px_70px_rgba(8,145,178,0.28)]">
+                <div className="relative overflow-hidden rounded-2xl p-5">
+                  <div className="pointer-events-none absolute -right-16 -top-14 h-36 w-36 rounded-full bg-emerald-500/20 blur-3xl" />
+                  <div className="pointer-events-none absolute -left-16 -bottom-14 h-36 w-36 rounded-full bg-cyan-400/20 blur-3xl" />
+
+                  <div className="relative grid gap-3">
+                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/45 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
+                      <CircleCheckBig className="h-3.5 w-3.5" />
+                      Confirmacao de check-in
+                    </div>
+
+                    <h3 className="text-xl font-bold text-text-primary">Confirmar sua presenca agora?</h3>
+                    <p className="text-sm text-text-secondary">
+                      Ao confirmar, o atendimento sera marcado como concluido e contabilizado no financeiro.
+                    </p>
+
+                    <div className="rounded-xl border border-borderc/80 bg-slate-950/40 p-3 text-sm">
+                      <p className="font-semibold text-text-primary">{next?.services?.name || 'Servico'}</p>
+                      <p className="text-text-secondary">{next?.barbers?.users?.name || '-'}</p>
+                      <p className="text-text-secondary">
+                        {next?.start_datetime ? new Date(next.start_datetime).toLocaleString('pt-BR') : '--'}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        disabled={busy}
+                        onClick={() => setConfirmOpen(false)}
+                      >
+                        Voltar
+                      </Button>
+                      <Button
+                        type="button"
+                        className="min-h-11 bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                        disabled={busy}
+                        onClick={confirmCheckIn}
+                      >
+                        {busy ? 'Confirmando...' : 'Confirmar check-in'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </>
         ) : (
           <EmptyState
