@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { deriveOverdueStatus } from '@/lib/appointments-policy';
 import { isValidStatusTransition } from '@/lib/server/appointment-core';
+import { shouldEnforceClientNoShowBlocking } from '@/lib/runtime-flags';
 
 function isAuthorized(req: Request) {
   const expected = process.env.CRON_SECRET || '';
@@ -44,18 +45,20 @@ export async function POST(req: Request) {
       if (nextStatus === 'no_show') noShows += 1;
     }
 
-    const noShowRows = await supabaseAdmin.select(
-      'appointments',
-      `select=client_id,status&barbershop_id=eq.${barbershop}&status=eq.no_show`
-    ) as any[];
+    if (shouldEnforceClientNoShowBlocking()) {
+      const noShowRows = await supabaseAdmin.select(
+        'appointments',
+        `select=client_id,status&barbershop_id=eq.${barbershop}&status=eq.no_show`
+      ) as any[];
 
-    const grouped: Record<string, number> = {};
-    (noShowRows || []).forEach((r) => { grouped[String(r.client_id)] = (grouped[String(r.client_id)] || 0) + 1; });
+      const grouped: Record<string, number> = {};
+      (noShowRows || []).forEach((r) => { grouped[String(r.client_id)] = (grouped[String(r.client_id)] || 0) + 1; });
 
-    for (const [clientId, total] of Object.entries(grouped)) {
-      if (total < 3) continue;
-      const blockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await supabaseAdmin.update('users', `id=eq.${encodeURIComponent(clientId)}&barbershop_id=eq.${barbershop}`, { blocked_until: blockedUntil, updated_at: nowIso });
+      for (const [clientId, total] of Object.entries(grouped)) {
+        if (total < 3) continue;
+        const blockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        await supabaseAdmin.update('users', `id=eq.${encodeURIComponent(clientId)}&barbershop_id=eq.${barbershop}`, { blocked_until: blockedUntil, updated_at: nowIso });
+      }
     }
 
     return NextResponse.json({ ok: true, updated: appointments.length, completed, noShows, skipped });

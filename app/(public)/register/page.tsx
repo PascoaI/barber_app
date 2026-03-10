@@ -64,7 +64,7 @@ export default function RegisterPage() {
       <Card className="border-borderc/80 bg-gradient-to-br from-slate-950/75 via-slate-900/70 to-slate-950/80">
         <CardHeader>
           <CardTitle>Criar conta</CardTitle>
-          <p className="text-sm text-text-secondary">Cadastro com politica de senha forte e registro de consentimento (LGPD).</p>
+          <p className="text-sm text-text-secondary">Cadastro com registro de consentimento (LGPD).</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="grid gap-3">
@@ -79,7 +79,7 @@ export default function RegisterPage() {
             <div className="grid gap-1.5">
               <Label htmlFor="register-pass">Senha</Label>
               <Input id="register-pass" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <small className="text-xs text-text-secondary">Use ao menos 10 caracteres com maiuscula, minuscula, numero e simbolo.</small>
+              <small className="text-xs text-text-secondary">Use a senha de sua preferencia para a fase de testes.</small>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="register-invite">Código de convite (opcional)</Label>

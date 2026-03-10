@@ -8,6 +8,7 @@ import { sendOperationalAlert } from '@/lib/observability/alerts';
 import { recordBusinessMetric } from '@/lib/observability/metrics';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
+import { isTemporaryBypassUser, shouldEnforceClientNoShowBlocking } from '@/lib/runtime-flags';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.create');
@@ -108,11 +109,12 @@ export async function POST(req: Request) {
       subscriptionStatus = subscriptions?.[0]?.status || null;
     }
 
+    const skipClientBlocking = !shouldEnforceClientNoShowBlocking() || isTemporaryBypassUser(session?.email);
     const validation = validateAppointmentCreation({
       payload: scopedBody,
       existingAppointments: existingAppointments || [],
       blockedSlots: blockedSlots || [],
-      blockedUntil,
+      blockedUntil: skipClientBlocking ? null : blockedUntil,
       subscriptionStatus
     });
 

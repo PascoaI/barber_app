@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { validateStrongPassword } from '@/lib/server/security-core';
 import { resolveTenantForRegistration } from '@/lib/auth/tenant-resolver';
+import { shouldEnforceStrongPasswordPolicy } from '@/lib/runtime-flags';
 
 export async function POST(req: Request) {
   try {
@@ -39,9 +40,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'Aceite os termos de uso e a politica de privacidade.' }, { status: 400 });
     }
 
-    const strong = validateStrongPassword(password);
-    if (!strong.ok) {
-      return NextResponse.json({ ok: false, message: `Senha fraca: ${strong.reasons.join(', ')}` }, { status: 400 });
+    if (shouldEnforceStrongPasswordPolicy()) {
+      const strong = validateStrongPassword(password);
+      if (!strong.ok) {
+        return NextResponse.json({ ok: false, message: `Senha fraca: ${strong.reasons.join(', ')}` }, { status: 400 });
+      }
     }
 
     const service = createSupabaseServiceClient();

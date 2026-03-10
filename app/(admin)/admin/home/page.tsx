@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MrrCards } from '@/components/admin/MrrCards';
 import { OccupancyTable } from '@/components/admin/OccupancyTable';
 import { CardSkeleton, TableSkeleton } from '@/components/common/Skeletons';
-import { blockClientUntil, getAdminKpis, getOccupancyByBarber, getRecurringNoShowClients, getRetentionReport, unblockClient } from '@/lib/analytics';
+import { getAdminKpis, getOccupancyByBarber, getRetentionReport } from '@/lib/analytics';
 import { confirmAppointmentAttendanceByAdmin, getAdminAttendanceHistory } from '@/lib/appointments';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,10 @@ export default function AdminHomePage() {
   const [kpis, setKpis] = useState<any>(null);
   const [occupancy, setOccupancy] = useState<any[]>([]);
   const [retention, setRetention] = useState<any>(null);
-  const [repeatNoShows, setRepeatNoShows] = useState<any[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<{ completed: any[]; overdueWithoutCheckIn: any[] }>({ completed: [], overdueWithoutCheckIn: [] });
   const [loading, setLoading] = useState(true);
   const [attendanceLoading, setAttendanceLoading] = useState(true);
   const [actionId, setActionId] = useState('');
-  const [unlockId, setUnlockId] = useState('');
   const { toast } = useToast();
 
   const loadAttendanceHistory = useCallback(async () => {
@@ -36,16 +34,14 @@ export default function AdminHomePage() {
     (async () => {
       setLoading(true);
       try {
-        const [k, o, r, n] = await Promise.all([
+        const [k, o, r] = await Promise.all([
           getAdminKpis(),
           getOccupancyByBarber(),
-          getRetentionReport(30),
-          getRecurringNoShowClients()
+          getRetentionReport(30)
         ]);
         setKpis(k);
         setOccupancy(o);
         setRetention(r);
-        setRepeatNoShows(n);
       } catch {
         toast('Falha ao carregar dashboard admin.');
       } finally {
@@ -138,39 +134,8 @@ export default function AdminHomePage() {
         </article>
       </div>
 
-      <div className="rounded-xl border border-borderc p-3 text-sm grid gap-2">
-        <p className="font-medium">Clientes reincidentes em no-show</p>
-        <ul className="ml-5 list-disc">{repeatNoShows.map((c: any) => <li key={c.client_id}>{c.name || c.email || c.client_id} ({c.total})</li>)}</ul>
-        {repeatNoShows[0] ? (
-          <button
-            className="text-left underline"
-            onClick={async () => {
-              const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-              await blockClientUntil(String(repeatNoShows[0].client_id), until);
-              toast('Cliente bloqueado por 7 dias para novos agendamentos.');
-            }}
-          >
-            Bloquear 1o reincidente por 7 dias
-          </button>
-        ) : null}
-      </div>
-
-      <div className="rounded-xl border border-borderc p-3 text-sm grid gap-2">
-        <p className="font-medium">Desbloqueio manual</p>
-        <div className="flex gap-2">
-          <input className="flex-1 rounded border px-2 py-1" value={unlockId} onChange={(e) => setUnlockId(e.target.value)} placeholder="ID do cliente" />
-          <button
-            className="underline"
-            onClick={async () => {
-              if (!unlockId) return;
-              await unblockClient(unlockId);
-              toast('Cliente desbloqueado manualmente.');
-              setUnlockId('');
-            }}
-          >
-            Desbloquear cliente
-          </button>
-        </div>
+      <div className="rounded-xl border border-borderc p-3 text-sm">
+        Regras automaticas de bloqueio de cliente estao ocultas temporariamente no ambiente atual.
       </div>
 
       <h2 className="text-lg font-semibold">Retencao</h2>

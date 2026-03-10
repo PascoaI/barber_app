@@ -1,9 +1,10 @@
-'use client';
+﻿'use client';
 
 import { getCurrentUserContext } from '@/lib/auth';
 import { supabaseClient } from '@/lib/supabaseClient';
 import { withCsrfHeaders } from '@/lib/security/csrf-client';
 import { enqueuePendingBooking } from '@/lib/booking/offline-outbox';
+import { isTemporaryBypassUser, shouldEnforceClientNoShowBlocking } from '@/lib/runtime-flags';
 
 const UPCOMING_STATUSES = ['pending', 'confirmed', 'awaiting_payment'];
 
@@ -66,8 +67,9 @@ export async function listClientHistory(filters: {
 
 export async function createAppointmentSafe(payload: Record<string, any>) {
   const user = await getCurrentUserContext();
-  if (user.blocked_until && new Date(user.blocked_until) > new Date()) {
-    throw new Error(`Cliente bloqueado para agendamento até ${new Date(user.blocked_until).toLocaleString('pt-BR')}.`);
+  const bypassBlockedRule = !shouldEnforceClientNoShowBlocking() || isTemporaryBypassUser(user.email);
+  if (!bypassBlockedRule && user.blocked_until && new Date(user.blocked_until) > new Date()) {
+    throw new Error(`Cliente bloqueado para agendamento ate ${new Date(user.blocked_until).toLocaleString('pt-BR')}.`);
   }
 
   const normalized = {
@@ -195,3 +197,4 @@ export function getRealAvailability(input: {
     return !busyConflict && !blockedConflict;
   });
 }
+
