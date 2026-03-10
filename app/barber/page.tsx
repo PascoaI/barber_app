@@ -154,17 +154,17 @@ export default function BarberEntryPage() {
                       type="button"
                       variant="outline"
                       className="h-10 px-3 text-xs"
-                      onClick={() => setSelectedDate(asInputDate(addDays(new Date(), -1)))}
+                      onClick={() => setSelectedDate(asInputDate(new Date()))}
                     >
-                      Ontem
+                      Hoje
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="h-10 px-3 text-xs"
-                      onClick={() => setSelectedDate(asInputDate(new Date()))}
+                      onClick={() => setSelectedDate(asInputDate(addDays(new Date(), -1)))}
                     >
-                      Hoje
+                      Ontem
                     </Button>
                     <span className="rounded-full border border-borderc/80 bg-slate-900/60 px-2.5 py-1 text-xs text-text-secondary">
                       {filteredAppointments.length} de {appointments.length}
