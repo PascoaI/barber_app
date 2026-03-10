@@ -138,15 +138,18 @@ Recomendação inicial:
 
 ## 8) Qualidade de release
 
-Pipeline obrigatório antes de deploy:
+Pipeline obrigatorio antes de deploy:
+- `npm run check:utf8`
+- `npm run check:legacy:build-sync`
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
 - `npm run test:e2e`
 - `npm run build`
 - `npm run check:migrations`
+- `npm run check:go-live`
 
-## 9) Smoke test pós-deploy (produção)
+## 9) Smoke test pos-deploy (producao)
 
 - Login cliente e admin.
 - Agendamento completo (criar -> confirmar -> concluir).

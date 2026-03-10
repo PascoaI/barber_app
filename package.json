@@ -5,6 +5,8 @@
   "scripts": {
     "build:legacy-script": "node scripts/build-legacy-script.cjs",
     "normalize:legacy-encoding": "node scripts/normalize-legacy-utf8.cjs",
+    "check:utf8": "node scripts/check-utf8.cjs",
+    "check:legacy:build-sync": "node scripts/check-legacy-build-sync.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

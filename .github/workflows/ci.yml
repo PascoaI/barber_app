@@ -22,6 +22,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: UTF-8 and encoding guard
+        run: npm run check:utf8
+
+      - name: Legacy bundle sync guard
+        run: npm run check:legacy:build-sync
+
       - name: Lint
         run: npm run lint
 
