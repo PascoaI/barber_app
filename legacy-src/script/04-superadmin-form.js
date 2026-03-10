@@ -159,6 +159,7 @@ function initBarberHomePage() {
   const weekEl = document.getElementById('barber-earnings-week');
   const agendaCountEl = document.getElementById('barber-agenda-count');
   const agendaDateFilterEl = document.getElementById('barber-agenda-date-filter');
+  const agendaYesterdayBtn = document.getElementById('barber-agenda-yesterday-btn');
   const agendaTodayBtn = document.getElementById('barber-agenda-today-btn');
   if (!agendaRoot) return;
 
@@ -307,6 +308,16 @@ function initBarberHomePage() {
   if (agendaTodayBtn) {
     agendaTodayBtn.addEventListener('click', () => {
       selectedDate = toInputDate(new Date());
+      if (agendaDateFilterEl) agendaDateFilterEl.value = selectedDate;
+      render();
+    });
+  }
+
+  if (agendaYesterdayBtn) {
+    agendaYesterdayBtn.addEventListener('click', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      selectedDate = toInputDate(yesterday);
       if (agendaDateFilterEl) agendaDateFilterEl.value = selectedDate;
       render();
     });

@@ -27,6 +27,12 @@ function asInputDate(value: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function addDays(base: Date, days: number) {
+  const copy = new Date(base);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
 function toLocalDateKey(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
@@ -144,6 +150,14 @@ export default function BarberEntryPage() {
                       onChange={(e) => setSelectedDate(e.target.value)}
                       className="h-10 rounded-xl border border-borderc/80 bg-slate-900/65 px-3 text-sm text-text-primary outline-none transition-colors focus:border-primary/70"
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 px-3 text-xs"
+                      onClick={() => setSelectedDate(asInputDate(addDays(new Date(), -1)))}
+                    >
+                      Ontem
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
