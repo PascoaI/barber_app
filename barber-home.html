@@ -44,20 +44,29 @@
         <h1 class="mt-2">Agenda do barbeiro</h1>
         <p class="subtitle text-text-secondary leading-relaxed mt-2 mb-5">Visualize seus atendimentos, acompanhe status e conclua serviços direto da home.</p>
 
-        <div class="grid gap-3 md:grid-cols-2 mb-4">
-          <article class="rounded-xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4">
+        <div class="barber-sections-grid mb-4">
+          <article class="barber-section-card barber-section-earnings-today">
             <p class="text-xs uppercase tracking-wide text-emerald-100/85">Ganhos de hoje</p>
             <strong id="barber-earnings-today" class="block text-2xl mt-1">R$ 0,00</strong>
             <small class="text-emerald-100/80">Somente serviços concluidos.</small>
           </article>
-          <article class="rounded-xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4">
+          <article class="barber-section-card barber-section-earnings-week">
             <p class="text-xs uppercase tracking-wide text-sky-100/85">Ganhos da semana</p>
             <strong id="barber-earnings-week" class="block text-2xl mt-1">R$ 0,00</strong>
             <small class="text-sky-100/80">Soma semanal dos atendimentos concluidos.</small>
           </article>
         </div>
 
-        <div id="barber-home-agenda" class="grid gap-3"></div>
+        <section class="barber-section-card barber-agenda-section">
+          <header class="barber-agenda-header">
+            <div>
+              <h2>Agenda do barbeiro</h2>
+              <p>Cards detalhados para leitura rápida e ação imediata.</p>
+            </div>
+            <span id="barber-agenda-count" class="barber-agenda-count">0 agendamentos</span>
+          </header>
+          <div id="barber-home-agenda" class="grid gap-3"></div>
+        </section>
       </section>
     </main>
 

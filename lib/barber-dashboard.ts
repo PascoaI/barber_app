@@ -10,6 +10,7 @@ export type BarberAppointmentRow = {
   created_at?: string | null;
   status: string;
   barber_id: string;
+  notes?: string | null;
   service_price?: number | null;
   service_name?: string | null;
   client_name?: string | null;
@@ -81,7 +82,7 @@ export async function getBarberDashboardData() {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select('id,start_datetime,created_at,status,barber_id,service_price,service_name,client_name,users(name,email),services(name,price)')
+    .select('id,start_datetime,created_at,status,notes,barber_id,service_price,service_name,client_name,users(name,email),services(name,price)')
     .eq('barbershop_id', barbershopId)
     .eq('barber_id', barberId)
     .order('start_datetime', { ascending: true })

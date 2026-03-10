@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeInfo, CalendarClock, CalendarDays, CircleDollarSign, Clock3, Scissors, UserRound } from 'lucide-react';
+import { AlertTriangle, BadgeInfo, CalendarClock, CalendarDays, CheckCircle2, CircleDollarSign, Clock3, Scissors, UserRound, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -41,6 +41,14 @@ function statusStyle(status: string) {
   return 'border-borderc bg-slate-950/40 text-text-secondary';
 }
 
+function StatusIcon({ status }: { status: string }) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'completed') return <CheckCircle2 className="h-3.5 w-3.5" />;
+  if (normalized === 'confirmed' || normalized === 'pending' || normalized === 'awaiting_payment') return <Clock3 className="h-3.5 w-3.5" />;
+  if (normalized === 'no_show') return <AlertTriangle className="h-3.5 w-3.5" />;
+  return <XCircle className="h-3.5 w-3.5" />;
+}
+
 export default function BarberEntryPage() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
@@ -77,8 +85,8 @@ export default function BarberEntryPage() {
             <CardSkeleton />
           ) : (
             <>
-              <section className="grid gap-3 md:grid-cols-2">
-                <article className="rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4">
+              <section className="grid gap-3 lg:grid-cols-2">
+                <article className="rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4 shadow-[0_12px_30px_rgba(16,185,129,0.12)]">
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-emerald-100/90">
                     <CircleDollarSign className="h-4 w-4" />
                     Ganhos de hoje
@@ -86,7 +94,7 @@ export default function BarberEntryPage() {
                   <p className="text-3xl font-extrabold text-emerald-50">{asCurrency(Number(dashboard.earningsToday || 0))}</p>
                   <small className="text-emerald-100/80">Somente atendimentos concluidos do barbeiro logado.</small>
                 </article>
-                <article className="rounded-2xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4">
+                <article className="rounded-2xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4 shadow-[0_12px_30px_rgba(56,189,248,0.12)]">
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-100/90">
                     <Scissors className="h-4 w-4" />
                     Ganhos da semana
@@ -96,8 +104,17 @@ export default function BarberEntryPage() {
                 </article>
               </section>
 
-              <section className="grid gap-3">
-                <h2 className="text-base font-semibold uppercase tracking-wide text-text-secondary">Seus agendamentos</h2>
+              <section className="rounded-2xl border border-borderc/80 bg-slate-950/45 p-4 shadow-[0_14px_36px_rgba(2,6,23,0.28)]">
+                <header className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-borderc/70 pb-3">
+                  <div>
+                    <h2 className="text-base font-semibold">Agenda do barbeiro</h2>
+                    <p className="text-xs text-text-secondary">Cards com dados completos para leitura e acao rapida.</p>
+                  </div>
+                  <span className="rounded-full border border-borderc/80 bg-slate-900/60 px-2.5 py-1 text-xs text-text-secondary">
+                    {appointments.length} agendamento(s)
+                  </span>
+                </header>
+
                 {appointments.length === 0 ? (
                   <EmptyState title="Sem agendamentos para este barbeiro" description="Quando houver novos horarios vinculados, eles aparecerao aqui." />
                 ) : (
@@ -107,33 +124,48 @@ export default function BarberEntryPage() {
                       const appointmentDate = asDateTime(row.start_datetime);
                       const createdAt = asDateTime(row.created_at);
                       return (
-                        <article key={row.id} className="relative overflow-hidden rounded-2xl border border-borderc/80 bg-slate-950/55 p-4 shadow-[0_18px_55px_rgba(2,6,23,0.35)]">
-                          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" aria-hidden="true" />
-                          <div className="grid gap-3">
-                            <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
+                        <article key={row.id} className="rounded-2xl border border-borderc/80 bg-slate-950/55 p-4 shadow-[0_10px_26px_rgba(2,6,23,0.28)]">
+                          <div className="grid gap-4">
+                            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
                               <div className="grid gap-2">
-                                <p className="text-base font-semibold text-text-primary">{row._displayService}</p>
-                                <div className="grid gap-1.5 text-xs text-text-secondary md:grid-cols-2">
-                                  <p className="flex items-center gap-1.5">
-                                    <UserRound className="h-3.5 w-3.5 text-primary" />
-                                    Cliente: <strong className="text-text-primary">{row._displayClient}</strong>
+                                <p className="text-base font-semibold">{row._displayService}</p>
+                                <div className="grid gap-2 text-xs text-text-secondary sm:grid-cols-2">
+                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <UserRound className="h-3.5 w-3.5 text-primary" />
+                                      Cliente:
+                                    </span>{' '}
+                                    <strong className="text-text-primary">{row._displayClient}</strong>
                                   </p>
-                                  <p className="flex items-center gap-1.5">
-                                    <CalendarClock className="h-3.5 w-3.5 text-primary" />
-                                    Atendimento: <strong className="text-text-primary">{appointmentDate}</strong>
+                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                                      Atendimento:
+                                    </span>{' '}
+                                    <strong className="text-text-primary">{appointmentDate}</strong>
                                   </p>
-                                  <p className="flex items-center gap-1.5">
-                                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
-                                    Criado em: <strong className="text-text-primary">{createdAt}</strong>
+                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                      Criado em:
+                                    </span>{' '}
+                                    <strong className="text-text-primary">{createdAt}</strong>
                                   </p>
-                                  <p className="flex items-center gap-1.5">
-                                    <Clock3 className="h-3.5 w-3.5 text-primary" />
-                                    Valor: <strong className="text-primary">{asCurrency(row._displayPrice)}</strong>
+                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <Clock3 className="h-3.5 w-3.5 text-primary" />
+                                      Valor:
+                                    </span>{' '}
+                                    <strong className="text-primary">{asCurrency(row._displayPrice)}</strong>
                                   </p>
                                 </div>
+                                <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2 text-xs text-text-secondary">
+                                  Observacoes: <strong className="text-text-primary">{row.notes ? String(row.notes) : 'Sem observacoes registradas.'}</strong>
+                                </p>
                               </div>
                               <div className="flex flex-col items-start gap-2 md:items-end">
-                                <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide ${statusStyle(row.status)}`}>
+                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide ${statusStyle(row.status)}`}>
+                                  <StatusIcon status={String(row.status || '')} />
                                   {statusLabel(row.status)}
                                 </span>
                                 <span className="inline-flex items-center gap-1 rounded-full border border-borderc/80 bg-slate-900/50 px-2 py-1 text-[11px] text-text-secondary">
@@ -142,10 +174,8 @@ export default function BarberEntryPage() {
                                 </span>
                               </div>
                             </div>
-                            <div className="grid gap-2 pt-1 md:grid-cols-[1fr_auto] md:items-center">
-                              <p className="text-xs text-text-secondary">
-                                Apenas status <strong className="text-text-primary">PENDENTE</strong> ou <strong className="text-text-primary">CONFIRMADO</strong> podem ser concluídos.
-                              </p>
+                            <div className="flex flex-col gap-2 border-t border-borderc/70 pt-3 md:flex-row md:items-center md:justify-between">
+                              <p className="text-xs text-text-secondary">Concluir habilitado para status pendente ou confirmado.</p>
                               <Button
                                 disabled={!canConclude || busyId === String(row.id)}
                                 onClick={async () => {
