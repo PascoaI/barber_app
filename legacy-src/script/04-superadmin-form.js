@@ -249,15 +249,13 @@ function initBarberHomePage() {
       return `
         <article class="barber-appointment-card">
           <div class="barber-appointment-header">
-            <div class="grid gap-2">
+            <div class="grid gap-1.5">
               <p class="barber-appointment-title">${a.service_name || 'Servico'}</p>
-              <div class="barber-meta-grid">
-                <p class="barber-meta-item">Cliente: <strong>${a.client_name || '-'}</strong></p>
-                <p class="barber-meta-item">Atendimento: <strong>${formatBookingDateTime(a.appointment_date, a.start_time)}</strong></p>
-                <p class="barber-meta-item">Criado em: <strong>${createdAt}</strong></p>
-                <p class="barber-meta-item">Valor: <strong>${asCurrency(a.service_price || 0)}</strong></p>
-              </div>
-              <p class="barber-notes-item">Observacoes: <strong>${a.notes ? String(a.notes) : 'Sem observacoes registradas.'}</strong></p>
+              <p class="text-xs text-text-secondary">Cliente: <strong class="text-text-primary">${a.client_name || '-'}</strong></p>
+              <p class="text-xs text-text-secondary">Atendimento: <strong class="text-text-primary">${formatBookingDateTime(a.appointment_date, a.start_time)}</strong></p>
+              <p class="text-xs text-text-secondary">Criado em: <strong class="text-text-primary">${createdAt}</strong></p>
+              <p class="text-xs text-text-secondary">Valor: <strong class="text-primary">${asCurrency(a.service_price || 0)}</strong></p>
+              <p class="text-xs text-text-secondary">Observacoes: <strong class="text-text-primary">${a.notes ? String(a.notes) : 'Sem observacoes registradas.'}</strong></p>
             </div>
             <div class="flex flex-col items-start gap-2 md:items-end">
               <span class="barber-badge ${statusBadgeClass(a.status)}"><span aria-hidden="true">${statusIcon(a.status)}</span>${getBookingStatusLabel(a.status).toUpperCase()}</span>

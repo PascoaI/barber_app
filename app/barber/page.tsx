@@ -86,20 +86,24 @@ export default function BarberEntryPage() {
           ) : (
             <>
               <section className="grid gap-3 lg:grid-cols-2">
-                <article className="rounded-2xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent p-4 shadow-[0_12px_30px_rgba(16,185,129,0.12)]">
+                <article className="rounded-2xl border border-emerald-300/40 bg-gradient-to-br from-emerald-500/25 via-emerald-500/10 to-transparent p-5 shadow-[0_16px_38px_rgba(16,185,129,0.2)]">
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-emerald-100/90">
                     <CircleDollarSign className="h-4 w-4" />
                     Ganhos de hoje
                   </p>
-                  <p className="text-3xl font-extrabold text-emerald-50">{asCurrency(Number(dashboard.earningsToday || 0))}</p>
+                  <p className="text-4xl font-black leading-none text-emerald-50 drop-shadow-[0_2px_10px_rgba(16,185,129,0.35)]">
+                    {asCurrency(Number(dashboard.earningsToday || 0))}
+                  </p>
                   <small className="text-emerald-100/80">Somente atendimentos concluidos do barbeiro logado.</small>
                 </article>
-                <article className="rounded-2xl border border-sky-400/35 bg-gradient-to-br from-sky-500/15 via-sky-500/5 to-transparent p-4 shadow-[0_12px_30px_rgba(56,189,248,0.12)]">
+                <article className="rounded-2xl border border-sky-300/40 bg-gradient-to-br from-sky-500/25 via-sky-500/10 to-transparent p-5 shadow-[0_16px_38px_rgba(56,189,248,0.2)]">
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-100/90">
                     <Scissors className="h-4 w-4" />
                     Ganhos da semana
                   </p>
-                  <p className="text-3xl font-extrabold text-sky-50">{asCurrency(Number(dashboard.earningsWeek || 0))}</p>
+                  <p className="text-4xl font-black leading-none text-sky-50 drop-shadow-[0_2px_10px_rgba(56,189,248,0.35)]">
+                    {asCurrency(Number(dashboard.earningsWeek || 0))}
+                  </p>
                   <small className="text-sky-100/80">Soma semanal dos servicos concluidos por voce.</small>
                 </article>
               </section>
@@ -129,37 +133,23 @@ export default function BarberEntryPage() {
                             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
                               <div className="grid gap-2">
                                 <p className="text-base font-semibold">{row._displayService}</p>
-                                <div className="grid gap-2 text-xs text-text-secondary sm:grid-cols-2">
-                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <UserRound className="h-3.5 w-3.5 text-primary" />
-                                      Cliente:
-                                    </span>{' '}
-                                    <strong className="text-text-primary">{row._displayClient}</strong>
-                                  </p>
-                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <CalendarClock className="h-3.5 w-3.5 text-primary" />
-                                      Atendimento:
-                                    </span>{' '}
-                                    <strong className="text-text-primary">{appointmentDate}</strong>
-                                  </p>
-                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <CalendarDays className="h-3.5 w-3.5 text-primary" />
-                                      Criado em:
-                                    </span>{' '}
-                                    <strong className="text-text-primary">{createdAt}</strong>
-                                  </p>
-                                  <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2">
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <Clock3 className="h-3.5 w-3.5 text-primary" />
-                                      Valor:
-                                    </span>{' '}
-                                    <strong className="text-primary">{asCurrency(row._displayPrice)}</strong>
-                                  </p>
-                                </div>
-                                <p className="rounded-lg border border-borderc/60 bg-slate-900/40 px-2.5 py-2 text-xs text-text-secondary">
+                                <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                  <UserRound className="h-3.5 w-3.5 text-primary" />
+                                  Cliente: <strong className="text-text-primary">{row._displayClient}</strong>
+                                </p>
+                                <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                  <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                                  Atendimento: <strong className="text-text-primary">{appointmentDate}</strong>
+                                </p>
+                                <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                                  Criado em: <strong className="text-text-primary">{createdAt}</strong>
+                                </p>
+                                <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                  <Clock3 className="h-3.5 w-3.5 text-primary" />
+                                  Valor: <strong className="text-primary">{asCurrency(row._displayPrice)}</strong>
+                                </p>
+                                <p className="text-xs text-text-secondary">
                                   Observacoes: <strong className="text-text-primary">{row.notes ? String(row.notes) : 'Sem observacoes registradas.'}</strong>
                                 </p>
                               </div>

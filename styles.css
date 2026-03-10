@@ -1815,6 +1815,12 @@ textarea:focus {
   padding: 1rem;
 }
 
+.barber-section-card strong {
+  font-size: clamp(1.75rem, 2.6vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: -0.015em;
+}
+
 .barber-section-earnings-today {
   border-color: rgba(16, 185, 129, 0.36);
   background: linear-gradient(135deg, rgba(5, 46, 33, 0.56), rgba(10, 17, 33, 0.92));
@@ -1834,7 +1840,6 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border-bottom: 1px solid rgba(90, 111, 158, 0.25);
   padding-bottom: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -1947,7 +1952,6 @@ textarea:focus {
 }
 
 .barber-appointment-actions {
-  border-top: 1px solid rgba(90, 111, 158, 0.24);
   padding-top: 0.75rem;
   display: grid;
   gap: 0.6rem;
