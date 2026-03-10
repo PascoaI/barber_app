@@ -27,7 +27,7 @@ async function main() {
     ['npm run typecheck', `${npmCmd} run typecheck`, true],
     ['npm test', `${npmCmd} test`, true],
     ['npm run build', `${npmCmd} run build`, true],
-    ['npm run test:e2e', `${npmCmd} run test:e2e`, true],
+    ['npm run test:e2e', `${npmCmd} run test:e2e`, true, { PLAYWRIGHT_PORT: process.env.PLAYWRIGHT_PORT || '4273' }],
     ['npm run check:agenda:full', `${npmCmd} run check:agenda:full`, true],
     [
       'npm run env:check:matrix (dev)',

@@ -143,13 +143,13 @@ test('login rapido por dica clicavel', async ({ page }) => {
 test('barber home aplica filtro de data e conclui servico', async ({ page }) => {
   await page.addInitScript(() => {
     const now = new Date();
-    const today = new Date(now);
-    today.setHours(14, 0, 0, 0);
+    const today = new Date(now.getTime() + 60 * 60 * 1000);
+    today.setSeconds(0, 0);
     const todayEnd = new Date(today.getTime() + 30 * 60 * 1000);
 
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(16, 0, 0, 0);
+    yesterday.setSeconds(0, 0);
     const yesterdayEnd = new Date(yesterday.getTime() + 30 * 60 * 1000);
 
     const toDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -235,7 +235,9 @@ test('barber home aplica filtro de data e conclui servico', async ({ page }) => 
   await expect(page.locator('#barber-agenda-count')).toContainText('1 de 2');
 
   await page.click('#barber-agenda-today-btn');
-  await page.click('[data-barber-conclude]');
+  const concludeEnabled = page.locator('[data-barber-conclude]:not([disabled])').first();
+  await expect(concludeEnabled).toBeVisible();
+  await concludeEnabled.click();
   const modalConfirm = page.locator('[data-modal-confirm]');
   if (await modalConfirm.count()) {
     await modalConfirm.click();

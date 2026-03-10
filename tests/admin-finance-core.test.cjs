@@ -49,4 +49,9 @@ test('subscription snapshot calcula mrr, receita do periodo e ranking de planos'
   assert.equal(snapshot.totals.churnInPeriodCount, 2);
   assert.equal(snapshot.topPlansBySubscribers[0].name, 'basic');
   assert.equal(snapshot.topPlansBySubscribers[0].subscribers, 2);
+  assert.equal(snapshot.subscriptions.length, 5);
+  assert.equal(snapshot.subscriptions[0].id, 's5');
+  assert.equal(snapshot.subscriptions[0].status, 'disabled');
+  assert.equal(snapshot.subscriptions[0].amount, 90);
+  assert.equal(snapshot.subscriptions[1].statusLabel, 'Suspensa');
 });

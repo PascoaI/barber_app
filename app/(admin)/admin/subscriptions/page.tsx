@@ -20,6 +20,10 @@ function asCurrency(value: number) {
 
 export default function AdminSubscriptionsPage() {
   const [period, setPeriod] = useState<FinancePeriod>('today');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [planFilter, setPlanFilter] = useState('all');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const { toast } = useToast();
@@ -43,6 +47,10 @@ export default function AdminSubscriptionsPage() {
       active = false;
     };
   }, [period, toast]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [period, statusFilter, planFilter, query]);
 
   const kpis = useMemo(() => {
     if (!data) return [];
@@ -75,6 +83,43 @@ export default function AdminSubscriptionsPage() {
   }, [data]);
 
   const rowClass = 'flex items-center justify-between gap-3 rounded-xl border border-borderc/80 bg-slate-950/30 px-3 py-2.5';
+  const badgeClassByStatus: Record<string, string> = {
+    active: 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100',
+    trial: 'border-sky-400/40 bg-sky-500/15 text-sky-100',
+    suspended: 'border-amber-400/40 bg-amber-500/15 text-amber-100',
+    disabled: 'border-rose-400/40 bg-rose-500/15 text-rose-100',
+    canceled: 'border-rose-400/40 bg-rose-500/15 text-rose-100',
+    cancelled: 'border-rose-400/40 bg-rose-500/15 text-rose-100'
+  };
+
+  const subscriptionRows = useMemo(() => (Array.isArray(data?.subscriptions) ? data.subscriptions : []), [data]);
+  const planOptions = useMemo(() => {
+    const unique = new Set<string>();
+    subscriptionRows.forEach((row: any) => {
+      const planName = String(row?.plan || '').trim();
+      if (planName) unique.add(planName);
+    });
+    return ['all', ...Array.from(unique).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
+  }, [subscriptionRows]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return subscriptionRows.filter((row: any) => {
+      const status = String(row?.status || '').toLowerCase();
+      const plan = String(row?.plan || '').toLowerCase();
+      const id = String(row?.id || '').toLowerCase();
+      const statusLabel = String(row?.statusLabel || '').toLowerCase();
+      if (statusFilter !== 'all' && status !== statusFilter) return false;
+      if (planFilter !== 'all' && plan !== planFilter.toLowerCase()) return false;
+      if (!normalizedQuery) return true;
+      return id.includes(normalizedQuery) || plan.includes(normalizedQuery) || statusLabel.includes(normalizedQuery);
+    });
+  }, [planFilter, query, statusFilter, subscriptionRows]);
+
+  const pageSize = 6;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-4">
@@ -170,6 +215,101 @@ export default function AdminSubscriptionsPage() {
                   </div>
                 </article>
               </div>
+
+              <article className="rounded-xl border border-borderc/80 bg-slate-950/35 p-3">
+                <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="font-semibold">Detalhamento tecnico de assinaturas</h3>
+                    <small className="text-text-secondary">Filtros por status/plano e leitura paginada.</small>
+                  </div>
+                  <small className="rounded-full border border-borderc px-2 py-1 text-xs text-text-secondary">
+                    {filteredRows.length} registro(s) encontrados
+                  </small>
+                </div>
+
+                <div className="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <label className="grid gap-1 text-xs text-text-secondary">
+                    Buscar
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Plano, status ou ID"
+                      className="min-h-10 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary outline-none transition focus:border-primary/70"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs text-text-secondary">
+                    Status
+                    <select
+                      value={statusFilter}
+                      onChange={(event) => setStatusFilter(event.target.value)}
+                      className="min-h-10 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary outline-none transition focus:border-primary/70"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="active">Ativa</option>
+                      <option value="trial">Trial</option>
+                      <option value="suspended">Suspensa</option>
+                      <option value="disabled">Desativada</option>
+                      <option value="canceled">Cancelada</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-xs text-text-secondary">
+                    Plano
+                    <select
+                      value={planFilter}
+                      onChange={(event) => setPlanFilter(event.target.value)}
+                      className="min-h-10 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary outline-none transition focus:border-primary/70"
+                    >
+                      {planOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option === 'all' ? 'Todos' : option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid gap-1 text-xs text-text-secondary">
+                    Paginacao
+                    <div className="flex min-h-10 items-center justify-between rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm">
+                      <span>Pagina {safePage} de {totalPages}</span>
+                      <span>{pageSize} por pagina</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  {pagedRows.length ? (
+                    pagedRows.map((row: any) => (
+                      <div key={row.id} className={rowClass}>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{row.plan}</p>
+                          <p className="text-xs text-text-secondary">ID: {row.id}</p>
+                        </div>
+                        <div className="hidden text-xs text-text-secondary sm:block">
+                          Inicio: {row.startedAt ? new Date(row.startedAt).toLocaleString('pt-BR') : '--'}
+                        </div>
+                        <div className="hidden text-xs text-text-secondary lg:block">
+                          Expira: {row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('pt-BR') : '--'}
+                        </div>
+                        <strong className="text-sm">{asCurrency(row.amount)}</strong>
+                        <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${badgeClassByStatus[row.status] || 'border-borderc/80 bg-slate-900/40 text-text-secondary'}`}>
+                          {row.statusLabel}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="rounded-xl border border-borderc/80 bg-slate-950/35 p-3 text-sm text-text-secondary">Nenhuma assinatura encontrada para os filtros selecionados.</p>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  <Button variant="outline" disabled={safePage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                    Pagina anterior
+                  </Button>
+                  <Button variant="outline" disabled={safePage >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                    Proxima pagina
+                  </Button>
+                </div>
+              </article>
 
               <article className="rounded-xl border border-borderc/80 bg-slate-950/35 p-3">
                 <div className="mb-3 flex items-center justify-between">
