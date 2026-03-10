@@ -426,6 +426,8 @@ function setUserBlockedUntil(email, isoDate) {
 }
 
 function canClientBook(email) {
+  const legacyBlockingEnabled = false;
+  if (!legacyBlockingEnabled) return true;
   const blocked = getUserBlockedUntil(email);
   if (!blocked) return true;
   return new Date(blocked) <= new Date();
