@@ -963,7 +963,7 @@ function isHardBusinessCreateReason(reason) {
   ].includes(reason);
 }
 
-function updateAppointmentStatus(id, status) {
+function updateAppointmentStatus(id, status, meta = {}) {
   if (!APPOINTMENT_STATUS.includes(status)) return;
   const rows = getAppointments();
   const idx = rows.findIndex((a) => a.id === id);
@@ -971,6 +971,9 @@ function updateAppointmentStatus(id, status) {
 
   const beforeState = { ...rows[idx] };
   if (!canTransitionAppointmentStatus(rows[idx].status, status)) return;
+  if (meta && typeof meta === 'object') {
+    rows[idx] = { ...rows[idx], ...meta };
+  }
   rows[idx].status = status;
   rows[idx].updated_at = nowIso();
   rows[idx].updated_by = getSession()?.email || 'system';
@@ -2237,6 +2240,10 @@ function initAdminDashboard() {
     const avgTicket = totalAppointments ? revenue / totalAppointments : 0;
     financeRoot.innerHTML = `
       <header class="admin-panel-head"><div><h3>Resumo financeiro (${label})</h3><small>Atualizado agora</small></div><span>Performance</span></header>
+
+            ${['pending', 'confirmed'].includes(String(next.status || '')) && !canCheckIn ? `
+              <p class="text-xs text-text-secondary">Check-in habilita automaticamente entre 15 e 30 minutos antes do horario.</p>
+            ` : ""}
       <div class="grid gap-2 md:grid-cols-2">
         <article class="admin-list-item"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p></article>
         <article class="admin-list-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
@@ -2309,6 +2316,9 @@ function initClientHomePage() {
     if (!next) {
       nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p></article>`;
     } else {
+      const minutesToStart = (new Date(next.start_datetime || 0).getTime() - Date.now()) / 60000;
+      const checkInWindowOpen = Number.isFinite(minutesToStart) && minutesToStart >= 15 && minutesToStart <= 30;
+      const canCheckIn = ['pending', 'confirmed'].includes(String(next.status || '')) && checkInWindowOpen;
       const statusLabel = getBookingStatusLabel(next.status);
       const statusTone =
         next.status === 'confirmed'
@@ -2327,6 +2337,7 @@ function initClientHomePage() {
                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary/90">Próximo agendamento</p>
                 <h3 class="text-xl font-semibold text-text-primary md:text-2xl">${next.service_name}</h3>
               </div>
+
               <span class="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone}">
                 <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                 ${statusLabel}
@@ -2360,6 +2371,15 @@ function initClientHomePage() {
                 <span aria-hidden="true">✕</span> Cancelar
               </button>
             </div>
+            ${['pending', 'confirmed'].includes(String(next.status || '')) && !canCheckIn ? `
+              <p class="text-xs text-text-secondary">Check-in habilita automaticamente entre 15 e 30 minutos antes do horario.</p>
+            ` : ""}
+            ${canCheckIn ? `
+              <button class="relative inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-emerald-400/60 bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 px-4 font-extrabold uppercase tracking-wide text-slate-950 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition duration-200 hover:brightness-105" data-client-checkin="${next.id}">
+                <span class="absolute inset-0 animate-pulse bg-white/10"></span>
+                <span class="relative">Realizar check-in</span>
+              </button>
+            ` : ""}
           </div>
         </article>
       `;
@@ -2372,6 +2392,26 @@ function initClientHomePage() {
       nextWrap.querySelector('[data-client-cancel]')?.addEventListener('click', async () => {
         if (!(await confirmAction('Deseja realmente cancelar este agendamento?'))) return;
         updateAppointmentStatus(next.id, 'canceled');
+        initClientHomePage();
+      });
+      nextWrap.querySelector('[data-client-checkin]')?.addEventListener('click', async () => {
+        const confirmed = await confirmAction('Deseja confirmar seu check-in agora?', {
+          title: 'Confirmacao de check-in',
+          confirmText: 'Confirmar check-in',
+          cancelText: 'Voltar'
+        });
+        if (!confirmed) return;
+        const checkInAt = nowIso();
+        updateAppointmentStatus(next.id, 'completed', {
+          check_in_time: checkInAt,
+          check_in_by: 'client',
+          service_completed_at: checkInAt
+        });
+        await alertAction('Check-in confirmado com sucesso.', {
+          title: 'Presenca confirmada',
+          confirmText: 'Fechar',
+          hideCancel: true
+        });
         initClientHomePage();
       });
     }

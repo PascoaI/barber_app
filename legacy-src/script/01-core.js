@@ -961,7 +961,7 @@ function isHardBusinessCreateReason(reason) {
   ].includes(reason);
 }
 
-function updateAppointmentStatus(id, status) {
+function updateAppointmentStatus(id, status, meta = {}) {
   if (!APPOINTMENT_STATUS.includes(status)) return;
   const rows = getAppointments();
   const idx = rows.findIndex((a) => a.id === id);
@@ -969,6 +969,9 @@ function updateAppointmentStatus(id, status) {
 
   const beforeState = { ...rows[idx] };
   if (!canTransitionAppointmentStatus(rows[idx].status, status)) return;
+  if (meta && typeof meta === 'object') {
+    rows[idx] = { ...rows[idx], ...meta };
+  }
   rows[idx].status = status;
   rows[idx].updated_at = nowIso();
   rows[idx].updated_by = getSession()?.email || 'system';
