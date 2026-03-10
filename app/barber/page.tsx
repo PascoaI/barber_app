@@ -86,22 +86,24 @@ export default function BarberEntryPage() {
           ) : (
             <>
               <section className="grid gap-3 lg:grid-cols-2">
-                <article className="rounded-2xl border border-emerald-300/40 bg-gradient-to-br from-emerald-500/25 via-emerald-500/10 to-transparent p-5 shadow-[0_16px_38px_rgba(16,185,129,0.2)]">
+                <article className="relative overflow-hidden rounded-2xl border border-emerald-300/45 bg-gradient-to-br from-emerald-500/20 via-emerald-500/8 to-transparent p-5 shadow-[0_16px_38px_rgba(16,185,129,0.2)]">
+                  <div className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-emerald-300/20 blur-2xl" aria-hidden="true" />
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-emerald-100/90">
                     <CircleDollarSign className="h-4 w-4" />
                     Ganhos de hoje
                   </p>
-                  <p className="text-4xl font-black leading-none text-emerald-50 drop-shadow-[0_2px_10px_rgba(16,185,129,0.35)]">
+                  <p className="text-3xl font-extrabold leading-none text-emerald-50">
                     {asCurrency(Number(dashboard.earningsToday || 0))}
                   </p>
                   <small className="text-emerald-100/80">Somente atendimentos concluidos do barbeiro logado.</small>
                 </article>
-                <article className="rounded-2xl border border-sky-300/40 bg-gradient-to-br from-sky-500/25 via-sky-500/10 to-transparent p-5 shadow-[0_16px_38px_rgba(56,189,248,0.2)]">
+                <article className="relative overflow-hidden rounded-2xl border border-sky-300/45 bg-gradient-to-br from-sky-500/20 via-sky-500/8 to-transparent p-5 shadow-[0_16px_38px_rgba(56,189,248,0.2)]">
+                  <div className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-sky-300/20 blur-2xl" aria-hidden="true" />
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-100/90">
                     <Scissors className="h-4 w-4" />
                     Ganhos da semana
                   </p>
-                  <p className="text-4xl font-black leading-none text-sky-50 drop-shadow-[0_2px_10px_rgba(56,189,248,0.35)]">
+                  <p className="text-3xl font-extrabold leading-none text-sky-50">
                     {asCurrency(Number(dashboard.earningsWeek || 0))}
                   </p>
                   <small className="text-sky-100/80">Soma semanal dos servicos concluidos por voce.</small>
@@ -109,7 +111,7 @@ export default function BarberEntryPage() {
               </section>
 
               <section className="rounded-2xl border border-borderc/80 bg-slate-950/45 p-4 shadow-[0_14px_36px_rgba(2,6,23,0.28)]">
-                <header className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-borderc/70 pb-3">
+                <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-base font-semibold">Agenda do barbeiro</h2>
                     <p className="text-xs text-text-secondary">Cards com dados completos para leitura e acao rapida.</p>
@@ -164,7 +166,7 @@ export default function BarberEntryPage() {
                                 </span>
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2 border-t border-borderc/70 pt-3 md:flex-row md:items-center md:justify-between">
+                            <div className="flex flex-col gap-2 pt-3 md:flex-row md:items-center md:justify-between">
                               <p className="text-xs text-text-secondary">Concluir habilitado para status pendente ou confirmado.</p>
                               <Button
                                 disabled={!canConclude || busyId === String(row.id)}

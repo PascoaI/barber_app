@@ -1815,7 +1815,7 @@ textarea:focus {
   padding: 1rem;
 }
 
-.barber-section-card strong {
+.barber-kpi-value {
   font-size: clamp(1.75rem, 2.6vw, 2.2rem);
   font-weight: 900;
   letter-spacing: -0.015em;
