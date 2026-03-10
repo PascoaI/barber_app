@@ -7,6 +7,16 @@ import { enqueuePendingBooking } from '@/lib/booking/offline-outbox';
 
 const UPCOMING_STATUSES = ['pending', 'confirmed', 'awaiting_payment'];
 
+export function getCheckInWindowState(startDatetime: string, now = new Date()) {
+  const start = new Date(startDatetime);
+  if (Number.isNaN(start.getTime())) {
+    return { available: false, minutesToStart: null as number | null };
+  }
+  const minutesToStart = (start.getTime() - now.getTime()) / 60000;
+  const available = minutesToStart >= 20 && minutesToStart <= 30;
+  return { available, minutesToStart };
+}
+
 export async function getNextAppointment() {
   const user = await getCurrentUserContext();
   const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
@@ -89,6 +99,66 @@ export async function createAppointmentSafe(payload: Record<string, any>) {
     throw new Error(result?.reason || result?.error || 'create_appointment_failed');
   }
 
+  return result.appointment;
+}
+
+export async function performClientCheckIn(appointmentId: string) {
+  const response = await fetch('/api/appointments/check-in', withCsrfHeaders({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appointment_id: appointmentId })
+  }));
+  const result = await response.json();
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.reason || result?.error || 'check_in_failed');
+  }
+  return result.appointment;
+}
+
+export async function getAdminAttendanceHistory(limit = 8) {
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
+  const supabase = supabaseClient();
+  const now = new Date().toISOString();
+
+  const [completedRes, overdueRes] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select('id,start_datetime,status,check_in_time,check_in_by,service_completed_at,client_id,barber_id,service_id,users(name,email),barbers(users(name)),services(name,price)')
+      .eq('barbershop_id', scopeBarbershopId)
+      .eq('status', 'completed')
+      .order('start_datetime', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('appointments')
+      .select('id,start_datetime,status,check_in_time,check_in_by,service_completed_at,client_id,barber_id,service_id,users(name,email),barbers(users(name)),services(name,price)')
+      .eq('barbershop_id', scopeBarbershopId)
+      .in('status', ['pending', 'confirmed'])
+      .is('check_in_time', null)
+      .lte('start_datetime', now)
+      .order('start_datetime', { ascending: false })
+      .limit(limit)
+  ]);
+
+  if (completedRes.error) throw completedRes.error;
+  if (overdueRes.error) throw overdueRes.error;
+
+  return {
+    completed: completedRes.data || [],
+    overdueWithoutCheckIn: overdueRes.data || []
+  };
+}
+
+export async function confirmAppointmentAttendanceByAdmin(appointmentId: string) {
+  const response = await fetch('/api/appointments/confirm-service', withCsrfHeaders({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appointment_id: appointmentId })
+  }));
+  const result = await response.json();
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.reason || result?.error || 'confirm_service_failed');
+  }
   return result.appointment;
 }
 
