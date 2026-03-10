@@ -1868,6 +1868,28 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.barber-agenda-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.barber-agenda-tools input[type='date'] {
+  min-height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(90, 111, 158, 0.55);
+  background: rgba(10, 18, 34, 0.72);
+  color: #e7eeff;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.barber-agenda-tools input[type='date']:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary, #d4a24f) 72%, #fff 10%);
+}
+
 .barber-appointment-card {
   border: 1px solid rgba(90, 111, 158, 0.36);
   border-radius: 1rem;

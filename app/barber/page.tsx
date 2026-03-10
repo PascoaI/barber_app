@@ -20,6 +20,20 @@ function asDateTime(value?: string | null) {
   return date.toLocaleString('pt-BR');
 }
 
+function asInputDate(value: Date) {
+  const y = value.getFullYear();
+  const m = String(value.getMonth() + 1).padStart(2, '0');
+  const d = String(value.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toLocalDateKey(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return asInputDate(date);
+}
+
 function statusLabel(status: string) {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'completed') return 'CONCLUIDO';
@@ -53,6 +67,7 @@ export default function BarberEntryPage() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
   const [busyId, setBusyId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => asInputDate(new Date()));
   const { toast } = useToast();
 
   const load = useCallback(async () => {
@@ -71,6 +86,10 @@ export default function BarberEntryPage() {
   }, [load]);
 
   const appointments = useMemo(() => dashboard?.appointments || [], [dashboard?.appointments]);
+  const filteredAppointments = useMemo(
+    () => appointments.filter((row: any) => toLocalDateKey(row.start_datetime) === selectedDate),
+    [appointments, selectedDate]
+  );
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-4">
@@ -116,16 +135,34 @@ export default function BarberEntryPage() {
                     <h2 className="text-base font-semibold">Agenda do barbeiro</h2>
                     <p className="text-xs text-text-secondary">Cards com dados completos para leitura e acao rapida.</p>
                   </div>
-                  <span className="rounded-full border border-borderc/80 bg-slate-900/60 px-2.5 py-1 text-xs text-text-secondary">
-                    {appointments.length} agendamento(s)
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="sr-only" htmlFor="barber-agenda-date-filter">Filtrar por data</label>
+                    <input
+                      id="barber-agenda-date-filter"
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="h-10 rounded-xl border border-borderc/80 bg-slate-900/65 px-3 text-sm text-text-primary outline-none transition-colors focus:border-primary/70"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 px-3 text-xs"
+                      onClick={() => setSelectedDate(asInputDate(new Date()))}
+                    >
+                      Hoje
+                    </Button>
+                    <span className="rounded-full border border-borderc/80 bg-slate-900/60 px-2.5 py-1 text-xs text-text-secondary">
+                      {filteredAppointments.length} de {appointments.length}
+                    </span>
+                  </div>
                 </header>
 
-                {appointments.length === 0 ? (
-                  <EmptyState title="Sem agendamentos para este barbeiro" description="Quando houver novos horarios vinculados, eles aparecerao aqui." />
+                {filteredAppointments.length === 0 ? (
+                  <EmptyState title="Sem agendamentos nesta data" description="Selecione outra data no calendario para ver os atendimentos." />
                 ) : (
                   <div className="grid gap-3">
-                    {appointments.map((row: any) => {
+                    {filteredAppointments.map((row: any) => {
                       const canConclude = ['pending', 'confirmed'].includes(String(row.status || '').toLowerCase());
                       const appointmentDate = asDateTime(row.start_datetime);
                       const createdAt = asDateTime(row.created_at);

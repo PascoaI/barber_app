@@ -3055,10 +3055,24 @@ function initBarberHomePage() {
   const todayEl = document.getElementById('barber-earnings-today');
   const weekEl = document.getElementById('barber-earnings-week');
   const agendaCountEl = document.getElementById('barber-agenda-count');
+  const agendaDateFilterEl = document.getElementById('barber-agenda-date-filter');
+  const agendaTodayBtn = document.getElementById('barber-agenda-today-btn');
   if (!agendaRoot) return;
 
   const session = getSession();
   const now = new Date();
+  const toInputDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+  const dateKeyFromIso = (value) => {
+    const parsed = new Date(value || '');
+    if (Number.isNaN(parsed.getTime())) return '';
+    return toInputDate(parsed);
+  };
+  let selectedDate = toInputDate(now);
 
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayEnd = new Date(dayStart);
@@ -3100,16 +3114,17 @@ function initBarberHomePage() {
   });
 
   const render = () => {
-    const rows = getAppointments()
+    const baseRows = getAppointments()
       .filter((a) => {
         const sameBarberId = String(a.barber_id || '') === String(activeBarber?.id || session?.barberId || '');
         const sameBarberName = String(a.barber_name || '').toLowerCase() === String(activeBarber?.name || '').toLowerCase();
         return sameBarberId || sameBarberName;
       })
       .sort((a, b) => new Date(a.start_datetime || 0) - new Date(b.start_datetime || 0));
+    const rows = baseRows.filter((a) => dateKeyFromIso(a.start_datetime) === selectedDate);
 
     if (agendaCountEl) {
-      agendaCountEl.textContent = `${rows.length} agendamento${rows.length === 1 ? '' : 's'}`;
+      agendaCountEl.textContent = `${rows.length} de ${baseRows.length}`;
     }
 
     const completedRows = rows.filter((a) => String(a.status || '').toLowerCase() === 'completed');
@@ -3177,6 +3192,22 @@ function initBarberHomePage() {
       });
     });
   };
+
+  if (agendaDateFilterEl) {
+    agendaDateFilterEl.value = selectedDate;
+    agendaDateFilterEl.addEventListener('change', () => {
+      selectedDate = agendaDateFilterEl.value || toInputDate(new Date());
+      render();
+    });
+  }
+
+  if (agendaTodayBtn) {
+    agendaTodayBtn.addEventListener('click', () => {
+      selectedDate = toInputDate(new Date());
+      if (agendaDateFilterEl) agendaDateFilterEl.value = selectedDate;
+      render();
+    });
+  }
 
   render();
 }
