@@ -39,6 +39,16 @@ assertProductionBootEnv();
 const enableLegacyHtmlRewrites = process.env.ENABLE_LEGACY_HTML_REWRITES === 'true';
 
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: '/admin-home', destination: '/admin/home', permanent: false },
+      { source: '/admin-settings', destination: '/admin/settings', permanent: false },
+      { source: '/client-home', destination: '/client/home', permanent: false },
+      { source: '/client-history', destination: '/client/history', permanent: false },
+      { source: '/client-profile', destination: '/client/profile', permanent: false },
+      { source: '/client-subscriptions', destination: '/client/subscriptions', permanent: false }
+    ];
+  },
   async headers() {
     return [
       {

@@ -132,3 +132,114 @@ test('cobranca/assinatura via fluxo de planos', async ({ page }) => {
   await expect(page.locator('text=Assinatura ativa')).toBeVisible();
 });
 
+test('login rapido por dica clicavel', async ({ page }) => {
+  await page.goto('/login.html');
+  const hint = page.locator('[data-login-email="cliente@barber.com"]');
+  await expect(hint).toBeVisible();
+  await hint.click();
+  await expect(page).toHaveURL(/client-home\.html$/);
+});
+
+test('barber home aplica filtro de data e conclui servico', async ({ page }) => {
+  await page.addInitScript(() => {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(14, 0, 0, 0);
+    const todayEnd = new Date(today.getTime() + 30 * 60 * 1000);
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(16, 0, 0, 0);
+    const yesterdayEnd = new Date(yesterday.getTime() + 30 * 60 * 1000);
+
+    const toDate = (d: Date) => d.toISOString().slice(0, 10);
+    const toTime = (d: Date) => d.toTimeString().slice(0, 5);
+
+    localStorage.setItem('barberpro_session', JSON.stringify({
+      email: 'pedro@barber.com',
+      role: 'barber',
+      name: 'Pedro',
+      barberId: 'pedro',
+      unit_id: 'unit_bom_fim',
+      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    }));
+
+    localStorage.setItem('barberpro_appointments', JSON.stringify([
+      {
+        id: `apt_barber_today_${Date.now()}`,
+        unit_id: 'unit_bom_fim',
+        tenant_id: 'tenant_barberpro_demo',
+        client_email: 'cliente@barber.com',
+        client_name: 'Cliente Hoje',
+        service_id: 'corte',
+        service_name: 'Corte',
+        service_price: 72,
+        duration_minutes: 30,
+        barber_id: 'pedro',
+        barber_name: 'Pedro',
+        city: 'Porto Alegre',
+        branch: 'Bom Fim',
+        appointment_date: toDate(today),
+        start_time: toTime(today),
+        end_time: toTime(todayEnd),
+        start_datetime: today.toISOString(),
+        end_datetime: todayEnd.toISOString(),
+        status: 'pending',
+        requires_pre_payment: false,
+        payment_due_at: null,
+        notes: 'Observacao teste hoje',
+        created_at: today.toISOString(),
+        updated_at: today.toISOString(),
+        created_by: 'admin@barber.com',
+        updated_by: 'admin@barber.com',
+        idempotency_key: `idem_barber_today_${Date.now()}`
+      },
+      {
+        id: `apt_barber_yesterday_${Date.now()}`,
+        unit_id: 'unit_bom_fim',
+        tenant_id: 'tenant_barberpro_demo',
+        client_email: 'cliente@barber.com',
+        client_name: 'Cliente Ontem',
+        service_id: 'barba',
+        service_name: 'Barba',
+        service_price: 54,
+        duration_minutes: 30,
+        barber_id: 'pedro',
+        barber_name: 'Pedro',
+        city: 'Porto Alegre',
+        branch: 'Bom Fim',
+        appointment_date: toDate(yesterday),
+        start_time: toTime(yesterday),
+        end_time: toTime(yesterdayEnd),
+        start_datetime: yesterday.toISOString(),
+        end_datetime: yesterdayEnd.toISOString(),
+        status: 'confirmed',
+        requires_pre_payment: false,
+        payment_due_at: null,
+        notes: 'Observacao teste ontem',
+        created_at: yesterday.toISOString(),
+        updated_at: yesterday.toISOString(),
+        created_by: 'admin@barber.com',
+        updated_by: 'admin@barber.com',
+        idempotency_key: `idem_barber_yesterday_${Date.now()}`
+      }
+    ]));
+  });
+
+  await page.goto('/barber-home.html');
+  await expect(page.locator('#barber-agenda-count')).toContainText('1 de 2');
+  await expect(page.locator('text=Cliente Hoje')).toBeVisible();
+
+  await page.click('#barber-agenda-yesterday-btn');
+  await expect(page.locator('text=Cliente Ontem')).toBeVisible();
+  await expect(page.locator('#barber-agenda-count')).toContainText('1 de 2');
+
+  await page.click('#barber-agenda-today-btn');
+  await page.click('[data-barber-conclude]');
+  const modalConfirm = page.locator('[data-modal-confirm]');
+  if (await modalConfirm.count()) {
+    await modalConfirm.click();
+  }
+  await expect(page.locator('.barber-badge.status-completed').first()).toContainText(/CONCLU/i);
+});
+

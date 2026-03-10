@@ -88,9 +88,12 @@ jobs:
           OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
         run: npm run env:check:matrix
 
-      - name: Environment matrix check (prod skipped)
+      - name: Environment matrix gate (prod secrets required on main)
         if: ${{ github.ref == 'refs/heads/main' && !(secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STRIPE_SECRET_KEY != '' && secrets.STRIPE_WEBHOOK_SECRET != '' && secrets.STRIPE_PRICE_BASIC != '' && secrets.STRIPE_PRICE_PRO != '' && secrets.STRIPE_PRICE_ENTERPRISE != '' && secrets.CRON_SECRET != '' && secrets.UPSTASH_REDIS_REST_URL != '' && secrets.UPSTASH_REDIS_REST_TOKEN != '' && secrets.SENTRY_DSN != '' && secrets.OTEL_EXPORTER_OTLP_ENDPOINT != '' && secrets.OPS_ALERT_WEBHOOK_URL != '') }}
-        run: echo "Prod env matrix skipped: missing production secrets."
+        run: |
+          echo "Missing required production secrets for TARGET_ENV=prod on main."
+          echo "Set all required values before merging/deploying main."
+          exit 1
 
       - name: Production build
         run: npm run build

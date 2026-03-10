@@ -22,6 +22,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Environment matrix gate (staging secrets required for preview)
+        if: ${{ !(secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL != '' && secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STAGING_STRIPE_SECRET_KEY != '' && secrets.STAGING_STRIPE_WEBHOOK_SECRET != '' && secrets.STAGING_STRIPE_PRICE_BASIC != '' && secrets.STAGING_STRIPE_PRICE_PRO != '' && secrets.STAGING_STRIPE_PRICE_ENTERPRISE != '' && secrets.STAGING_CRON_SECRET != '' && secrets.STAGING_UPSTASH_REDIS_REST_URL != '' && secrets.STAGING_UPSTASH_REDIS_REST_TOKEN != '' && secrets.STAGING_SENTRY_DSN != '') }}
+        run: |
+          echo "Missing required staging secrets for preview environment matrix."
+          exit 1
+
       - name: Environment matrix check (staging)
         if: ${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL != '' && secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.STAGING_STRIPE_SECRET_KEY != '' && secrets.STAGING_STRIPE_WEBHOOK_SECRET != '' && secrets.STAGING_STRIPE_PRICE_BASIC != '' && secrets.STAGING_STRIPE_PRICE_PRO != '' && secrets.STAGING_STRIPE_PRICE_ENTERPRISE != '' && secrets.STAGING_CRON_SECRET != '' && secrets.STAGING_UPSTASH_REDIS_REST_URL != '' && secrets.STAGING_UPSTASH_REDIS_REST_TOKEN != '' && secrets.STAGING_SENTRY_DSN != '' }}
         env:

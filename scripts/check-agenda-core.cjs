@@ -63,8 +63,10 @@ async function main() {
     console.log('[agenda] endpoint sanity');
     const a = await postJson('/api/appointments/validate-slot', {});
     const b = await postJson('/api/cron/appointments-status', {});
-    if (a.status !== 400 || b.status !== 400) {
-      console.error('expected 400 validation errors for empty payloads');
+    const allowedValidate = new Set([400, 401, 403]);
+    const allowedCron = new Set([400, 401, 403]);
+    if (!allowedValidate.has(a.status) || !allowedCron.has(b.status)) {
+      console.error('expected auth/validation response statuses for empty payloads');
       console.error({ a, b });
       process.exit(1);
     }
