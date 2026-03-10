@@ -426,8 +426,6 @@ function setUserBlockedUntil(email, isoDate) {
 }
 
 function canClientBook(email) {
-  const legacyBlockingEnabled = false;
-  if (!legacyBlockingEnabled) return true;
   const blocked = getUserBlockedUntil(email);
   if (!blocked) return true;
   return new Date(blocked) <= new Date();
@@ -803,14 +801,11 @@ function autoUpdateAppointmentStatuses() {
     noShowByClient[a.client_email] = (noShowByClient[a.client_email] || 0) + 1;
   });
 
-  const legacyBlockingEnabled = false;
-  if (legacyBlockingEnabled) {
-    Object.entries(noShowByClient).forEach(([email, total]) => {
-      if (total < limit) return;
-      const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
-      setUserBlockedUntil(email, blockedUntil);
-    });
-  }
+  Object.entries(noShowByClient).forEach(([email, total]) => {
+    if (total < limit) return;
+    const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
+    setUserBlockedUntil(email, blockedUntil);
+  });
 }
 
 function checkOverduePrepayments() {
@@ -833,9 +828,8 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
-  const legacyBlockingEnabled = false;
   const blockedUntil = getUserBlockedUntil(session?.email || "");
-  if (legacyBlockingEnabled && blockedUntil && new Date(blockedUntil) > new Date()) return null;
+  if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
   if (!service) return null;
   const barbers = getBarbers(true);
@@ -1183,10 +1177,65 @@ function renderMetrics(container, metrics) {
   `;
 }
 
-﻿function initLoginPage() {
+function getLegacyLoginHints() {
+  const platformHints = getPlatformUsers()
+    .filter((u) => u && u.role !== 'super_admin')
+    .map((u) => ({
+      email: String(u.email || '').trim().toLowerCase(),
+      role: String(u.role || '').trim().toLowerCase()
+    }));
+
+  const barberHints = getBarbers()
+    .filter((b) => b && b.active && b.email)
+    .map((b) => ({
+      email: String(b.email || '').trim().toLowerCase(),
+      role: 'barber'
+    }));
+
+  const byEmail = new Map();
+  [...platformHints, ...barberHints].forEach((item) => {
+    if (!item.email || byEmail.has(item.email)) return;
+    byEmail.set(item.email, item);
+  });
+  return Array.from(byEmail.values()).sort((a, b) => a.email.localeCompare(b.email));
+}
+
+function roleHintLabel(role) {
+  if (role === 'admin') return 'Admin';
+  if (role === 'barber') return 'Barbeiro';
+  if (role === 'client') return 'Cliente';
+  return 'Usuario';
+}
+
+function renderLegacyLoginHints() {
+  const root = document.getElementById('legacy-login-hints');
+  if (!root) return;
+  const hints = getLegacyLoginHints();
+  if (!hints.length) {
+    root.innerHTML = '';
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="rounded-xl border border-borderc/80 bg-slate-950/40 p-3 grid gap-2">
+      <p class="text-xs uppercase tracking-wide text-text-secondary font-semibold">Dicas de login (sem SuperAdmin)</p>
+      <div class="grid gap-1.5">
+        ${hints.map((item) => `
+          <div class="flex items-center justify-between gap-2 rounded-lg border border-borderc/70 bg-slate-900/40 px-2 py-1.5">
+            <span class="text-xs text-text-secondary truncate">${item.email}</span>
+            <span class="text-[10px] uppercase tracking-wide rounded-full border border-borderc/80 px-2 py-0.5 text-text-secondary">${roleHintLabel(item.role)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function initLoginPage() {
   const form = document.querySelector('form.auth-form');
   if (!form) return;
   const feedback = document.getElementById('login-feedback');
+  renderLegacyLoginHints();
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
