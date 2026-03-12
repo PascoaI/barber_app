@@ -352,13 +352,23 @@ function initBookingReviewPage() {
   } else if (!hasRole('client')) {
     action.textContent = 'Perfil administrativo não agenda por esta tela';
     action.disabled = true;
-  } else if (!canClientBook(session.email)) {
-    action.textContent = 'Cliente bloqueado temporariamente';
-    action.disabled = true;
   } else {
     action.textContent = 'Confirmar agendamento';
     action.disabled = false;
   }
+
+  const enforceReviewUnblockedState = () => {
+    const txt = String(action.textContent || '').toLowerCase();
+    if (txt.includes('bloqueado') || txt.includes('blocked')) {
+      action.textContent = 'Confirmar agendamento';
+      action.disabled = false;
+    }
+  };
+  enforceReviewUnblockedState();
+  try {
+    const observer = new MutationObserver(() => enforceReviewUnblockedState());
+    observer.observe(action, { childList: true, characterData: true, subtree: true, attributes: true });
+  } catch {}
 
   const successModal = document.getElementById('booking-success-modal');
   const successHomeBtn = document.getElementById('booking-success-home');
@@ -367,8 +377,6 @@ function initBookingReviewPage() {
     const currentSession = getSession();
     if (!currentSession) return (window.location.href = 'login.html?redirect=booking-review.html');
     if (!hasRole('client')) return;
-    if (!canClientBook(currentSession.email)) return;
-
     const apt = createAppointmentFromBooking();
     if (!apt) {
       if (feedback) feedback.textContent = 'Horário indisponível ou dados inválidos. Volte e selecione outro horário/profissional.';

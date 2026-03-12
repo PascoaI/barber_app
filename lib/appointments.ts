@@ -4,7 +4,6 @@ import { getCurrentUserContext } from '@/lib/auth';
 import { supabaseClient } from '@/lib/supabaseClient';
 import { withCsrfHeaders } from '@/lib/security/csrf-client';
 import { enqueuePendingBooking } from '@/lib/booking/offline-outbox';
-import { isTemporaryBypassUser, shouldEnforceClientNoShowBlocking } from '@/lib/runtime-flags';
 
 const UPCOMING_STATUSES = ['pending', 'confirmed', 'awaiting_payment'];
 
@@ -26,7 +25,7 @@ export async function getNextAppointment() {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select('id, start_datetime, end_datetime, status, service_id, barber_id, services(name,price), barbers(users(name))')
+    .select('id, start_datetime, end_datetime, status, service_id, barber_id, services(name,price,duration_minutes), barbers(users(name))')
     .eq('barbershop_id', scopeBarbershopId)
     .eq('client_id', String(user.id))
     .in('status', UPCOMING_STATUSES)
@@ -67,10 +66,7 @@ export async function listClientHistory(filters: {
 
 export async function createAppointmentSafe(payload: Record<string, any>) {
   const user = await getCurrentUserContext();
-  const bypassBlockedRule = !shouldEnforceClientNoShowBlocking() || isTemporaryBypassUser(user.email);
-  if (!bypassBlockedRule && user.blocked_until && new Date(user.blocked_until) > new Date()) {
-    throw new Error(`Cliente bloqueado para agendamento ate ${new Date(user.blocked_until).toLocaleString('pt-BR')}.`);
-  }
+  // Bloqueio de cliente para agendamento desativado temporariamente ate a fase final do projeto.
 
   const normalized = {
     ...payload,

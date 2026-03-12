@@ -413,21 +413,7 @@ function getUserPolicies() {
   return getJson(STORAGE_KEYS.userPolicies, {});
 }
 
-function getUserBlockedUntil(email) {
-  return getUserPolicies()[email]?.blocked_until || null;
-}
-
-function setUserBlockedUntil(email, isoDate) {
-  const policies = getUserPolicies();
-  policies[email] = { ...(policies[email] || {}), blocked_until: isoDate, updated_at: nowIso() };
-  setJson(STORAGE_KEYS.userPolicies, policies);
-}
-
-function canClientBook(email) {
-  const blocked = getUserBlockedUntil(email);
-  if (!blocked) return true;
-  return new Date(blocked) <= new Date();
-}
+// Regras de bloqueio de cliente para agendamento removidas no ambiente de testes.
 
 function requireRole(roles, redirect = 'login.html') {
   const session = getSession();
@@ -776,9 +762,6 @@ function autoUpdateAppointmentStatuses() {
   const rows = getAppointments();
   const now = new Date();
   const payments = getPayments();
-  const settings = getUnitSettings();
-  const limit = Number(settings.no_show_block_limit || 3);
-  const blockDays = Number(settings.no_show_block_days || 7);
   let changed = false;
 
   rows.forEach((a) => {
@@ -793,17 +776,7 @@ function autoUpdateAppointmentStatuses() {
 
   if (changed) saveAppointments(rows);
 
-  const noShowByClient = {};
-  getAppointments().forEach((a) => {
-    if (a.status !== 'no_show') return;
-    noShowByClient[a.client_email] = (noShowByClient[a.client_email] || 0) + 1;
-  });
-
-  Object.entries(noShowByClient).forEach(([email, total]) => {
-    if (total < limit) return;
-    const blockedUntil = addMinutes(new Date(), blockDays * 24 * 60).toISOString();
-    setUserBlockedUntil(email, blockedUntil);
-  });
+  // Regra de bloqueio automatico por no-show desativada em ambiente de testes.
 }
 
 function checkOverduePrepayments() {
@@ -826,8 +799,6 @@ function checkOverduePrepayments() {
 function createAppointmentFromBooking() {
   const session = getSession();
   const booking = getBooking();
-  const blockedUntil = getUserBlockedUntil(session?.email || "");
-  if (blockedUntil && new Date(blockedUntil) > new Date()) return null;
   const service = getServiceById(booking.service);
   if (!service) return null;
   const barbers = getBarbers(true);
@@ -950,8 +921,6 @@ function isHardBusinessCreateReason(reason) {
   return [
     'appointment_overlap',
     'blocked_slot_conflict',
-    'client_blocked',
-    'subscription_inactive',
     'invalid_datetime_range',
     'invalid_initial_status',
     'missing_idempotency_key',

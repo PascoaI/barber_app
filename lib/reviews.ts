@@ -33,3 +33,25 @@ export async function submitAppointmentReview(input: { appointment_id: string; r
   });
   if (error) throw error;
 }
+
+export async function listMyReviewsByAppointment(appointmentIds: string[]) {
+  if (!appointmentIds.length) return {};
+  const user = await getCurrentUserContext();
+  const scopeBarbershopId = String(user.barbershop_id || user.tenant_id || user.unit_id || '');
+  const supabase = supabaseClient();
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id,appointment_id,rating,comment,created_at')
+    .eq('barbershop_id', scopeBarbershopId)
+    .eq('user_id', String(user.id))
+    .in('appointment_id', appointmentIds);
+
+  if (error) throw error;
+
+  const map: Record<string, any> = {};
+  (data || []).forEach((row: any) => {
+    map[String(row.appointment_id)] = row;
+  });
+  return map;
+}

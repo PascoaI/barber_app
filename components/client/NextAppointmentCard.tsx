@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, CircleCheckBig, Scissors } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -9,11 +9,18 @@ import { getCheckInWindowState, getNextAppointment, performClientCheckIn } from 
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { cancelAppointment, getAvailableSlots, getTodayDateInput, rescheduleAppointment } from '@/lib/client-booking';
 
 export function NextAppointmentCard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState(getTodayDateInput());
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string; label: string }>>([]);
+  const [selectedSlot, setSelectedSlot] = useState('');
   const [next, setNext] = useState<any>(null);
   const { toast } = useToast();
 
@@ -52,6 +59,35 @@ export function NextAppointmentCard() {
 
   const checkInSupportedStatus = ['pending', 'confirmed'].includes(status);
   const canCheckIn = checkInSupportedStatus && checkInState.available;
+  const canManage = ['pending', 'confirmed', 'awaiting_payment'].includes(status) && next?.start_datetime && new Date(next.start_datetime).getTime() > Date.now();
+
+  const selectedSlotData = useMemo(
+    () => availableSlots.find((slot) => slot.start === selectedSlot) || null,
+    [availableSlots, selectedSlot]
+  );
+
+  const loadRescheduleSlots = useCallback(async () => {
+    if (!next?.barber_id || !next?.services?.duration_minutes) return;
+    setSlotsLoading(true);
+    try {
+      const slots = await getAvailableSlots({
+        barberId: String(next.barber_id),
+        serviceDurationMinutes: Number(next.services.duration_minutes || 30),
+        dateInput: rescheduleDate,
+        editingAppointmentId: String(next.id)
+      });
+      setAvailableSlots(slots);
+    } catch {
+      toast('Falha ao carregar horarios para reagendamento.');
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [next?.barber_id, next?.id, next?.services?.duration_minutes, rescheduleDate, toast]);
+
+  useEffect(() => {
+    if (!rescheduleOpen) return;
+    void loadRescheduleSlots();
+  }, [loadRescheduleSlots, rescheduleOpen]);
 
   const confirmCheckIn = async () => {
     try {
@@ -124,6 +160,17 @@ export function NextAppointmentCard() {
               </button>
             ) : null}
 
+            {canManage ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button type="button" variant="outline" onClick={() => { setRescheduleOpen(true); setSelectedSlot(''); }}>
+                  Reagendar
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setCancelOpen(true)}>
+                  Cancelar
+                </Button>
+              </div>
+            ) : null}
+
             <Dialog open={confirmOpen}>
               <DialogContent className="border-emerald-400/35 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-0 shadow-[0_22px_70px_rgba(8,145,178,0.28)]">
                 <div className="relative overflow-hidden rounded-2xl p-5">
@@ -168,6 +215,118 @@ export function NextAppointmentCard() {
                         {busy ? 'Confirmando...' : 'Confirmar check-in'}
                       </Button>
                     </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={rescheduleOpen}>
+              <DialogContent className="max-w-2xl border-borderc/80 bg-slate-950">
+                <div className="grid gap-3">
+                  <h3 className="text-lg font-semibold">Reagendar atendimento</h3>
+                  <label className="grid gap-1 text-xs text-text-secondary">
+                    Nova data
+                    <input
+                      type="date"
+                      value={rescheduleDate}
+                      min={getTodayDateInput()}
+                      onChange={(event) => {
+                        setRescheduleDate(event.target.value);
+                        setSelectedSlot('');
+                      }}
+                      className="min-h-11 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary outline-none focus:border-primary/70"
+                    />
+                  </label>
+
+                  {slotsLoading ? (
+                    <p className="text-sm text-text-secondary">Carregando horarios...</p>
+                  ) : !availableSlots.length ? (
+                    <p className="text-sm text-text-secondary">Sem horarios livres nesta data.</p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {availableSlots.map((slot) => {
+                        const active = selectedSlot === slot.start;
+                        return (
+                          <button
+                            key={slot.start}
+                            type="button"
+                            onClick={() => setSelectedSlot(slot.start)}
+                            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                              active
+                                ? 'border-primary bg-primary/10 text-text-primary'
+                                : 'border-borderc bg-slate-950/40 text-text-secondary hover:border-primary/50'
+                            }`}
+                          >
+                            {slot.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button variant="outline" disabled={busy} onClick={() => setRescheduleOpen(false)}>
+                      Fechar
+                    </Button>
+                    <Button
+                      disabled={busy || !selectedSlotData}
+                      onClick={async () => {
+                        if (!selectedSlotData || !next?.id) return;
+                        try {
+                          setBusy(true);
+                          await rescheduleAppointment({
+                            appointmentId: String(next.id),
+                            startIso: selectedSlotData.start,
+                            endIso: selectedSlotData.end
+                          });
+                          toast('Agendamento reagendado com sucesso.');
+                          setRescheduleOpen(false);
+                          await loadNextAppointment();
+                        } catch (error: any) {
+                          toast(error?.message || 'Nao foi possivel reagendar.');
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {busy ? 'Reagendando...' : 'Confirmar reagendamento'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={cancelOpen}>
+              <DialogContent className="max-w-md border-borderc/80 bg-slate-950">
+                <div className="grid gap-3">
+                  <h3 className="text-lg font-semibold">Cancelar agendamento</h3>
+                  <p className="text-sm text-text-secondary">
+                    Deseja realmente cancelar seu proximo atendimento?
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button variant="outline" disabled={busy} onClick={() => setCancelOpen(false)}>
+                      Voltar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={busy}
+                      onClick={async () => {
+                        if (!next?.id) return;
+                        try {
+                          setBusy(true);
+                          await cancelAppointment(String(next.id));
+                          toast('Agendamento cancelado com sucesso.');
+                          setCancelOpen(false);
+                          await loadNextAppointment();
+                        } catch (error: any) {
+                          toast(error?.message || 'Nao foi possivel cancelar.');
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {busy ? 'Cancelando...' : 'Confirmar cancelamento'}
+                    </Button>
                   </div>
                 </div>
               </DialogContent>

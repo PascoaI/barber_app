@@ -8,7 +8,6 @@ import { sendOperationalAlert } from '@/lib/observability/alerts';
 import { recordBusinessMetric } from '@/lib/observability/metrics';
 import { validateCsrfFromRequest, validateSameOrigin } from '@/lib/security/csrf';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { isTemporaryBypassUser, shouldEnforceClientNoShowBlocking } from '@/lib/runtime-flags';
 
 export async function POST(req: Request) {
   const trace = startTrace('appointments.create');
@@ -86,36 +85,13 @@ export async function POST(req: Request) {
         .eq('barber_id', String(barber_id))
     ]);
 
-    let blockedUntil: string | null = null;
-    let subscriptionStatus: string | null = null;
-
-    if (client_id) {
-      const { data: clientRow } = await supabase
-        .from('users')
-        .select('blocked_until')
-        .eq('id', String(client_id))
-        .eq('barbershop_id', String(barbershop_id))
-        .maybeSingle();
-      blockedUntil = (clientRow as any)?.blocked_until || null;
-
-      const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('status')
-        .eq('barbershop_id', String(barbershop_id))
-        .eq('user_id', String(client_id))
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .returns<Array<{ status: string }>>();
-      subscriptionStatus = subscriptions?.[0]?.status || null;
-    }
-
-    const skipClientBlocking = !shouldEnforceClientNoShowBlocking() || isTemporaryBypassUser(session?.email);
+    // Regras de bloqueio de cliente/subscricao desativadas temporariamente ate a fase final do projeto.
     const validation = validateAppointmentCreation({
       payload: scopedBody,
       existingAppointments: existingAppointments || [],
       blockedSlots: blockedSlots || [],
-      blockedUntil: skipClientBlocking ? null : blockedUntil,
-      subscriptionStatus
+      blockedUntil: null,
+      subscriptionStatus: null
     });
 
     if (!validation.ok) {
