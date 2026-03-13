@@ -1,9 +1,10 @@
-export type AppointmentStatus = 'awaiting_payment' | 'pending' | 'confirmed' | 'canceled' | 'completed' | 'no_show';
+export type AppointmentStatus = 'awaiting_payment' | 'pending' | 'confirmed' | 'in_progress' | 'canceled' | 'completed' | 'no_show';
 
 const TRANSITIONS: Record<string, AppointmentStatus[]> = {
-  awaiting_payment: ['pending', 'confirmed', 'canceled'],
-  pending: ['confirmed', 'canceled', 'completed', 'no_show'],
-  confirmed: ['completed', 'canceled', 'no_show'],
+  awaiting_payment: ['pending', 'confirmed', 'in_progress', 'canceled', 'no_show'],
+  pending: ['confirmed', 'in_progress', 'canceled', 'completed', 'no_show'],
+  confirmed: ['in_progress', 'completed', 'canceled', 'no_show'],
+  in_progress: ['completed', 'canceled'],
   canceled: [],
   completed: [],
   no_show: []

@@ -151,7 +151,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         .select('*')
         .eq('barbershop_id', barbershopId)
         .eq('barber_id', String(appointment.barber_id))
-        .in('status', ['awaiting_payment', 'pending', 'confirmed']),
+        .in('status', ['awaiting_payment', 'pending', 'confirmed', 'in_progress']),
       supabase
         .from('blocked_slots')
         .select('*')

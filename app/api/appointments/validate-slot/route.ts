@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       .select('id,start_datetime,end_datetime,status,barber_id')
       .eq('barbershop_id', String(barbershop_id))
       .eq('barber_id', String(barber_id))
-      .in('status', ['awaiting_payment', 'pending', 'confirmed']);
+      .in('status', ['awaiting_payment', 'pending', 'confirmed', 'in_progress']);
 
     const conflicts = (appts || []).some((a: any) => {
       if (editing_appointment_id && String(a.id) === String(editing_appointment_id)) return false;

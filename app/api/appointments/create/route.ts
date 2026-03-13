@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         .select('id,start_datetime,end_datetime,status')
         .eq('barbershop_id', String(barbershop_id))
         .eq('barber_id', String(barber_id))
-        .in('status', ['awaiting_payment', 'pending', 'confirmed']),
+        .in('status', ['awaiting_payment', 'pending', 'confirmed', 'in_progress']),
       supabase
         .from('blocked_slots')
         .select('start_datetime,end_datetime')

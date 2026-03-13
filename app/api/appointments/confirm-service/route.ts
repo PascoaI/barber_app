@@ -72,8 +72,8 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!['pending', 'confirmed'].includes(String(appointment.status || ''))) {
-      return NextResponse.json({ error: 'Somente pendentes ou confirmados podem ser concluidos manualmente.', reason: 'invalid_status' }, { status: 409 });
+    if (!['pending', 'confirmed', 'in_progress'].includes(String(appointment.status || ''))) {
+      return NextResponse.json({ error: 'Somente agendados/em andamento podem ser concluidos manualmente.', reason: 'invalid_status' }, { status: 409 });
     }
 
     if (!canTransitionStatus(String(appointment.status), 'completed')) {
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       })
       .eq('id', appointmentId)
       .eq('barbershop_id', barbershopId)
-      .in('status', ['pending', 'confirmed'])
+      .in('status', ['pending', 'confirmed', 'in_progress'])
       .select('id,status,start_datetime,check_in_time,check_in_by,service_completed_at')
       .single();
 

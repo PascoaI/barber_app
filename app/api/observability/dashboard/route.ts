@@ -76,7 +76,7 @@ export async function GET() {
       .filter((value) => Number.isFinite(value) && value >= 0);
 
     const appointments = (appointmentsRes.data || []) as Array<{ status: string | null }>;
-    const convertibleStatuses = new Set(['pending', 'confirmed', 'scheduled', 'awaiting_payment', 'completed', 'cancelled', 'canceled', 'no_show']);
+    const convertibleStatuses = new Set(['pending', 'confirmed', 'scheduled', 'awaiting_payment', 'in_progress', 'completed', 'cancelled', 'canceled', 'no_show']);
     const conversionBase = appointments.filter((row) => convertibleStatuses.has(String(row.status || '').toLowerCase())).length;
     const completedCount = appointments.filter((row) => String(row.status || '').toLowerCase() === 'completed').length;
     const conversionRate = conversionBase > 0 ? (completedCount / conversionBase) * 100 : 0;

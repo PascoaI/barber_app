@@ -7,15 +7,29 @@ import { withCsrfHeaders } from '@/lib/security/csrf-client';
 export type BarberAppointmentRow = {
   id: string;
   start_datetime: string;
+  end_datetime?: string | null;
   created_at?: string | null;
   status: string;
   barber_id: string;
+  client_id?: string | null;
+  service_id?: string | null;
+  status_reason?: string | null;
   notes?: string | null;
   service_price?: number | null;
   service_name?: string | null;
+  delay_minutes?: number | null;
+  delay_reason?: string | null;
+  transferred_from_barber_id?: string | null;
+  transferred_to_barber_id?: string | null;
+  rescheduled_from?: string | null;
+  rescheduled_by?: string | null;
   client_name?: string | null;
   users?: { name?: string | null; email?: string | null } | null;
-  services?: { name?: string | null; price?: number | null } | null;
+  services?: { name?: string | null; price?: number | null; duration_minutes?: number | null } | null;
+  barbers?: { users?: { name?: string | null } | null } | null;
+  _displayClient?: string;
+  _displayService?: string;
+  _displayPrice?: number;
 };
 
 function startOfDay(date: Date) {
@@ -72,17 +86,18 @@ async function resolveCurrentBarberId() {
   return {
     barberId: String(barberRow.id),
     barbershopId: scopeBarbershopId,
-    userRole: String(user.role || '')
+    userRole: String(user.role || ''),
+    barberOptions: rows.map((row: any) => ({ id: String(row.id), name: String(row.name || row.users?.name || `Barbeiro ${row.id}`) }))
   };
 }
 
 export async function getBarberDashboardData() {
-  const { barberId, barbershopId } = await resolveCurrentBarberId();
+  const { barberId, barbershopId, barberOptions } = await resolveCurrentBarberId();
   const supabase = supabaseClient();
 
   const { data, error } = await supabase
     .from('appointments')
-    .select('id,start_datetime,created_at,status,notes,barber_id,service_price,service_name,client_name,users(name,email),services(name,price)')
+    .select('id,start_datetime,end_datetime,created_at,status,status_reason,notes,barber_id,client_id,service_id,service_price,service_name,client_name,delay_minutes,delay_reason,transferred_from_barber_id,transferred_to_barber_id,rescheduled_from,rescheduled_by,users(name,email),services(name,price,duration_minutes),barbers(users(name))')
     .eq('barbershop_id', barbershopId)
     .eq('barber_id', barberId)
     .order('start_datetime', { ascending: true })
@@ -122,6 +137,7 @@ export async function getBarberDashboardData() {
 
   return {
     barberId,
+    barberOptions,
     appointments: normalizedRows,
     earningsToday,
     earningsWeek
@@ -139,4 +155,94 @@ export async function concludeBarberService(appointmentId: string) {
     throw new Error(result?.reason || result?.error || 'conclude_service_failed');
   }
   return result.appointment;
+}
+
+async function patchBarberAppointment(appointmentId: string, payload: Record<string, any>) {
+  const response = await fetch(`/api/barber/appointments/${encodeURIComponent(appointmentId)}`, withCsrfHeaders({
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }));
+  const result = await response.json();
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.reason || result?.error || 'barber_appointment_patch_failed');
+  }
+  return result.appointment;
+}
+
+export async function updateBarberAppointmentStatus(input: {
+  appointmentId: string;
+  toStatus: 'in_progress' | 'completed' | 'no_show' | 'canceled';
+  reason?: string;
+}) {
+  return patchBarberAppointment(input.appointmentId, {
+    action: 'status',
+    to_status: input.toStatus,
+    reason: input.reason || undefined
+  });
+}
+
+export async function signalBarberAppointmentDelay(input: {
+  appointmentId: string;
+  delayMinutes: number;
+  delayReason?: string;
+}) {
+  return patchBarberAppointment(input.appointmentId, {
+    action: 'delay',
+    delay_minutes: input.delayMinutes,
+    delay_reason: input.delayReason || undefined
+  });
+}
+
+export async function rescheduleBarberAppointment(input: {
+  appointmentId: string;
+  startIso: string;
+  endIso?: string;
+  durationMinutes?: number;
+}) {
+  return patchBarberAppointment(input.appointmentId, {
+    action: 'reschedule',
+    start_datetime: input.startIso,
+    end_datetime: input.endIso,
+    duration_minutes: input.durationMinutes
+  });
+}
+
+export async function transferBarberAppointment(input: {
+  appointmentId: string;
+  toBarberId: string;
+  startIso?: string;
+  endIso?: string;
+}) {
+  return patchBarberAppointment(input.appointmentId, {
+    action: 'transfer',
+    to_barber_id: input.toBarberId,
+    start_datetime: input.startIso,
+    end_datetime: input.endIso
+  });
+}
+
+export async function getBarberAppointmentClientContext(appointmentId: string) {
+  const response = await fetch(`/api/barber/appointments/${encodeURIComponent(appointmentId)}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+  const result = await response.json();
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.reason || result?.error || 'barber_appointment_context_failed');
+  }
+  return result.context;
+}
+
+export function getOperationalStatusLabel(status: string) {
+  const key = String(status || '').toLowerCase();
+  if (['awaiting_payment', 'pending', 'confirmed'].includes(key)) return 'AGENDADO';
+  if (key === 'in_progress') return 'EM_ANDAMENTO';
+  if (key === 'completed') return 'CONCLUIDO';
+  if (key === 'no_show') return 'NO_SHOW';
+  if (key === 'canceled' || key === 'cancelled') return 'CANCELADO';
+  return String(status || '').toUpperCase();
 }

@@ -41,7 +41,7 @@ export async function getAdminKpis() {
   const noShows = appointments.filter((a: any) => a.status === 'no_show').length;
   const noShowRate = appointments.length ? (noShows / appointments.length) * 100 : 0;
   const forecast = appointments
-    .filter((a: any) => ['pending', 'confirmed', 'awaiting_payment'].includes(a.status) && new Date(a.start_datetime) >= new Date())
+    .filter((a: any) => ['pending', 'confirmed', 'awaiting_payment', 'in_progress'].includes(a.status) && new Date(a.start_datetime) >= new Date())
     .reduce((acc: number, a: any) => acc + Number(a.services?.price || 0), 0);
 
   return {
@@ -65,7 +65,7 @@ export async function getOccupancyByBarber() {
 
   const [barbersRes, apptRes, blockedRes, settingsRes] = await Promise.all([
     supabase.from('barbers').select('id,users(name)').eq('barbershop_id', scopeBarbershopId),
-    supabase.from('appointments').select('id,barber_id,start_datetime,end_datetime,status').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', weekStart.toISOString()).in('status', ['pending', 'confirmed', 'awaiting_payment', 'completed']),
+    supabase.from('appointments').select('id,barber_id,start_datetime,end_datetime,status').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', weekStart.toISOString()).in('status', ['pending', 'confirmed', 'awaiting_payment', 'in_progress', 'completed']),
     supabase.from('blocked_slots').select('barber_id,start_datetime,end_datetime').eq('barbershop_id', scopeBarbershopId).gte('start_datetime', weekStart.toISOString()),
     supabase.from('unit_settings').select('opening_time,closing_time').eq('barbershop_id', scopeBarbershopId).single()
   ]);

@@ -132,7 +132,7 @@ export async function getAvailableSlots(params: {
       .eq('barber_id', params.barberId)
       .gte('start_datetime', dayStart.toISOString())
       .lte('start_datetime', dayEnd.toISOString())
-      .in('status', ['awaiting_payment', 'pending', 'confirmed']),
+      .in('status', ['awaiting_payment', 'pending', 'confirmed', 'in_progress']),
     supabase
       .from('blocked_slots')
       .select('*')
