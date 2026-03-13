@@ -70,7 +70,7 @@ function initLoginPage() {
     const user = base || (barber ? { email: barber.email, password: barber.password, role: 'barber', name: barber.name, barberId: barber.id, unit_id: barber.unit_id } : null);
 
     if (!user) {
-      if (feedback) feedback.textContent = 'Credenciais invÃ¡lidas.';
+      if (feedback) feedback.textContent = 'Credenciais inválidas.';
       return;
     }
 
@@ -82,7 +82,7 @@ function initLoginPage() {
     if (user.role === 'admin') {
       const shop = getBarbershops().find((s) => s.email.toLowerCase() === user.email.toLowerCase() || s.id === user.unit_id);
       if (shop && ['suspended', 'disabled'].includes(shop.status)) {
-        if (feedback) feedback.textContent = shop.status === 'suspended' ? 'Acesso desta barbearia estÃ¡ suspenso.' : 'Acesso desta barbearia estÃ¡ desativado.';
+        if (feedback) feedback.textContent = shop.status === 'suspended' ? 'Acesso desta barbearia está suspenso.' : 'Acesso desta barbearia está desativado.';
         return;
       }
     }
@@ -131,7 +131,7 @@ function initSuperAdminLoginPage() {
 
     const user = getPlatformUsers().find((u) => u.role === 'super_admin' && normalizeCredential(u.email).toLowerCase() === email && normalizeCredential(u.password) === password);
     if (!user) {
-      if (feedback) feedback.textContent = 'Credenciais do SuperAdmin invÃ¡lidas.';
+      if (feedback) feedback.textContent = 'Credenciais do SuperAdmin inválidas.';
       return;
     }
 
@@ -189,7 +189,7 @@ function initServicePage() {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = `service-card ${b.service === s.id ? 'active' : ''}`;
-    card.innerHTML = `<span class="service-bg">${s.emoji}</span><span class="service-title">${s.name}</span><span class="service-price">${asCurrency(s.price)} Â· ${s.duration_minutes} min</span>`;
+    card.innerHTML = `<span class="service-bg">${s.emoji}</span><span class="service-title">${s.name}</span><span class="service-price">${asCurrency(s.price)} · ${s.duration_minutes} min</span>`;
     card.addEventListener('click', () => {
       if (isEditMode) saveBooking({ service: s.id });
       else saveBooking({ service: s.id, professional: '', date: '', time: '' });
@@ -215,7 +215,7 @@ function initProfessionalPage() {
   if (!b.service) return (window.location.href = 'booking-service.html');
   const isEditMode = new URLSearchParams(window.location.search).get('edit') === 'professional';
 
-  const pros = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferÃªncia', avatar: 'â­' }];
+  const pros = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência', avatar: '⭐' }];
   pros.forEach((p) => {
     const card = document.createElement('button');
     card.type = 'button';
@@ -262,12 +262,12 @@ function initDatetimePage() {
     const city = BASE_DATA.cities.find((c) => c.id === cur.city);
     const branch = city?.branches.find((x) => x.id === cur.branch);
     const selectedService = getServiceById(cur.service);
-    const selectedProfessional = cur.professional === 'sem-preferencia' ? { name: 'Sem preferÃªncia' } : getBarbers().find((x) => x.id === cur.professional);
-    if (summaryServiceEl) summaryServiceEl.textContent = `ServiÃ§o: ${selectedService?.name || '-'}`;
+    const selectedProfessional = cur.professional === 'sem-preferencia' ? { name: 'Sem preferência' } : getBarbers().find((x) => x.id === cur.professional);
+    if (summaryServiceEl) summaryServiceEl.textContent = `Serviço: ${selectedService?.name || '-'}`;
     if (summaryPriceEl) summaryPriceEl.textContent = `Valor a partir de: ${asCurrency(selectedService?.price || 0)}`;
     if (summaryLocationEl) summaryLocationEl.textContent = `Local: ${branch?.name || '-'}`;
     if (summaryProfessionalEl) summaryProfessionalEl.textContent = `Profissional: ${selectedProfessional?.name || '-'}`;
-    if (summaryTimeEl) summaryTimeEl.textContent = `HorÃ¡rio: ${cur.time || '-'}`;
+    if (summaryTimeEl) summaryTimeEl.textContent = `Horário: ${cur.time || '-'}`;
   }
 
   function render() {
@@ -327,12 +327,12 @@ function initBookingReviewPage() {
   const city = BASE_DATA.cities.find((c) => c.id === b.city);
   const branch = city?.branches.find((x) => x.id === b.branch);
   const service = getServiceById(b.service);
-  const barber = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferÃªncia' }].find((x) => x.id === b.professional);
+  const barber = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência' }].find((x) => x.id === b.professional);
 
   list.innerHTML = [
-    ['ðŸŒ', city?.name, 'RegiÃ£o', 'booking-location.html?edit=location'],
+    ['ðŸŒ', city?.name, 'Região', 'booking-location.html?edit=location'],
     ['ðŸ“', branch?.name, 'Unidade', 'booking-location.html?edit=location'],
-    ['ðŸ’ˆ', `${service?.name} (${service?.duration_minutes} min)`, 'ServiÃ§o', 'booking-service.html?edit=service'],
+    ['ðŸ’ˆ', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html?edit=service'],
     ['ðŸ‘¤', barber?.name, 'Profissional', 'booking-professional.html?edit=professional'],
     ['ðŸ“…', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html?edit=datetime']
   ]
@@ -350,7 +350,7 @@ function initBookingReviewPage() {
     action.textContent = 'Efetuar login para continuar';
     action.disabled = false;
   } else if (!hasRole('client')) {
-    action.textContent = 'Perfil administrativo nÃ£o agenda por esta tela';
+    action.textContent = 'Perfil administrativo não agenda por esta tela';
     action.disabled = true;
   } else {
     action.textContent = 'Confirmar agendamento';
@@ -379,8 +379,8 @@ function initBookingReviewPage() {
     if (!hasRole('client')) return;
     const apt = createAppointmentFromBooking();
     if (!apt) {
-      if (feedback) feedback.textContent = 'HorÃ¡rio indisponÃ­vel ou dados invÃ¡lidos. Volte e selecione outro horÃ¡rio/profissional.';
-      action.textContent = 'HorÃ¡rio indisponÃ­vel. Escolha outro.';
+      if (feedback) feedback.textContent = 'Horário indisponível ou dados inválidos. Volte e selecione outro horário/profissional.';
+      action.textContent = 'Horário indisponível. Escolha outro.';
       return;
     }
 
@@ -395,21 +395,21 @@ function initBookingReviewPage() {
     });
     if (!validation.ok) {
       if (!isTechnicalValidationReason(validation.reason)) {
-        if (feedback) feedback.textContent = `HorÃ¡rio indisponÃ­vel (${validation.reason || 'server_validation'}).`;
-        action.textContent = 'HorÃ¡rio indisponÃ­vel. Escolha outro.';
+        if (feedback) feedback.textContent = `Horário indisponível (${validation.reason || 'server_validation'}).`;
+        action.textContent = 'Horário indisponível. Escolha outro.';
         return;
       }
-      if (feedback) feedback.textContent = 'ValidaÃ§Ã£o do servidor indisponÃ­vel no momento. Tentando concluir mesmo assim.';
+      if (feedback) feedback.textContent = 'Validação do servidor indisponível no momento. Tentando concluir mesmo assim.';
     }
 
     const serverCreation = await createAppointmentServerSide(apt);
     if (!serverCreation.ok) {
       if (isHardBusinessCreateReason(serverCreation.reason)) {
-        if (feedback) feedback.textContent = `HorÃ¡rio indisponÃ­vel (${serverCreation.reason}).`;
-        action.textContent = 'HorÃ¡rio indisponÃ­vel. Escolha outro.';
+        if (feedback) feedback.textContent = `Horário indisponível (${serverCreation.reason}).`;
+        action.textContent = 'Horário indisponível. Escolha outro.';
         return;
       }
-      if (feedback) feedback.textContent = `Agendamento salvo localmente. Falha na sincronizaÃ§Ã£o com servidor (${serverCreation.reason}).`;
+      if (feedback) feedback.textContent = `Agendamento salvo localmente. Falha na sincronização com servidor (${serverCreation.reason}).`;
     } else {
       logAudit('appointment_server_synced', { appointment_id: apt.id, server_appointment_id: serverCreation.appointment?.id || null });
     }
@@ -417,7 +417,7 @@ function initBookingReviewPage() {
     const rows = getAppointments();
     const duplicated = rows.find((r) => r.idempotency_key && r.idempotency_key === apt.idempotency_key);
     if (duplicated) {
-      if (feedback) feedback.textContent = 'Agendamento jÃ¡ confirmado anteriormente para este horÃ¡rio.';
+      if (feedback) feedback.textContent = 'Agendamento já confirmado anteriormente para este horário.';
       action.disabled = true;
       return;
     }
@@ -447,7 +447,7 @@ function initBookingReviewPage() {
     }
 
     action.disabled = true;
-    if (feedback) feedback.textContent = 'Agendamento concluÃ­do com sucesso!';
+    if (feedback) feedback.textContent = 'Agendamento concluído com sucesso!';
 
     if (successModal) {
       successModal.classList.remove('hidden');
@@ -635,7 +635,7 @@ function renderAppointmentCard(a, canManage = false) {
   const actionButtons = canManage
     ? `<div class="form-row"><button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button><button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button><button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button></div>`
     : '';
-  return `<article class="schedule-item"><h3>${a.service_name} Â· ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} Â· ${a.client_name || 'Cliente'} Â· <span class="status-badge status-${a.status}">${getBookingStatusLabel(a.status)}</span></p><small>${a.branch} - ${a.city}</small>${actionButtons}</article>`;
+  return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.client_name || 'Cliente'} · <span class="status-badge status-${a.status}">${getBookingStatusLabel(a.status)}</span></p><small>${a.branch} - ${a.city}</small>${actionButtons}</article>`;
 }
 
 
@@ -738,7 +738,7 @@ function initAdminBarbersPage() {
   function render() {
     const rows = getBarbers();
     listEl.innerHTML = rows
-      .map((b) => `<article class="schedule-item"><h3>${b.name}</h3><p>${b.email} Â· comissÃ£o ${b.commission_percentage}% Â· ${b.active ? 'ativo' : 'inativo'}</p><div class="form-row"><button class="button button-secondary" type="button" data-edit="${b.id}">Editar</button><button class="button button-secondary" type="button" data-delete="${b.id}">Excluir</button></div></article>`)
+      .map((b) => `<article class="schedule-item"><h3>${b.name}</h3><p>${b.email} · comissão ${b.commission_percentage}% · ${b.active ? 'ativo' : 'inativo'}</p><div class="form-row"><button class="button button-secondary" type="button" data-edit="${b.id}">Editar</button><button class="button button-secondary" type="button" data-delete="${b.id}">Excluir</button></div></article>`)
       .join('');
 
     listEl.querySelectorAll('[data-edit]').forEach((btn) => {
@@ -816,7 +816,7 @@ function initBlockedSlotsPage() {
       return;
     }
     listEl.innerHTML = rows
-      .map((b) => `<article class="schedule-item"><h3>${b.barber_name}</h3><p>${new Date(b.start_datetime).toLocaleString('pt-BR')} atÃ© ${new Date(b.end_datetime).toLocaleString('pt-BR')}</p><small>${b.reason}</small><div class="form-row"><button class="button button-secondary" data-delete="${b.id}" type="button">Excluir bloqueio</button></div></article>`)
+      .map((b) => `<article class="schedule-item"><h3>${b.barber_name}</h3><p>${new Date(b.start_datetime).toLocaleString('pt-BR')} até ${new Date(b.end_datetime).toLocaleString('pt-BR')}</p><small>${b.reason}</small><div class="form-row"><button class="button button-secondary" data-delete="${b.id}" type="button">Excluir bloqueio</button></div></article>`)
       .join('');
 
     listEl.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -1114,7 +1114,7 @@ function initAdminDashboard() {
     const pageRows = sortedQueueRows.slice(pageStart, pageStart + queuePageSize);
 
     const queueList = pageRows
-      .map((a) => `<article class="admin-list-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)}</p><small>${a.barber_name} Â· ${getBookingStatusLabel(a.status)}</small></article>`)
+      .map((a) => `<article class="admin-list-item"><h3>${a.service_name}</h3><p>${formatBookingDateTime(a.appointment_date, a.start_time)}</p><small>${a.barber_name} · ${getBookingStatusLabel(a.status)}</small></article>`)
       .join('');
 
     const queueControls = sortedQueueRows.length > queuePageSize
@@ -1122,7 +1122,7 @@ function initAdminDashboard() {
         <div class="mt-2 flex items-center justify-between gap-2">
           <button type="button" class="button button-secondary !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-queue-prev ${queuePage === 0 ? 'disabled' : ''}>Anterior</button>
           <small class="text-text-secondary">Parte ${queuePage + 1} de ${totalPages}</small>
-          <button type="button" class="button button-primary !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-queue-next ${queuePage >= totalPages - 1 ? 'disabled' : ''}>PrÃ³ximos 3</button>
+          <button type="button" class="button button-primary !min-h-10 !px-4 !text-xs md:!text-sm rounded-xl" data-queue-next ${queuePage >= totalPages - 1 ? 'disabled' : ''}>Próximos 3</button>
         </div>
       `
       : '';
@@ -1173,7 +1173,7 @@ function initAdminDashboard() {
             ` : ""}
       <div class="grid gap-2 md:grid-cols-2">
         <article class="admin-list-item"><h3>Faturamento</h3><p>${asCurrency(revenue)}</p></article>
-        <article class="admin-list-item"><h3>Ticket mÃ©dio</h3><p>${asCurrency(avgTicket)}</p></article>
+        <article class="admin-list-item"><h3>Ticket médio</h3><p>${asCurrency(avgTicket)}</p></article>
       </div>
     `;
   };
@@ -1241,7 +1241,7 @@ function initClientHomePage() {
   const nextWrap = document.getElementById('client-next-appointment');
   if (nextWrap) {
     if (!next) {
-      nextWrap.innerHTML = `<article class="schedule-item"><h3>PrÃ³ximo agendamento</h3><p>Nenhum horÃ¡rio futuro encontrado.</p></article>`;
+      nextWrap.innerHTML = `<article class="schedule-item"><h3>Próximo agendamento</h3><p>Nenhum horário futuro encontrado.</p></article>`;
     } else {
       const minutesToStart = (new Date(next.start_datetime || 0).getTime() - Date.now()) / 60000;
       const checkInWindowOpen = Number.isFinite(minutesToStart) && minutesToStart >= 15 && minutesToStart <= 30;
@@ -1261,7 +1261,7 @@ function initClientHomePage() {
           <div class="relative grid gap-4">
             <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary/90">PrÃ³ximo agendamento</p>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary/90">Próximo agendamento</p>
                 <h3 class="text-xl font-semibold text-text-primary md:text-2xl">${next.service_name}</h3>
               </div>
 
@@ -1461,7 +1461,7 @@ function initStockPage() {
   function render() {
     const rows = getProducts();
     listEl.innerHTML = rows
-      .map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>Quantidade: ${p.quantity} Â· MÃ­nimo: ${p.minimum_stock}</p><div class="form-row"><button type="button" class="button button-secondary" data-edit="${p.id}">Editar</button><button type="button" class="button button-secondary" data-delete="${p.id}">Excluir</button></div></article>`)
+      .map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>Quantidade: ${p.quantity} · Mínimo: ${p.minimum_stock}</p><div class="form-row"><button type="button" class="button button-secondary" data-edit="${p.id}">Editar</button><button type="button" class="button button-secondary" data-delete="${p.id}">Excluir</button></div></article>`)
       .join('');
 
     listEl.querySelectorAll('[data-edit]').forEach((btn) => {
@@ -1517,7 +1517,7 @@ function initClientSubscriptionsPage() {
 
   const session = getSession();
   if (!session || !hasRole('client')) {
-    root.innerHTML = '<div class="empty-state"><h2>FaÃ§a login como cliente</h2><p>VocÃª precisa entrar para assinar um plano.</p><a class="button button-primary" href="login.html?redirect=client-subscriptions.html">Efetuar login</a></div>';
+    root.innerHTML = '<div class="empty-state"><h2>Faça login como cliente</h2><p>Você precisa entrar para assinar um plano.</p><a class="button button-primary" href="login.html?redirect=client-subscriptions.html">Efetuar login</a></div>';
     return;
   }
 
@@ -1529,15 +1529,15 @@ function initClientSubscriptionsPage() {
   const subscriptions = getSubscriptions();
   const currentSub = subscriptions.filter((s) => s.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
   const active = currentSub && currentSub.status === 'active' ? currentSub : null;
-  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>âš  Plano vencido</h3><p>Seu status atual Ã© <strong>${currentSub.status}</strong>. O consumo de sessÃµes estÃ¡ bloqueado atÃ© regularizaÃ§Ã£o.</p></article>` : '';
+  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>âš  Plano vencido</h3><p>Seu status atual é <strong>${currentSub.status}</strong>. O consumo de sessões está bloqueado até regularização.</p></article>` : '';
   root.innerHTML = `
     ${expiredBanner}<section class="subscription-info-stack">
-      ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>SessÃµes restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>VÃ¡lido atÃ© ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para comeÃ§ar.</p></article>`}
-      <article class=\"schedule-item subscription-static-card\"><h3>InformaÃ§Ãµes da assinatura</h3><p>Os planos sÃ£o renovados mensalmente.</p><small>VocÃª pode cancelar e contratar novamente quando quiser.</small></article>
+      ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
+      <article class=\"schedule-item subscription-static-card\"><h3>Informações da assinatura</h3><p>Os planos são renovados mensalmente.</p><small>Você pode cancelar e contratar novamente quando quiser.</small></article>
     </section>
     <section class="subscription-plans-stack">
-      <article class=\"schedule-item subscription-static-card\"><h3>Planos disponÃ­veis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
-      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card subscription-clickable-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mÃªs</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mÃªs`}</p><small>${(p.benefits || []).join(' â€¢ ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[ðŸ¥‰ðŸ¥ˆðŸ¥‡]\s*/, '')}</button></div></article>`).join('')}
+      <article class=\"schedule-item subscription-static-card\"><h3>Planos disponíveis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
+      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card subscription-clickable-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' â€¢ ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[ðŸ¥‰ðŸ¥ˆðŸ¥‡]\s*/, '')}</button></div></article>`).join('')}
     </section>
   `;
 
@@ -1545,7 +1545,7 @@ function initClientSubscriptionsPage() {
     btn.addEventListener('click', async () => {
       const plan = plans.find((x) => x.id === btn.dataset.subscribe);
       if (!plan) return;
-      if (!(await confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mÃªs?`))) return;
+      if (!(await confirmAction(`Confirmar assinatura do ${plan.name} por ${asCurrency(plan.price)} / mês?`))) return;
       const rows = getSubscriptions().filter((s) => s.user_id !== session.email);
       rows.unshift({
         id: `sub_${Date.now()}`,
@@ -1583,14 +1583,14 @@ function initClientHistoryPage() {
     const pay = payments.find((p) => p.appointment_id === a.id);
     const rev = reviews.find((r) => r.appointment_id === a.id);
     const usedSub = usage.some((u) => u.appointment_id === a.id);
-    const reviewAction = a.status === 'completed' && !rev ? `<button class="button button-secondary" data-review="${a.id}">Avaliar</button>` : (rev ? `<small>AvaliaÃ§Ã£o: ${rev.rating}/5</small>` : '');
-    return `<article class="schedule-item"><h3>${a.service_name} Â· ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} Â· ${a.branch}</p><small>Status: ${a.status} Â· Pago: ${asCurrency(pay?.amount || a.service_price)} Â· Assinatura: ${usedSub ? 'Sim' : 'NÃ£o'}</small><div class="form-row">${reviewAction}</div></article>`;
-  }).join('') || '<article class="schedule-item"><h3>HistÃ³rico vazio</h3></article>';
+    const reviewAction = a.status === 'completed' && !rev ? `<button class="button button-secondary" data-review="${a.id}">Avaliar</button>` : (rev ? `<small>Avaliação: ${rev.rating}/5</small>` : '');
+    return `<article class="schedule-item"><h3>${a.service_name} · ${formatBookingDateTime(a.appointment_date, a.start_time)}</h3><p>${a.barber_name} · ${a.branch}</p><small>Status: ${a.status} · Pago: ${asCurrency(pay?.amount || a.service_price)} · Assinatura: ${usedSub ? 'Sim' : 'Não'}</small><div class="form-row">${reviewAction}</div></article>`;
+  }).join('') || '<article class="schedule-item"><h3>Histórico vazio</h3></article>';
   root.querySelectorAll('[data-review]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const rating = Number(prompt('Avalie de 1 a 5', '5') || 0);
       if (rating < 1 || rating > 5) return;
-      const comment = prompt('ComentÃ¡rio (opcional)', '') || '';
+      const comment = prompt('Comentário (opcional)', '') || '';
       const rows = getJson(STORAGE_KEYS.reviews, []);
       if (rows.some((r) => r.appointment_id === btn.dataset.review)) return;
       rows.unshift({ id: `rev_${Date.now()}`, appointment_id: btn.dataset.review, rating, comment, created_at: nowIso() });
@@ -1673,7 +1673,7 @@ function initClientNotificationsPage() {
     return;
   }
   const rows = getNotifications().filter((n) => n.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  root.innerHTML = rows.map((n) => `<article class="schedule-item"><h3>${n.type}</h3><p>${n.status}</p><small>${new Date(n.created_at || nowIso()).toLocaleString('pt-BR')}</small></article>`).join('') || '<article class="schedule-item"><h3>Sem notificaÃ§Ãµes</h3></article>';
+  root.innerHTML = rows.map((n) => `<article class="schedule-item"><h3>${n.type}</h3><p>${n.status}</p><small>${new Date(n.created_at || nowIso()).toLocaleString('pt-BR')}</small></article>`).join('') || '<article class="schedule-item"><h3>Sem notificações</h3></article>';
 }
 
 function initSubscriptionsPage() {
@@ -1695,9 +1695,9 @@ function initSubscriptionsPage() {
   });
 
   root.innerHTML = `
-    <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Exibindo apenas planos ativos implementÃ¡veis.</small></article>
-    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mÃªs â€¢ ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' â€¢ ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
-    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} â€” Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' Â· ') : 'Nenhuma assinatura ativa'}</p></article>
+    <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Exibindo apenas planos ativos implementáveis.</small></article>
+    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês â€¢ ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' â€¢ ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
+    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} â€” Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
   `;
 }
 
