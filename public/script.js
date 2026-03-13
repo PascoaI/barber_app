@@ -1482,11 +1482,11 @@ function initBookingReviewPage() {
   const barber = [...getBarbers(true), { id: 'sem-preferencia', name: 'Sem preferência' }].find((x) => x.id === b.professional);
 
   list.innerHTML = [
-    ['ðŸŒ', city?.name, 'Região', 'booking-location.html?edit=location'],
-    ['ðŸ“', branch?.name, 'Unidade', 'booking-location.html?edit=location'],
-    ['ðŸ’ˆ', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html?edit=service'],
-    ['ðŸ‘¤', barber?.name, 'Profissional', 'booking-professional.html?edit=professional'],
-    ['ðŸ“…', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html?edit=datetime']
+    ['🌍', city?.name, 'Região', 'booking-location.html?edit=location'],
+    ['📍', branch?.name, 'Unidade', 'booking-location.html?edit=location'],
+    ['💈', `${service?.name} (${service?.duration_minutes} min)`, 'Serviço', 'booking-service.html?edit=service'],
+    ['👤', barber?.name, 'Profissional', 'booking-professional.html?edit=professional'],
+    ['📅', formatBookingDateTime(b.date, b.time), 'Data e hora', 'booking-datetime.html?edit=datetime']
   ]
     .map((row) => `<article class="review-item"><div class="review-icon">${row[0]}</div><div><h3>${row[1] || '-'}</h3><p>${row[2]}</p></div><a class="review-edit" href="${row[3]}">Alterar</a></article>`)
     .join('');
@@ -1927,7 +1927,7 @@ function initAdminBarbersPage() {
       commission_percentage: Number(commissionEl.value || 0),
       active: activeEl.checked,
       unit_id: APP_CONFIG.unitId,
-      avatar: 'ðŸ’ˆ',
+      avatar: '💈',
       updated_at: nowIso()
     };
 
@@ -2425,29 +2425,29 @@ function initClientHomePage() {
 
             <div class="grid gap-3 md:grid-cols-2">
               <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
-                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">ðŸ“…</span> Data e hora</p>
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">📅</span> Data e hora</p>
                 <p class="text-sm font-semibold text-text-primary">${formatBookingDateTime(next.appointment_date, next.start_time)}</p>
               </div>
               <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
-                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">ðŸ’ˆ</span> Profissional</p>
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">💈</span> Profissional</p>
                 <p class="text-sm font-semibold text-text-primary">${next.barber_name}</p>
               </div>
               <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
-                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">ðŸ“</span> Unidade</p>
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">📍</span> Unidade</p>
                 <p class="text-sm font-semibold text-text-primary">${next.branch}</p>
               </div>
               <div class="rounded-xl border border-borderc/70 bg-slate-950/35 px-3 py-2.5 transition-all duration-200 hover:border-primary/35 hover:bg-slate-900/55">
-                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">ðŸŒ†</span> Cidade</p>
+                <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-text-secondary"><span aria-hidden="true">🌆</span> Cidade</p>
                 <p class="text-sm font-semibold text-text-primary">${next.city || 'Porto Alegre'}</p>
               </div>
             </div>
 
             <div class="grid gap-2 md:grid-cols-2">
               <button class="button button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary bg-primary text-zinc-900 hover:bg-primary-dark hover:shadow-md hover:scale-[1.01] active:scale-[0.99]" data-client-reschedule="${next.id}">
-                <span aria-hidden="true">â†»</span> Reagendar
+                  <span aria-hidden="true">↻</span> Reagendar
               </button>
               <button class="button button-secondary inline-flex items-center justify-center gap-2 rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary border border-borderc bg-surface text-text-primary hover:border-primary/70 hover:shadow-md hover:scale-[1.01] active:scale-[0.99]" data-client-cancel="${next.id}">
-                <span aria-hidden="true">âœ•</span> Cancelar
+                  <span aria-hidden="true">✕</span> Cancelar
               </button>
             </div>
             ${['pending', 'confirmed'].includes(String(next.status || '')) && !canCheckIn ? `
@@ -2681,7 +2681,7 @@ function initClientSubscriptionsPage() {
   const subscriptions = getSubscriptions();
   const currentSub = subscriptions.filter((s) => s.user_id === session.email).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
   const active = currentSub && currentSub.status === 'active' ? currentSub : null;
-  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>âš  Plano vencido</h3><p>Seu status atual é <strong>${currentSub.status}</strong>. O consumo de sessões está bloqueado até regularização.</p></article>` : '';
+  const expiredBanner = currentSub && currentSub.status !== 'active' ? `<article class="schedule-item"><h3>⚠ Plano vencido</h3><p>Seu status atual é <strong>${currentSub.status}</strong>. O consumo de sessões está bloqueado até regularização.</p></article>` : '';
   root.innerHTML = `
     ${expiredBanner}<section class="subscription-info-stack">
       ${active ? `<article class=\"schedule-item subscription-static-card\"><h3>Assinatura ativa</h3><p>Plano: <strong>${active.plan_name || active.plan_id}</strong></p><p>Sessões restantes: ${active.remaining_sessions >= 9999 ? 'Ilimitadas' : active.remaining_sessions}</p><small>Válido até ${new Date(active.expires_at).toLocaleDateString('pt-BR')}</small></article>` : `<article class=\"schedule-item subscription-static-card\"><h3>Sem assinatura ativa</h3><p>Escolha um plano abaixo para começar.</p></article>`}
@@ -2689,7 +2689,7 @@ function initClientSubscriptionsPage() {
     </section>
     <section class="subscription-plans-stack">
       <article class=\"schedule-item subscription-static-card\"><h3>Planos disponíveis</h3><p>Escolha seu plano e confirme a assinatura.</p></article>
-      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card subscription-clickable-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' â€¢ ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[ðŸ¥‰ðŸ¥ˆðŸ¥‡]\s*/, '')}</button></div></article>`).join('')}
+      ${plans.map((p) => `<article class=\"schedule-item subscription-plan-card subscription-clickable-card\"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês</p><p>${p.sessions_per_month >= 9999 ? 'Cortes ilimitados' : `${p.sessions_per_month} cortes por mês`}</p><small>${(p.benefits || []).join(' • ')}</small><div class=\"form-row\"><button class=\"button button-primary\" data-subscribe=\"${p.id}\">Escolher ${p.name.replace(/^[🥉🥈🥇]\s*/, '')}</button></div></article>`).join('')}
     </section>
   `;
 
@@ -2848,8 +2848,8 @@ function initSubscriptionsPage() {
 
   root.innerHTML = `
     <article class="schedule-item"><h3>Resumo de assinaturas</h3><p>Total ativas: <strong>${activeSubs.length}</strong></p><small>Exibindo apenas planos ativos implementáveis.</small></article>
-    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês â€¢ ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' â€¢ ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
-    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} â€” Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
+    ${plans.map((p) => `<article class="schedule-item"><h3>${p.name}</h3><p>${asCurrency(p.price)} / mês • ${p.sessions_per_month} cortes</p><small>${(p.benefits || []).join(' • ') || '-'}</small><p>Clientes assinantes: <strong>${byPlan[p.id] || 0}</strong></p></article>`).join('')}
+    <article class="schedule-item"><h3>Assinaturas ativas (detalhado)</h3><p>${activeSubs.length ? activeSubs.map((s) => `${s.user_id} — Plano: ${s.plan_name || s.plan_id} (${s.remaining_sessions} cortes restantes)`).join(' · ') : 'Nenhuma assinatura ativa'}</p></article>
   `;
 }
 
