@@ -124,6 +124,7 @@ export default function BarberEntryPage() {
     loading: false,
     context: null
   });
+  const [expandedActions, setExpandedActions] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -230,6 +231,8 @@ export default function BarberEntryPage() {
                 ) : (
                   <div className="grid gap-3">
                     {filteredAppointments.map((row) => {
+                      const rowId = String(row.id);
+                      const showMoreActions = !!expandedActions[rowId];
                       const status = String(row.status || '').toLowerCase();
                       const canStart = ['awaiting_payment', 'pending', 'confirmed'].includes(status);
                       const canConclude = ['in_progress', 'pending', 'confirmed'].includes(status);
@@ -265,7 +268,7 @@ export default function BarberEntryPage() {
                               </div>
                             </div>
 
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid gap-2 sm:grid-cols-3">
                               <Button
                                 type="button"
                                 disabled={!canStart || busyKey === `start:${row.id}`}
@@ -280,6 +283,17 @@ export default function BarberEntryPage() {
                               >
                                 {busyKey === `complete:${row.id}` ? 'Concluindo...' : 'Concluir'}
                               </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setExpandedActions((current) => ({ ...current, [rowId]: !current[rowId] }))}
+                              >
+                                {showMoreActions ? 'Ocultar acoes' : 'Mais acoes'}
+                              </Button>
+                            </div>
+
+                            {showMoreActions ? (
+                              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                               <Button
                                 type="button"
                                 variant="outline"
@@ -327,7 +341,8 @@ export default function BarberEntryPage() {
                               >
                                 Contexto cliente
                               </Button>
-                            </div>
+                              </div>
+                            ) : null}
                           </div>
                         </article>
                       );
@@ -541,4 +556,3 @@ export default function BarberEntryPage() {
     </div>
   );
 }
-

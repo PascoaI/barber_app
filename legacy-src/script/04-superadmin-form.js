@@ -1,4 +1,4 @@
-﻿function initSuperAdminBarbershopFormPage() {
+function initSuperAdminBarbershopFormPage() {
   const form = document.getElementById('superadmin-barbershop-form');
   if (!form) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -296,6 +296,9 @@ function initBarberHomePage() {
             <div class="grid gap-2 md:grid-cols-3">
               <button type="button" class="button button-secondary min-h-10 w-full" data-barber-start="${a.id}" ${canStart ? '' : 'disabled'}>Iniciar</button>
               <button type="button" class="button button-primary min-h-10 w-full" data-barber-conclude="${a.id}" ${canConclude ? '' : 'disabled'}>${canConclude ? 'Concluir' : 'Finalizado'}</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-more="${a.id}" aria-expanded="false">Mais acoes</button>
+            </div>
+            <div class="hidden grid gap-2 md:grid-cols-3" data-barber-more-panel="${a.id}">
               <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>No-show</button>
               <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
               <button type="button" class="button button-secondary min-h-10 w-full" data-barber-delay="${a.id}" ${canDelay ? '' : 'disabled'}>Atraso</button>
@@ -309,6 +312,19 @@ function initBarberHomePage() {
     }).join('');
 
     const getAppointmentById = (id) => getAppointments().find((x) => String(x.id) === String(id));
+
+    agendaRoot.querySelectorAll('[data-barber-more]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-barber-more');
+        if (!id) return;
+        const panel = agendaRoot.querySelector(`[data-barber-more-panel="${id}"]`);
+        if (!panel) return;
+        const opening = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !opening);
+        button.setAttribute('aria-expanded', opening ? 'true' : 'false');
+        button.textContent = opening ? 'Ocultar acoes' : 'Mais acoes';
+      });
+    });
 
     agendaRoot.querySelectorAll('[data-barber-start]').forEach((button) => {
       button.addEventListener('click', async () => {
