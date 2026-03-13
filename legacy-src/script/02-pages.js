@@ -481,55 +481,156 @@ function initMySchedulesPage() {
   if (!root) return;
 
   const session = getSession();
-
   if (!session) {
-    root.innerHTML = '<div class="empty-state"><h2>Fa√ßa login para ver seus hor√°rios</h2><p>Voc√™ precisa entrar com sua conta para acessar os hor√°rios agendados.</p><a class="button button-primary" href="login.html?redirect=my-schedules.html">Efetuar login</a></div>';
+    root.innerHTML = '<div class="empty-state"><h2>FaÁa login para ver seus hor·rios</h2><p>VocÍ precisa entrar com sua conta para acessar os hor·rios agendados.</p><a class="button button-primary" href="login.html?redirect=my-schedules.html">Efetuar login</a></div>';
     return;
   }
-
   if (!hasRole('client')) {
-    root.innerHTML = '<div class="empty-state"><h2>√Årea exclusiva de clientes</h2></div>';
+    root.innerHTML = '<div class="empty-state"><h2>¡rea exclusiva de clientes</h2></div>';
     return;
   }
 
-  const appointments = getAppointments().filter((a) => a.client_email === session.email);
-  if (!appointments.length) {
-    root.innerHTML = '<div class="empty-state"><h2>Voc√™ n√£o tem hor√°rios agendados</h2><p>Quando confirmar um agendamento ele aparecer√° aqui.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></div>';
+  const allAppointments = getAppointments()
+    .filter((a) => a.client_email === session.email)
+    .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+
+  if (!allAppointments.length) {
+    root.innerHTML = '<div class="empty-state"><h2>VocÍ n„o tem hor·rios agendados</h2><p>Quando confirmar um agendamento ele aparecer· aqui.</p><a class="button button-primary" href="booking-location.html">Agendar agora</a></div>';
     return;
   }
 
-  root.innerHTML = appointments
-    .map((a) => `<article class="schedule-item schedule-item-client"><h3>${a.service_name}</h3><p class="schedule-main-time">${formatBookingDateTime(a.appointment_date, a.start_time)}</p><p>Status: <span class="status-badge status-${a.status}">${getBookingStatusLabel(a.status)}</span></p><small>${a.barber_name} ¬∑ ${a.branch}</small>${!['completed', 'canceled'].includes(a.status) ? `<div class="form-row"><button class="button button-secondary" data-reschedule="${a.id}">Remarcar</button><button class="button button-secondary" data-cancel="${a.id}">Cancelar</button></div>` : ''}</article>`)
-    .join('');
+  const asDateInput = (value) => {
+    const d = new Date(value);
+    if (!Number.isFinite(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const getAppointmentDateKey = (appointment) => {
+    if (appointment.appointment_date && /^\d{4}-\d{2}-\d{2}$/.test(String(appointment.appointment_date))) return String(appointment.appointment_date);
+    return asDateInput(appointment.start_datetime);
+  };
+  const statusBadgeClass = (status) => {
+    if (status === 'confirmed') return 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100';
+    if (status === 'completed') return 'border-sky-400/40 bg-sky-500/10 text-sky-100';
+    if (status === 'canceled') return 'border-rose-400/40 bg-rose-500/10 text-rose-100';
+    if (status === 'no_show') return 'border-amber-400/40 bg-amber-500/10 text-amber-100';
+    return 'border-borderc/80 bg-slate-900/40 text-text-secondary';
+  };
+  const today = asDateInput(new Date().toISOString());
 
-  root.querySelectorAll('[data-reschedule]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const apt = appointments.find((a) => a.id === btn.dataset.reschedule);
-      if (!apt || apt.status === 'completed') return;
-      const city = BASE_DATA.cities.find((c) => c.name === apt.city);
-      const branch = city?.branches.find((x) => x.name === apt.branch);
-      saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: apt.service_id, professional: apt.barber_id, date: apt.appointment_date, time: apt.start_time, edit_appointment_id: apt.id });
-      window.location.href = 'booking-datetime.html?edit=datetime';
-    });
-  });
+  root.innerHTML = `
+    <section class="rounded-xl border border-borderc bg-slate-950/35 p-3 mb-3">
+      <div class="grid gap-2 md:grid-cols-3">
+        <label class="text-xs text-text-secondary grid gap-1">Data
+          <input id="my-schedules-filter-date" type="date" value="${today}" class="min-h-11 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary" />
+        </label>
+        <label class="text-xs text-text-secondary grid gap-1">Status
+          <select id="my-schedules-filter-status" class="min-h-11 rounded-xl border border-borderc bg-slate-950/45 px-3 text-sm text-text-primary">
+            <option value="all">Todos</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="pending">Pendente</option>
+            <option value="awaiting_payment">Aguardando pagamento</option>
+            <option value="completed">ConcluÌdo</option>
+            <option value="canceled">Cancelado</option>
+            <option value="no_show">N„o comparecido</option>
+          </select>
+        </label>
+        <div class="text-xs text-text-secondary grid gap-1">Resultado
+          <div id="my-schedules-filter-count" class="min-h-11 rounded-xl border border-borderc bg-slate-950/45 px-3 flex items-center text-sm">0 item(ns)</div>
+        </div>
+      </div>
+    </section>
+    <div id="my-schedules-cards" class="grid gap-3"></div>
+  `;
 
-  root.querySelectorAll('[data-cancel]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const apt = appointments.find((a) => a.id === btn.dataset.cancel);
-      if (!apt) return;
-      const allowed = canCancelAppointment(apt);
-      if (!allowed) {
-        await alertAction('Cancelamento fora da pol√≠tica: prazo m√≠nimo n√£o respeitado.');
-        return;
-      }
-      if (!(await confirmAction('Deseja realmente cancelar este agendamento?'))) return;
-      updateAppointmentStatus(apt.id, 'canceled');
-      scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
-      initMySchedulesPage();
+  const dateEl = root.querySelector('#my-schedules-filter-date');
+  const statusEl = root.querySelector('#my-schedules-filter-status');
+  const countEl = root.querySelector('#my-schedules-filter-count');
+  const cardsEl = root.querySelector('#my-schedules-cards');
+
+  const renderCards = () => {
+    const selectedDate = dateEl?.value || today;
+    const selectedStatus = statusEl?.value || 'all';
+
+    const filtered = allAppointments.filter((appointment) => {
+      if (selectedDate && getAppointmentDateKey(appointment) !== selectedDate) return false;
+      if (selectedStatus !== 'all' && appointment.status !== selectedStatus) return false;
+      return true;
     });
-  });
+
+    if (countEl) countEl.textContent = `${filtered.length} item(ns)`;
+    if (!cardsEl) return;
+
+    if (!filtered.length) {
+      cardsEl.innerHTML = '<article class="rounded-xl border border-borderc bg-slate-950/35 p-3 text-sm text-text-secondary">Sem agendamentos para os filtros selecionados.</article>';
+      return;
+    }
+
+    const nextUpcoming = filtered
+      .filter((appointment) => ['pending', 'confirmed', 'awaiting_payment'].includes(appointment.status) && new Date(appointment.start_datetime).getTime() >= Date.now())
+      .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))[0];
+
+    cardsEl.innerHTML = filtered.map((appointment) => {
+      const isUpcoming = nextUpcoming && nextUpcoming.id === appointment.id;
+      const canReschedule = ['confirmed', 'no_show'].includes(appointment.status);
+      const canCancel = ['pending', 'confirmed', 'awaiting_payment'].includes(appointment.status);
+      return `
+        <article class="relative overflow-hidden rounded-2xl border ${isUpcoming ? 'border-primary/80 bg-gradient-to-br from-primary/20 via-slate-950/40 to-slate-900/50 shadow-[0_16px_36px_rgba(198,154,69,0.22)]' : 'border-borderc bg-slate-950/35'} p-4 grid gap-3">
+          ${isUpcoming ? '<div class="inline-flex w-fit rounded-full border border-primary/50 bg-primary/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">PrÛximo atendimento</div>' : ''}
+          <div class="grid gap-2 sm:grid-cols-2">
+            <p class="text-sm text-text-secondary"><strong class="text-text-primary">?? ServiÁo:</strong> ${appointment.service_name}</p>
+            <p class="text-sm text-text-secondary"><strong class="text-text-primary">?? Profissional:</strong> ${appointment.barber_name}</p>
+            <p class="text-sm text-text-secondary"><strong class="text-text-primary">?? Data:</strong> ${new Date(appointment.start_datetime).toLocaleDateString('pt-BR')}</p>
+            <p class="text-sm text-text-secondary"><strong class="text-text-primary">?? Hor·rio:</strong> ${String(appointment.start_time || '').slice(0, 5)}</p>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClass(appointment.status)}">${getBookingStatusLabel(appointment.status)}</span>
+            <small class="text-xs text-text-secondary">${appointment.branch} ∑ ${appointment.city || 'Porto Alegre'}</small>
+          </div>
+          ${(canReschedule || canCancel) ? `
+            <div class="grid gap-2 sm:grid-cols-2">
+              ${canReschedule ? `<button class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold border border-borderc bg-surface text-text-primary hover:border-primary/70" data-reschedule="${appointment.id}">Remarcar</button>` : ''}
+              ${canCancel ? `<button class="button button-secondary inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold border border-borderc bg-surface text-text-primary hover:border-primary/70" data-cancel="${appointment.id}">Cancelar</button>` : ''}
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    cardsEl.querySelectorAll('[data-reschedule]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const apt = allAppointments.find((a) => a.id === btn.dataset.reschedule);
+        if (!apt) return;
+        const city = BASE_DATA.cities.find((c) => c.name === apt.city);
+        const branch = city?.branches.find((x) => x.name === apt.branch);
+        saveBooking({ city: city?.id || 'poa', branch: branch?.id || 'bom-fim', service: apt.service_id, professional: apt.barber_id, date: '', time: '', edit_appointment_id: apt.id });
+        window.location.href = 'booking-datetime.html?edit=datetime';
+      });
+    });
+
+    cardsEl.querySelectorAll('[data-cancel]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const apt = allAppointments.find((a) => a.id === btn.dataset.cancel);
+        if (!apt) return;
+        const allowed = canCancelAppointment(apt);
+        if (!allowed) {
+          await alertAction('Cancelamento fora da polÌtica: prazo mÌnimo n„o respeitado.');
+          return;
+        }
+        if (!(await confirmAction('Deseja realmente cancelar este agendamento?'))) return;
+        updateAppointmentStatus(apt.id, 'canceled');
+        scheduleNotification({ user_id: apt.client_email, type: 'cancellation', scheduled_for: nowIso(), sent_at: nowIso(), related_appointment_id: apt.id });
+        initMySchedulesPage();
+      });
+    });
+  };
+
+  dateEl?.addEventListener('change', renderCards);
+  statusEl?.addEventListener('change', renderCards);
+  renderCards();
 }
-
 function renderAppointmentCard(a, canManage = false) {
   const actionButtons = canManage
     ? `<div class="form-row"><button class="button button-secondary" data-status="confirmed" data-id="${a.id}">Confirmar</button><button class="button button-secondary" data-status="completed" data-id="${a.id}">Concluir</button><button class="button button-secondary" data-status="canceled" data-id="${a.id}">Cancelar</button></div>`

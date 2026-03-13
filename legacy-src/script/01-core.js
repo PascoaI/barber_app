@@ -599,7 +599,8 @@ function getBookingStatusLabel(status) {
     pending: 'Pendente',
     confirmed: 'Confirmado',
     canceled: 'Cancelado',
-    completed: 'Concluído'
+    completed: 'Concluído',
+    no_show: 'Não comparecido'
   };
   return map[status] || status;
 }

@@ -49,7 +49,7 @@ export async function listClientHistory(filters: {
   const supabase = supabaseClient();
   let query = supabase
     .from('appointments')
-    .select('id,start_datetime,end_datetime,status,barber_id,service_id,barbers(users(name)),services(name,price)')
+    .select('id,start_datetime,end_datetime,status,barber_id,service_id,barbers(users(name)),services(name,price,duration_minutes)')
     .eq('barbershop_id', scopeBarbershopId)
     .eq('client_id', String(user.id))
     .order('start_datetime', { ascending: false });
