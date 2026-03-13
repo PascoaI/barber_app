@@ -293,18 +293,20 @@ function initBarberHomePage() {
           </div>
           <div class="barber-appointment-actions">
             <p>Acoes operacionais sem sair da agenda.</p>
-            <div class="grid gap-2 md:grid-cols-3">
+            <div class="barber-actions-row">
               <button type="button" class="button button-secondary min-h-10 w-full" data-barber-start="${a.id}" ${canStart ? '' : 'disabled'}>Iniciar</button>
               <button type="button" class="button button-primary min-h-10 w-full" data-barber-conclude="${a.id}" ${canConclude ? '' : 'disabled'}>${canConclude ? 'Concluir' : 'Finalizado'}</button>
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-more="${a.id}" aria-expanded="false">Mais acoes</button>
-            </div>
-            <div class="hidden grid gap-2 md:grid-cols-3" data-barber-more-panel="${a.id}">
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>No-show</button>
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-delay="${a.id}" ${canDelay ? '' : 'disabled'}>Atraso</button>
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-reschedule="${a.id}" ${canReschedule ? '' : 'disabled'}>Remarcar</button>
-              <button type="button" class="button button-secondary min-h-10 w-full md:col-span-2" data-barber-transfer="${a.id}" ${canTransfer ? '' : 'disabled'}>Transferir</button>
-              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-context="${a.id}">Contexto cliente</button>
+              <div class="barber-actions-more-wrap">
+                <button type="button" class="button button-secondary min-h-10 w-full" data-barber-more="${a.id}" aria-expanded="false">Mais acoes</button>
+                <div class="barber-actions-popover hidden" data-barber-more-panel="${a.id}">
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>No-show</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-delay="${a.id}" ${canDelay ? '' : 'disabled'}>Atraso</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-reschedule="${a.id}" ${canReschedule ? '' : 'disabled'}>Remarcar</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-transfer="${a.id}" ${canTransfer ? '' : 'disabled'}>Transferir</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-context="${a.id}">Contexto cliente</button>
+                </div>
+              </div>
             </div>
           </div>
         </article>
@@ -319,6 +321,15 @@ function initBarberHomePage() {
         if (!id) return;
         const panel = agendaRoot.querySelector(`[data-barber-more-panel="${id}"]`);
         if (!panel) return;
+        agendaRoot.querySelectorAll('[data-barber-more-panel]').forEach((item) => {
+          if (item !== panel) item.classList.add('hidden');
+        });
+        agendaRoot.querySelectorAll('[data-barber-more]').forEach((item) => {
+          if (item !== button) {
+            item.setAttribute('aria-expanded', 'false');
+            item.textContent = 'Mais acoes';
+          }
+        });
         const opening = panel.classList.contains('hidden');
         panel.classList.toggle('hidden', !opening);
         button.setAttribute('aria-expanded', opening ? 'true' : 'false');

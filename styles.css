@@ -1979,6 +1979,31 @@ textarea:focus {
   gap: 0.6rem;
 }
 
+.barber-actions-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.barber-actions-more-wrap {
+  position: relative;
+}
+
+.barber-actions-popover {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 30;
+  width: min(14.5rem, calc(100vw - 3.2rem));
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(90, 111, 158, 0.48);
+  border-radius: 0.82rem;
+  background: linear-gradient(180deg, rgba(9, 16, 33, 0.98), rgba(7, 13, 27, 0.96));
+  box-shadow: 0 16px 28px rgba(2, 8, 24, 0.34);
+}
+
 .barber-appointment-actions p {
   margin: 0;
   font-size: 0.75rem;
@@ -1997,5 +2022,16 @@ textarea:focus {
   .barber-appointment-actions {
     align-items: center;
     grid-template-columns: 1fr auto;
+  }
+
+  .barber-actions-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .barber-actions-popover {
+    top: 0;
+    right: auto;
+    left: calc(100% + 0.5rem);
+    width: 15.25rem;
   }
 }

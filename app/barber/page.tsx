@@ -124,7 +124,7 @@ export default function BarberEntryPage() {
     loading: false,
     context: null
   });
-  const [expandedActions, setExpandedActions] = useState<Record<string, boolean>>({});
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -232,7 +232,7 @@ export default function BarberEntryPage() {
                   <div className="grid gap-3">
                     {filteredAppointments.map((row) => {
                       const rowId = String(row.id);
-                      const showMoreActions = !!expandedActions[rowId];
+                      const showMoreActions = openActionsId === rowId;
                       const status = String(row.status || '').toLowerCase();
                       const canStart = ['awaiting_payment', 'pending', 'confirmed'].includes(status);
                       const canConclude = ['in_progress', 'pending', 'confirmed'].includes(status);
@@ -268,7 +268,7 @@ export default function BarberEntryPage() {
                               </div>
                             </div>
 
-                            <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                               <Button
                                 type="button"
                                 disabled={!canStart || busyKey === `start:${row.id}`}
@@ -283,22 +283,24 @@ export default function BarberEntryPage() {
                               >
                                 {busyKey === `complete:${row.id}` ? 'Concluindo...' : 'Concluir'}
                               </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setExpandedActions((current) => ({ ...current, [rowId]: !current[rowId] }))}
-                              >
-                                {showMoreActions ? 'Ocultar acoes' : 'Mais acoes'}
-                              </Button>
-                            </div>
-
-                            {showMoreActions ? (
-                              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                              <div className="relative">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setOpenActionsId((current) => (current === rowId ? null : rowId))}
+                                >
+                                  {showMoreActions ? 'Ocultar acoes' : 'Mais acoes'}
+                                </Button>
+                                {showMoreActions ? (
+                                  <div className="absolute right-0 top-[calc(100%+0.45rem)] z-30 grid w-[min(15rem,calc(100vw-2.5rem))] gap-2 rounded-xl border border-borderc/80 bg-slate-950/95 p-2 shadow-[0_16px_30px_rgba(2,6,23,0.36)] md:left-[calc(100%+0.55rem)] md:top-0 md:right-auto md:w-64">
                               <Button
                                 type="button"
                                 variant="outline"
                                 disabled={!canNoShow}
-                                onClick={() => setReasonModal({ open: true, row, toStatus: 'no_show', reason: '' })}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  setReasonModal({ open: true, row, toStatus: 'no_show', reason: '' });
+                                }}
                               >
                                 Marcar no-show
                               </Button>
@@ -306,7 +308,10 @@ export default function BarberEntryPage() {
                                 type="button"
                                 variant="outline"
                                 disabled={!canCancel}
-                                onClick={() => setReasonModal({ open: true, row, toStatus: 'canceled', reason: '' })}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  setReasonModal({ open: true, row, toStatus: 'canceled', reason: '' });
+                                }}
                               >
                                 Cancelar
                               </Button>
@@ -314,7 +319,10 @@ export default function BarberEntryPage() {
                                 type="button"
                                 variant="outline"
                                 disabled={!canDelay}
-                                onClick={() => setDelayModal({ open: true, row, minutes: String(row.delay_minutes || 10), reason: row.delay_reason || '' })}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  setDelayModal({ open: true, row, minutes: String(row.delay_minutes || 10), reason: row.delay_reason || '' });
+                                }}
                               >
                                 Sinalizar atraso
                               </Button>
@@ -322,7 +330,10 @@ export default function BarberEntryPage() {
                                 type="button"
                                 variant="outline"
                                 disabled={!canReschedule}
-                                onClick={() => setRescheduleModal({ open: true, row, datetime: toDatetimeLocalInput(row.start_datetime) })}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  setRescheduleModal({ open: true, row, datetime: toDatetimeLocalInput(row.start_datetime) });
+                                }}
                               >
                                 Remarcar
                               </Button>
@@ -330,19 +341,27 @@ export default function BarberEntryPage() {
                                 type="button"
                                 variant="outline"
                                 disabled={!canTransfer}
-                                onClick={() => setTransferModal({ open: true, row, toBarberId: '', datetime: '' })}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  setTransferModal({ open: true, row, toBarberId: '', datetime: '' });
+                                }}
                               >
                                 Transferir
                               </Button>
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => { void openContext(row); }}
+                                onClick={() => {
+                                  setOpenActionsId(null);
+                                  void openContext(row);
+                                }}
                               >
                                 Contexto cliente
                               </Button>
+                                  </div>
+                                ) : null}
                               </div>
-                            ) : null}
+                            </div>
                           </div>
                         </article>
                       );
