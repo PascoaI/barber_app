@@ -88,11 +88,12 @@ const STORAGE_KEYS = {
   barbershops: 'barberpro_barbershops'
 };
 
-const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'canceled', 'completed', 'no_show'];
+const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'in_progress', 'canceled', 'completed', 'no_show'];
 const APPOINTMENT_TRANSITIONS = {
-  awaiting_payment: ['pending', 'confirmed', 'canceled'],
-  pending: ['confirmed', 'canceled', 'completed', 'no_show'],
-  confirmed: ['completed', 'canceled', 'no_show'],
+  awaiting_payment: ['pending', 'confirmed', 'in_progress', 'canceled', 'no_show'],
+  pending: ['confirmed', 'in_progress', 'canceled', 'completed', 'no_show'],
+  confirmed: ['in_progress', 'completed', 'canceled', 'no_show'],
+  in_progress: ['completed', 'canceled'],
   canceled: [],
   completed: [],
   no_show: []
@@ -598,9 +599,10 @@ function getBookingStatusLabel(status) {
     awaiting_payment: 'Aguardando pagamento',
     pending: 'Pendente',
     confirmed: 'Confirmado',
+    in_progress: 'Em andamento',
     canceled: 'Cancelado',
-    completed: 'Concluído',
-    no_show: 'Não comparecido'
+    completed: 'Concluido',
+    no_show: 'Nao comparecido'
   };
   return map[status] || status;
 }
@@ -741,7 +743,7 @@ function isSlotAvailable({ barberId, date, time, serviceDuration, editingAppoint
   if (blockedConflict) return false;
 
   const busy = getAppointments()
-    .filter((a) => a.barber_id === barberId && ['awaiting_payment', 'pending', 'confirmed'].includes(a.status))
+    .filter((a) => a.barber_id === barberId && ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(a.status))
     .some((a) => {
       if (editingAppointmentId && a.id === editingAppointmentId) return false;
       const existingStart = addMinutes(new Date(a.start_datetime), -bufferMinutes);
@@ -946,14 +948,6 @@ function updateAppointmentStatus(id, status, meta = {}) {
   rows[idx].updated_at = nowIso();
   rows[idx].updated_by = getSession()?.email || 'system';
 
-  if (status === 'canceled') {
-    const removed = rows.splice(idx, 1)[0];
-    saveAppointments(rows);
-    invalidateDashboardCache('appointment_canceled');
-    logAudit('appointment_deleted_after_cancel', { appointment_id: removed?.id, before_state: beforeState });
-    return;
-  }
-
   saveAppointments(rows);
   logAudit('appointment_status_changed', { appointment_id: id, status, before_state: beforeState, after_state: rows[idx] });
 
@@ -965,6 +959,10 @@ function updateAppointmentStatus(id, status, meta = {}) {
   if (status === 'completed') {
     finalizeAppointmentTransaction(rows[idx]);
     invalidateDashboardCache('appointment_completed');
+  }
+
+  if (status === 'canceled') {
+    invalidateDashboardCache('appointment_canceled');
   }
 
 }

@@ -195,6 +195,7 @@ function initBarberHomePage() {
   const statusBadgeClass = (status) => {
     const normalized = String(status || '').toLowerCase();
     if (normalized === 'completed') return 'status-completed';
+    if (normalized === 'in_progress') return 'status-pending';
     if (normalized === 'confirmed') return 'status-confirmed';
     if (normalized === 'pending') return 'status-pending';
     if (normalized === 'awaiting_payment') return 'status-awaiting_payment';
@@ -205,10 +206,11 @@ function initBarberHomePage() {
 
   const statusIcon = (status) => {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'completed') return '●';
-    if (normalized === 'confirmed' || normalized === 'pending' || normalized === 'awaiting_payment') return '◷';
-    if (normalized === 'no_show' || normalized === 'canceled') return '▲';
-    return '○';
+    if (normalized === 'completed') return '*';
+    if (normalized === 'in_progress') return '>>';
+    if (normalized === 'confirmed' || normalized === 'pending' || normalized === 'awaiting_payment') return '~';
+    if (normalized === 'no_show' || normalized === 'canceled') return '!';
+    return '-';
   };
 
   const activeBarber = getBarbers().find((b) => {
@@ -260,8 +262,17 @@ function initBarberHomePage() {
     }
 
     agendaRoot.innerHTML = rows.map((a) => {
-      const canConclude = ['pending', 'confirmed'].includes(String(a.status || '').toLowerCase());
+      const status = String(a.status || '').toLowerCase();
+      const canStart = ['pending', 'confirmed'].includes(status);
+      const canConclude = ['in_progress', 'pending', 'confirmed'].includes(status);
+      const canNoShow = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
+      const canCancel = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
+      const canDelay = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
+      const canReschedule = ['awaiting_payment', 'pending', 'confirmed', 'no_show'].includes(status);
+      const canTransfer = ['awaiting_payment', 'pending', 'confirmed', 'in_progress', 'no_show'].includes(status);
       const createdAt = new Date(a.created_at || a.start_datetime || 0).toLocaleString('pt-BR');
+      const hasReason = !!String(a.status_reason || '').trim();
+      const hasDelay = Number(a.delay_minutes || 0) > 0;
       return `
         <article class="barber-appointment-card">
           <div class="barber-appointment-header">
@@ -272,6 +283,8 @@ function initBarberHomePage() {
               <p class="text-xs text-text-secondary">Criado em: <strong class="text-text-primary">${createdAt}</strong></p>
               <p class="text-xs text-text-secondary">Valor: <strong class="text-primary">${asCurrency(a.service_price || 0)}</strong></p>
               <p class="text-xs text-text-secondary">Observacoes: <strong class="text-text-primary">${a.notes ? String(a.notes) : 'Sem observacoes registradas.'}</strong></p>
+              ${hasReason ? `<p class="text-xs text-text-secondary">Motivo status: <strong class="text-text-primary">${sanitizeText(a.status_reason)}</strong></p>` : ''}
+              ${hasDelay ? `<p class="text-xs text-text-secondary">Atraso: <strong class="text-text-primary">${Number(a.delay_minutes)} min${a.delay_reason ? ` (${sanitizeText(a.delay_reason)})` : ''}</strong></p>` : ''}
             </div>
             <div class="flex flex-col items-start gap-2 md:items-end">
               <span class="barber-badge ${statusBadgeClass(a.status)}"><span aria-hidden="true">${statusIcon(a.status)}</span>${getBookingStatusLabel(a.status).toUpperCase()}</span>
@@ -279,12 +292,33 @@ function initBarberHomePage() {
             </div>
           </div>
           <div class="barber-appointment-actions">
-            <p>Concluir habilitado para status pendente ou confirmado.</p>
-            <button type="button" class="button button-primary min-h-10 w-full md:w-auto" data-barber-conclude="${a.id}" ${canConclude ? '' : 'disabled'}>${canConclude ? 'Concluir Servico' : 'Servico finalizado'}</button>
+            <p>Acoes operacionais sem sair da agenda.</p>
+            <div class="grid gap-2 md:grid-cols-3">
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-start="${a.id}" ${canStart ? '' : 'disabled'}>Iniciar</button>
+              <button type="button" class="button button-primary min-h-10 w-full" data-barber-conclude="${a.id}" ${canConclude ? '' : 'disabled'}>${canConclude ? 'Concluir' : 'Finalizado'}</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>No-show</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-delay="${a.id}" ${canDelay ? '' : 'disabled'}>Atraso</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-reschedule="${a.id}" ${canReschedule ? '' : 'disabled'}>Remarcar</button>
+              <button type="button" class="button button-secondary min-h-10 w-full md:col-span-2" data-barber-transfer="${a.id}" ${canTransfer ? '' : 'disabled'}>Transferir</button>
+              <button type="button" class="button button-secondary min-h-10 w-full" data-barber-context="${a.id}">Contexto cliente</button>
+            </div>
           </div>
         </article>
       `;
     }).join('');
+
+    const getAppointmentById = (id) => getAppointments().find((x) => String(x.id) === String(id));
+
+    agendaRoot.querySelectorAll('[data-barber-start]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-start');
+        if (!id) return;
+        updateAppointmentStatus(id, 'in_progress');
+        await alertAction('Atendimento iniciado.');
+        render();
+      });
+    });
 
     agendaRoot.querySelectorAll('[data-barber-conclude]').forEach((button) => {
       button.addEventListener('click', async () => {
@@ -292,6 +326,164 @@ function initBarberHomePage() {
         if (!id) return;
         updateAppointmentStatus(id, 'completed');
         await alertAction('Servico concluido com sucesso.', { title: 'Atendimento finalizado' });
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-no-show]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-no-show');
+        if (!id) return;
+        const reason = sanitizeText(window.prompt('Informe o motivo do no-show:') || '');
+        if (!reason) {
+          await alertAction('Motivo e obrigatorio para no-show.');
+          return;
+        }
+        updateAppointmentStatus(id, 'no_show', { status_reason: reason });
+        await alertAction('No-show registrado.');
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-cancel]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-cancel');
+        if (!id) return;
+        const reason = sanitizeText(window.prompt('Informe o motivo do cancelamento:') || '');
+        if (!reason) {
+          await alertAction('Motivo e obrigatorio para cancelamento.');
+          return;
+        }
+        updateAppointmentStatus(id, 'canceled', { status_reason: reason });
+        await alertAction('Atendimento cancelado.');
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-delay]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-delay');
+        if (!id) return;
+        const row = getAppointmentById(id);
+        if (!row) return;
+        const minutesRaw = String(window.prompt('Quantos minutos de atraso?', String(row.delay_minutes || 10)) || '').trim();
+        const delayMinutes = Number(minutesRaw);
+        if (!Number.isFinite(delayMinutes) || delayMinutes < 1) {
+          await alertAction('Informe um numero valido de minutos.');
+          return;
+        }
+        const reason = sanitizeText(window.prompt('Motivo do atraso (opcional):', String(row.delay_reason || '')) || '');
+        updateAppointmentStatus(id, String(row.status || 'pending'), { delay_minutes: delayMinutes, delay_reason: reason || null });
+        await alertAction('Atraso registrado.');
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-reschedule]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-reschedule');
+        if (!id) return;
+        const row = getAppointmentById(id);
+        if (!row) return;
+        const nextDate = sanitizeText(window.prompt('Nova data (AAAA-MM-DD):', row.appointment_date || '') || '');
+        const nextTime = sanitizeText(window.prompt('Novo horario (HH:MM):', row.start_time || '') || '');
+        if (!nextDate || !nextTime) return;
+        const duration = Number(row.duration_minutes || 30);
+        const available = isSlotAvailable({ barberId: row.barber_id, date: nextDate, time: nextTime, serviceDuration: duration, editingAppointmentId: row.id });
+        if (!available) {
+          await alertAction('Horario indisponivel para este profissional.');
+          return;
+        }
+        const start = toDate(nextDate, nextTime);
+        const end = addMinutes(start, duration);
+        const nextStatus = String(row.status || '') === 'no_show' ? 'confirmed' : String(row.status || 'pending');
+        updateAppointmentStatus(id, nextStatus, {
+          appointment_date: nextDate,
+          start_time: nextTime,
+          end_time: end.toTimeString().slice(0, 5),
+          start_datetime: start.toISOString(),
+          end_datetime: end.toISOString(),
+          rescheduled_from: row.start_datetime || null,
+          rescheduled_by: getSession()?.email || 'barber',
+          delay_minutes: 0,
+          delay_reason: null
+        });
+        await alertAction('Atendimento remarcado.');
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-transfer]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-transfer');
+        if (!id) return;
+        const row = getAppointmentById(id);
+        if (!row) return;
+        const candidates = getBarbers(true).filter((b) => String(b.id) !== String(row.barber_id));
+        if (!candidates.length) {
+          await alertAction('Nao ha outro barbeiro ativo para transferencia.');
+          return;
+        }
+        const listText = candidates.map((b) => `${b.id} - ${b.name}`).join('\n');
+        const toBarberId = sanitizeText(window.prompt(`Informe o ID do barbeiro destino:\n${listText}`, String(candidates[0].id || '')) || '');
+        const nextBarber = candidates.find((b) => String(b.id) === String(toBarberId));
+        if (!nextBarber) {
+          await alertAction('Barbeiro destino invalido.');
+          return;
+        }
+        const dateInput = sanitizeText(window.prompt('Nova data (AAAA-MM-DD, vazio = manter):', row.appointment_date || '') || '');
+        const timeInput = sanitizeText(window.prompt('Novo horario (HH:MM, vazio = manter):', row.start_time || '') || '');
+        const nextDate = dateInput || row.appointment_date;
+        const nextTime = timeInput || row.start_time;
+        const duration = Number(row.duration_minutes || 30);
+        const available = isSlotAvailable({ barberId: nextBarber.id, date: nextDate, time: nextTime, serviceDuration: duration, editingAppointmentId: row.id });
+        if (!available) {
+          await alertAction('Horario indisponivel para transferencia.');
+          return;
+        }
+        const start = toDate(nextDate, nextTime);
+        const end = addMinutes(start, duration);
+        const nextStatus = String(row.status || '') === 'no_show' ? 'confirmed' : String(row.status || 'pending');
+        updateAppointmentStatus(id, nextStatus, {
+          barber_id: nextBarber.id,
+          barber_name: nextBarber.name,
+          appointment_date: nextDate,
+          start_time: nextTime,
+          end_time: end.toTimeString().slice(0, 5),
+          start_datetime: start.toISOString(),
+          end_datetime: end.toISOString(),
+          transferred_from_barber_id: row.barber_id || null,
+          transferred_to_barber_id: nextBarber.id,
+          rescheduled_by: getSession()?.email || 'barber'
+        });
+        await alertAction('Atendimento transferido com sucesso.');
+        render();
+      });
+    });
+
+    agendaRoot.querySelectorAll('[data-barber-context]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-barber-context');
+        if (!id) return;
+        const row = getAppointmentById(id);
+        if (!row) return;
+        const all = getAppointments().filter((a) => String(a.client_email || '').toLowerCase() === String(row.client_email || '').toLowerCase());
+        const recent = all
+          .filter((a) => String(a.status || '') === 'completed')
+          .sort((a, b) => new Date(b.start_datetime || 0) - new Date(a.start_datetime || 0))
+          .slice(0, 3)
+          .map((a) => `- ${a.service_name} (${formatBookingDateTime(a.appointment_date, a.start_time)})`)
+          .join('\n');
+        const historyCount = all.length;
+        const message = [
+          `Cliente: ${row.client_name || '-'}`,
+          `Total de atendimentos: ${historyCount}`,
+          `Ultimos servicos:`,
+          recent || '- Sem historico concluido.',
+          '',
+          `Observacoes deste atendimento: ${row.notes ? String(row.notes) : 'Sem observacoes.'}`
+        ].join('\n');
+        await alertAction(message, { title: 'Contexto do cliente', confirmText: 'Fechar' });
         render();
       });
     });
