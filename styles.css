@@ -1994,10 +1994,10 @@ textarea:focus {
   top: calc(100% + 0.45rem);
   right: 0;
   z-index: 30;
-  width: min(14.5rem, calc(100vw - 3.2rem));
+  width: min(12rem, calc(100vw - 3.2rem));
   display: grid;
   gap: 0.45rem;
-  padding: 0.55rem;
+  padding: 0.45rem;
   border: 1px solid rgba(90, 111, 158, 0.48);
   border-radius: 0.82rem;
   background: linear-gradient(180deg, rgba(9, 16, 33, 0.98), rgba(7, 13, 27, 0.96));
@@ -2029,9 +2029,6 @@ textarea:focus {
   }
 
   .barber-actions-popover {
-    top: 0;
-    right: auto;
-    left: calc(100% + 0.5rem);
-    width: 15.25rem;
+    width: 12.5rem;
   }
 }

@@ -292,7 +292,7 @@ export default function BarberEntryPage() {
                                   {showMoreActions ? 'Ocultar acoes' : 'Mais acoes'}
                                 </Button>
                                 {showMoreActions ? (
-                                  <div className="absolute right-0 top-[calc(100%+0.45rem)] z-30 grid w-[min(15rem,calc(100vw-2.5rem))] gap-2 rounded-xl border border-borderc/80 bg-slate-950/95 p-2 shadow-[0_16px_30px_rgba(2,6,23,0.36)] md:left-[calc(100%+0.55rem)] md:top-0 md:right-auto md:w-64">
+                                  <div className="absolute right-0 top-[calc(100%+0.45rem)] z-30 grid w-[min(12rem,calc(100vw-2.5rem))] gap-2 rounded-xl border border-borderc/80 bg-slate-950/95 p-2 shadow-[0_16px_30px_rgba(2,6,23,0.36)]">
                               <Button
                                 type="button"
                                 variant="outline"
