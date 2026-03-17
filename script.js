@@ -602,7 +602,7 @@ function getBookingStatusLabel(status) {
     in_progress: 'Em andamento',
     canceled: 'Cancelado',
     completed: 'Concluido',
-    no_show: 'Nao comparecido'
+    no_show: 'Não compareceu'
   };
   return map[status] || status;
 }
@@ -3301,9 +3301,6 @@ function initBarberHomePage() {
       const canConclude = ['in_progress', 'pending', 'confirmed'].includes(status);
       const canNoShow = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
       const canCancel = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
-      const canDelay = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
-      const canReschedule = ['awaiting_payment', 'pending', 'confirmed', 'no_show'].includes(status);
-      const canTransfer = ['awaiting_payment', 'pending', 'confirmed', 'in_progress', 'no_show'].includes(status);
       const createdAt = new Date(a.created_at || a.start_datetime || 0).toLocaleString('pt-BR');
       const hasReason = !!String(a.status_reason || '').trim();
       const hasDelay = Number(a.delay_minutes || 0) > 0;
@@ -3333,12 +3330,8 @@ function initBarberHomePage() {
               <div class="barber-actions-more-wrap">
                 <button type="button" class="button button-secondary min-h-10 w-full" data-barber-more="${a.id}" aria-expanded="false">Mais acoes</button>
                 <div class="barber-actions-popover hidden" data-barber-more-panel="${a.id}">
-                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>No-show</button>
                   <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
-                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-delay="${a.id}" ${canDelay ? '' : 'disabled'}>Atraso</button>
-                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-reschedule="${a.id}" ${canReschedule ? '' : 'disabled'}>Remarcar</button>
-                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-transfer="${a.id}" ${canTransfer ? '' : 'disabled'}>Transferir</button>
-                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-context="${a.id}">Contexto cliente</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>Não compareceu</button>
                 </div>
               </div>
             </div>
@@ -3346,8 +3339,6 @@ function initBarberHomePage() {
         </article>
       `;
     }).join('');
-
-    const getAppointmentById = (id) => getAppointments().find((x) => String(x.id) === String(id));
 
     agendaRoot.querySelectorAll('[data-barber-more]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -3421,133 +3412,6 @@ function initBarberHomePage() {
       });
     });
 
-    agendaRoot.querySelectorAll('[data-barber-delay]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.getAttribute('data-barber-delay');
-        if (!id) return;
-        const row = getAppointmentById(id);
-        if (!row) return;
-        const minutesRaw = String(window.prompt('Quantos minutos de atraso?', String(row.delay_minutes || 10)) || '').trim();
-        const delayMinutes = Number(minutesRaw);
-        if (!Number.isFinite(delayMinutes) || delayMinutes < 1) {
-          await alertAction('Informe um numero valido de minutos.');
-          return;
-        }
-        const reason = sanitizeText(window.prompt('Motivo do atraso (opcional):', String(row.delay_reason || '')) || '');
-        updateAppointmentStatus(id, String(row.status || 'pending'), { delay_minutes: delayMinutes, delay_reason: reason || null });
-        await alertAction('Atraso registrado.');
-        render();
-      });
-    });
-
-    agendaRoot.querySelectorAll('[data-barber-reschedule]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.getAttribute('data-barber-reschedule');
-        if (!id) return;
-        const row = getAppointmentById(id);
-        if (!row) return;
-        const nextDate = sanitizeText(window.prompt('Nova data (AAAA-MM-DD):', row.appointment_date || '') || '');
-        const nextTime = sanitizeText(window.prompt('Novo horario (HH:MM):', row.start_time || '') || '');
-        if (!nextDate || !nextTime) return;
-        const duration = Number(row.duration_minutes || 30);
-        const available = isSlotAvailable({ barberId: row.barber_id, date: nextDate, time: nextTime, serviceDuration: duration, editingAppointmentId: row.id });
-        if (!available) {
-          await alertAction('Horario indisponivel para este profissional.');
-          return;
-        }
-        const start = toDate(nextDate, nextTime);
-        const end = addMinutes(start, duration);
-        const nextStatus = String(row.status || '') === 'no_show' ? 'confirmed' : String(row.status || 'pending');
-        updateAppointmentStatus(id, nextStatus, {
-          appointment_date: nextDate,
-          start_time: nextTime,
-          end_time: end.toTimeString().slice(0, 5),
-          start_datetime: start.toISOString(),
-          end_datetime: end.toISOString(),
-          rescheduled_from: row.start_datetime || null,
-          rescheduled_by: getSession()?.email || 'barber',
-          delay_minutes: 0,
-          delay_reason: null
-        });
-        await alertAction('Atendimento remarcado.');
-        render();
-      });
-    });
-
-    agendaRoot.querySelectorAll('[data-barber-transfer]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.getAttribute('data-barber-transfer');
-        if (!id) return;
-        const row = getAppointmentById(id);
-        if (!row) return;
-        const candidates = getBarbers(true).filter((b) => String(b.id) !== String(row.barber_id));
-        if (!candidates.length) {
-          await alertAction('Nao ha outro barbeiro ativo para transferencia.');
-          return;
-        }
-        const listText = candidates.map((b) => `${b.id} - ${b.name}`).join('\n');
-        const toBarberId = sanitizeText(window.prompt(`Informe o ID do barbeiro destino:\n${listText}`, String(candidates[0].id || '')) || '');
-        const nextBarber = candidates.find((b) => String(b.id) === String(toBarberId));
-        if (!nextBarber) {
-          await alertAction('Barbeiro destino invalido.');
-          return;
-        }
-        const dateInput = sanitizeText(window.prompt('Nova data (AAAA-MM-DD, vazio = manter):', row.appointment_date || '') || '');
-        const timeInput = sanitizeText(window.prompt('Novo horario (HH:MM, vazio = manter):', row.start_time || '') || '');
-        const nextDate = dateInput || row.appointment_date;
-        const nextTime = timeInput || row.start_time;
-        const duration = Number(row.duration_minutes || 30);
-        const available = isSlotAvailable({ barberId: nextBarber.id, date: nextDate, time: nextTime, serviceDuration: duration, editingAppointmentId: row.id });
-        if (!available) {
-          await alertAction('Horario indisponivel para transferencia.');
-          return;
-        }
-        const start = toDate(nextDate, nextTime);
-        const end = addMinutes(start, duration);
-        const nextStatus = String(row.status || '') === 'no_show' ? 'confirmed' : String(row.status || 'pending');
-        updateAppointmentStatus(id, nextStatus, {
-          barber_id: nextBarber.id,
-          barber_name: nextBarber.name,
-          appointment_date: nextDate,
-          start_time: nextTime,
-          end_time: end.toTimeString().slice(0, 5),
-          start_datetime: start.toISOString(),
-          end_datetime: end.toISOString(),
-          transferred_from_barber_id: row.barber_id || null,
-          transferred_to_barber_id: nextBarber.id,
-          rescheduled_by: getSession()?.email || 'barber'
-        });
-        await alertAction('Atendimento transferido com sucesso.');
-        render();
-      });
-    });
-
-    agendaRoot.querySelectorAll('[data-barber-context]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const id = button.getAttribute('data-barber-context');
-        if (!id) return;
-        const row = getAppointmentById(id);
-        if (!row) return;
-        const all = getAppointments().filter((a) => String(a.client_email || '').toLowerCase() === String(row.client_email || '').toLowerCase());
-        const recent = all
-          .filter((a) => String(a.status || '') === 'completed')
-          .sort((a, b) => new Date(b.start_datetime || 0) - new Date(a.start_datetime || 0))
-          .slice(0, 3)
-          .map((a) => `- ${a.service_name} (${formatBookingDateTime(a.appointment_date, a.start_time)})`)
-          .join('\n');
-        const historyCount = all.length;
-        const message = [
-          `Cliente: ${row.client_name || '-'}`,
-          `Total de atendimentos: ${historyCount}`,
-          `Ultimos servicos:`,
-          recent || '- Sem historico concluido.',
-          '',
-          `Observacoes deste atendimento: ${row.notes ? String(row.notes) : 'Sem observacoes.'}`
-        ].join('\n');
-        await alertAction(message, { title: 'Contexto do cliente', confirmText: 'Fechar' });
-        render();
-      });
-    });
   };
 
   if (agendaDateFilterEl) {

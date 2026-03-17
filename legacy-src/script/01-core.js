@@ -602,7 +602,7 @@ function getBookingStatusLabel(status) {
     in_progress: 'Em andamento',
     canceled: 'Cancelado',
     completed: 'Concluido',
-    no_show: 'Nao comparecido'
+    no_show: 'Não compareceu'
   };
   return map[status] || status;
 }

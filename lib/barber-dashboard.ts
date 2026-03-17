@@ -242,7 +242,7 @@ export function getOperationalStatusLabel(status: string) {
   if (['awaiting_payment', 'pending', 'confirmed'].includes(key)) return 'AGENDADO';
   if (key === 'in_progress') return 'EM_ANDAMENTO';
   if (key === 'completed') return 'CONCLUIDO';
-  if (key === 'no_show') return 'NO_SHOW';
+  if (key === 'no_show') return 'NÃO COMPARECEU';
   if (key === 'canceled' || key === 'cancelled') return 'CANCELADO';
   return String(status || '').toUpperCase();
 }
