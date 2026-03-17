@@ -1208,6 +1208,145 @@ function initAdminDashboard() {
   setTab('today');
 }
 
+function initAdminStatusRequestsPage() {
+  const root = document.getElementById('admin-status-requests-root');
+  if (!root) return;
+  if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
+
+  const filterButtons = Array.from(document.querySelectorAll('[data-request-filter]'));
+  const counterPending = document.getElementById('admin-request-count-pending');
+  const counterApproved = document.getElementById('admin-request-count-approved');
+  const counterRejected = document.getElementById('admin-request-count-rejected');
+  let currentFilter = 'pending';
+
+  const statusBadgeClass = (status) => {
+    if (status === 'pending') return 'status-awaiting_payment';
+    if (status === 'approved') return 'status-completed';
+    if (status === 'rejected') return 'status-no_show';
+    return '';
+  };
+
+  const render = () => {
+    const allRows = getStatusChangeRequests().sort((a, b) => new Date(b.requested_at || 0) - new Date(a.requested_at || 0));
+    const pending = allRows.filter((row) => row.status === 'pending');
+    const approved = allRows.filter((row) => row.status === 'approved');
+    const rejected = allRows.filter((row) => row.status === 'rejected');
+
+    if (counterPending) counterPending.textContent = String(pending.length);
+    if (counterApproved) counterApproved.textContent = String(approved.length);
+    if (counterRejected) counterRejected.textContent = String(rejected.length);
+
+    filterButtons.forEach((button) => {
+      const active = button.getAttribute('data-request-filter') === currentFilter;
+      button.classList.toggle('button-primary', active);
+      button.classList.toggle('button-secondary', !active);
+    });
+
+    const rows = currentFilter === 'all' ? allRows : allRows.filter((row) => row.status === currentFilter);
+    if (!rows.length) {
+      root.innerHTML = '<article class="schedule-item"><h3>Sem solicitações</h3><p>Nenhum item encontrado para o filtro selecionado.</p></article>';
+      return;
+    }
+
+    root.innerHTML = rows.map((row) => {
+      const id = String(row.id || '');
+      const currentStatus = sanitizeText(getBookingStatusLabel(row.current_status || '-'));
+      const requestedStatus = sanitizeText(getBookingStatusLabel(row.requested_status || '-'));
+      const statusLabel = sanitizeText(getBookingStatusLabel(row.status || '-'));
+      const isPending = row.status === 'pending';
+      return `
+        <article class="barber-appointment-card">
+          <div class="barber-appointment-header">
+            <div class="grid gap-1.5">
+              <p class="barber-appointment-title">Solicitação #${id.slice(0, 8)}</p>
+              <p class="text-xs text-text-secondary">Barbeiro: <strong class="text-text-primary">${sanitizeText(row.barber_name || row.barber_email || '-')}</strong></p>
+              <p class="text-xs text-text-secondary">Cliente: <strong class="text-text-primary">${sanitizeText(row.client_name || row.client_email || '-')}</strong></p>
+              <p class="text-xs text-text-secondary">Solicitado em: <strong class="text-text-primary">${new Date(row.requested_at || 0).toLocaleString('pt-BR')}</strong></p>
+              <p class="text-xs text-text-secondary">Status atual: <strong class="text-text-primary">${currentStatus}</strong></p>
+              <p class="text-xs text-text-secondary">Status solicitado: <strong class="text-primary">${requestedStatus}</strong></p>
+              <p class="text-xs text-text-secondary">Motivo: <strong class="text-text-primary">${sanitizeText(row.reason || 'Sem justificativa.')}</strong></p>
+              ${row.review_note ? `<p class="text-xs text-text-secondary">Nota do admin: <strong class="text-text-primary">${sanitizeText(row.review_note)}</strong></p>` : ''}
+            </div>
+            <div class="flex flex-col items-start gap-2 md:items-end">
+              <span class="barber-badge ${statusBadgeClass(row.status)}">${statusLabel}</span>
+              <span class="barber-badge">AG: ${sanitizeText(String(row.appointment_id || '').slice(0, 8))}</span>
+            </div>
+          </div>
+          ${isPending ? `
+            <div class="barber-appointment-actions">
+              <div class="barber-actions-row">
+                <input class="input" id="request-note-${id}" placeholder="Nota opcional da análise" />
+                <button type="button" class="button button-primary min-h-10 w-full" data-request-approve="${id}">Confirmar</button>
+                <button type="button" class="button button-secondary min-h-10 w-full" data-request-reject="${id}">Rejeitar</button>
+              </div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    root.querySelectorAll('[data-request-approve]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const requestId = button.getAttribute('data-request-approve');
+        if (!requestId) return;
+        const all = getStatusChangeRequests();
+        const idx = all.findIndex((item) => String(item.id) === requestId);
+        if (idx < 0) return;
+        const row = all[idx];
+        const note = sanitizeText(root.querySelector(`#request-note-${requestId}`)?.value || '');
+        const reviewer = getSession();
+        all[idx] = {
+          ...row,
+          status: 'approved',
+          reviewed_by_name: reviewer?.name || reviewer?.email || 'admin',
+          reviewed_at: nowIso(),
+          review_note: note || null,
+          updated_at: nowIso()
+        };
+        saveStatusChangeRequests(all);
+        updateAppointmentStatus(row.appointment_id, row.requested_status, { status_reason: row.reason || null });
+        logAudit('admin_status_change_request_approved', { request_id: requestId, appointment_id: row.appointment_id, requested_status: row.requested_status });
+        await alertAction('Solicitação aprovada e status aplicado no agendamento.');
+        render();
+      });
+    });
+
+    root.querySelectorAll('[data-request-reject]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const requestId = button.getAttribute('data-request-reject');
+        if (!requestId) return;
+        const all = getStatusChangeRequests();
+        const idx = all.findIndex((item) => String(item.id) === requestId);
+        if (idx < 0) return;
+        const row = all[idx];
+        const note = sanitizeText(root.querySelector(`#request-note-${requestId}`)?.value || '');
+        const reviewer = getSession();
+        all[idx] = {
+          ...row,
+          status: 'rejected',
+          reviewed_by_name: reviewer?.name || reviewer?.email || 'admin',
+          reviewed_at: nowIso(),
+          review_note: note || null,
+          updated_at: nowIso()
+        };
+        saveStatusChangeRequests(all);
+        logAudit('admin_status_change_request_rejected', { request_id: requestId, appointment_id: row.appointment_id });
+        await alertAction('Solicitação rejeitada.');
+        render();
+      });
+    });
+  };
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      currentFilter = button.getAttribute('data-request-filter') || 'pending';
+      render();
+    });
+  });
+
+  render();
+}
+
 
 function initClientHomePage() {
   const wrap = document.getElementById('client-branding');

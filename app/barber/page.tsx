@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, BadgeInfo, CalendarClock, CalendarDays, CheckCircle2, CircleDollarSign, Clock3, Scissors, UserRound, XCircle } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
   updateBarberAppointmentStatus,
   type BarberAppointmentRow
 } from '@/lib/barber-dashboard';
+import { createStatusChangeRequest, getStatusRequestLabel } from '@/lib/status-change-requests';
 import { useToast } from '@/components/ui/toast';
 
 function asCurrency(value: number) {
@@ -32,18 +33,6 @@ function asInputDate(value: Date) {
   const m = String(value.getMonth() + 1).padStart(2, '0');
   const d = String(value.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function toDatetimeLocalInput(value?: string | null) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d}T${hh}:${mm}`;
 }
 
 function addDays(base: Date, days: number) {
@@ -78,6 +67,22 @@ function StatusIcon({ status }: { status: string }) {
   return <XCircle className="h-3.5 w-3.5" />;
 }
 
+type ReasonModalState = {
+  open: boolean;
+  row: BarberAppointmentRow | null;
+  toStatus: 'no_show' | 'canceled' | null;
+  reason: string;
+};
+
+type StatusRequestModalState = {
+  open: boolean;
+  row: BarberAppointmentRow | null;
+  requestedStatus: 'confirmed' | 'no_show' | 'canceled' | '';
+  reason: string;
+};
+
+const REQUESTABLE_STATUSES: Array<'confirmed' | 'no_show' | 'canceled'> = ['confirmed', 'no_show', 'canceled'];
+
 export default function BarberEntryPage() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
@@ -85,10 +90,16 @@ export default function BarberEntryPage() {
   const [selectedDate, setSelectedDate] = useState(() => asInputDate(new Date()));
   const { toast } = useToast();
 
-  const [reasonModal, setReasonModal] = useState<{ open: boolean; row: BarberAppointmentRow | null; toStatus: 'no_show' | 'canceled' | null; reason: string }>({
+  const [reasonModal, setReasonModal] = useState<ReasonModalState>({
     open: false,
     row: null,
     toStatus: null,
+    reason: ''
+  });
+  const [statusRequestModal, setStatusRequestModal] = useState<StatusRequestModalState>({
+    open: false,
+    row: null,
+    requestedStatus: '',
     reason: ''
   });
   const [openActionsId, setOpenActionsId] = useState<string | null>(null);
@@ -121,17 +132,22 @@ export default function BarberEntryPage() {
       toast(successMessage);
       await load();
     } catch (error: any) {
-      toast(error?.message || 'Falha ao executar acao.');
+      toast(error?.message || 'Falha ao executar ação.');
     } finally {
       setBusyKey('');
     }
   }, [load, toast]);
 
+  const requestableStatusesForRow = useCallback((row: BarberAppointmentRow | null) => {
+    const current = String(row?.status || '').toLowerCase();
+    return REQUESTABLE_STATUSES.filter((item) => item !== current);
+  }, []);
+
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-4">
       <Card className="border-borderc/80 bg-[radial-gradient(circle_at_0%_0%,rgba(198,154,69,0.18),transparent_36%),radial-gradient(circle_at_100%_0%,rgba(56,189,248,0.16),transparent_42%),linear-gradient(135deg,rgba(2,6,23,0.95),rgba(10,18,40,0.92))]">
         <CardHeader>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/90">OPERACAO BARBER</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/90">OPERAÇÃO BARBER</p>
           <CardTitle className="text-2xl md:text-3xl">Agenda do dia a dia</CardTitle>
           <p className="text-sm text-text-secondary">Home centrada na agenda com controle operacional completo do atendimento.</p>
         </CardHeader>
@@ -147,7 +163,7 @@ export default function BarberEntryPage() {
                     Ganhos de hoje
                   </p>
                   <p className="text-3xl font-extrabold leading-none text-emerald-50">{asCurrency(Number(dashboard.earningsToday || 0))}</p>
-                  <small className="text-emerald-100/80">Somente atendimentos concluidos do barbeiro logado.</small>
+                  <small className="text-emerald-100/80">Somente atendimentos concluídos do barbeiro logado.</small>
                 </article>
                 <article className="relative overflow-hidden rounded-2xl border border-sky-300/45 bg-gradient-to-br from-sky-500/20 via-sky-500/8 to-transparent p-5 shadow-[0_16px_38px_rgba(56,189,248,0.2)]">
                   <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-100/90">
@@ -155,7 +171,7 @@ export default function BarberEntryPage() {
                     Ganhos da semana
                   </p>
                   <p className="text-3xl font-extrabold leading-none text-sky-50">{asCurrency(Number(dashboard.earningsWeek || 0))}</p>
-                  <small className="text-sky-100/80">Soma semanal dos servicos concluidos por voce.</small>
+                  <small className="text-sky-100/80">Soma semanal dos serviços concluídos por você.</small>
                 </article>
               </section>
 
@@ -163,7 +179,7 @@ export default function BarberEntryPage() {
                 <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-base font-semibold">Agenda do barbeiro</h2>
-                    <p className="text-xs text-text-secondary">Acoes operacionais completas no proprio card do atendimento.</p>
+                    <p className="text-xs text-text-secondary">Ações operacionais completas no próprio card do atendimento.</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="sr-only" htmlFor="barber-agenda-date-filter">Filtrar por data</label>
@@ -181,7 +197,7 @@ export default function BarberEntryPage() {
                 </header>
 
                 {filteredAppointments.length === 0 ? (
-                  <EmptyState title="Sem agendamentos nesta data" description="Selecione outra data no calendario para ver os atendimentos." />
+                  <EmptyState title="Sem agendamentos nesta data" description="Selecione outra data no calendário para ver os atendimentos." />
                 ) : (
                   <div className="grid gap-3">
                     {filteredAppointments.map((row) => {
@@ -190,7 +206,7 @@ export default function BarberEntryPage() {
                       const status = String(row.status || '').toLowerCase();
                       const canStart = ['awaiting_payment', 'pending', 'confirmed'].includes(status);
                       const canConclude = ['in_progress', 'pending', 'confirmed'].includes(status);
-                      const canNoShow = ['awaiting_payment', 'pending', 'confirmed'].includes(status);
+                      const canNoShow = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
                       const canCancel = ['awaiting_payment', 'pending', 'confirmed', 'in_progress'].includes(status);
 
                       return (
@@ -202,8 +218,8 @@ export default function BarberEntryPage() {
                                 <p className="flex items-center gap-1.5 text-xs text-text-secondary"><UserRound className="h-3.5 w-3.5 text-primary" />Cliente: <strong className="text-text-primary">{row._displayClient}</strong></p>
                                 <p className="flex items-center gap-1.5 text-xs text-text-secondary"><CalendarClock className="h-3.5 w-3.5 text-primary" />Atendimento: <strong className="text-text-primary">{asDateTime(row.start_datetime)}</strong></p>
                                 <p className="flex items-center gap-1.5 text-xs text-text-secondary"><CalendarDays className="h-3.5 w-3.5 text-primary" />Criado em: <strong className="text-text-primary">{asDateTime(row.created_at)}</strong></p>
-                                <p className="flex items-center gap-1.5 text-xs text-text-secondary"><Clock3 className="h-3.5 w-3.5 text-primary" />Valor: <strong className="text-primary">{asCurrency(row._displayPrice)}</strong></p>
-                                <p className="text-xs text-text-secondary">Observacoes: <strong className="text-text-primary">{row.notes ? String(row.notes) : 'Sem observacoes registradas.'}</strong></p>
+                                <p className="flex items-center gap-1.5 text-xs text-text-secondary"><Clock3 className="h-3.5 w-3.5 text-primary" />Valor: <strong className="text-primary">{asCurrency(row._displayPrice || 0)}</strong></p>
+                                <p className="text-xs text-text-secondary">Observações: <strong className="text-text-primary">{row.notes ? String(row.notes) : 'Sem observações registradas.'}</strong></p>
                                 {row.status_reason ? <p className="text-xs text-amber-200/90">Justificativa: {String(row.status_reason)}</p> : null}
                                 {Number(row.delay_minutes || 0) > 0 ? <p className="text-xs text-amber-200/90">Atraso sinalizado: {Number(row.delay_minutes)} min{row.delay_reason ? ` - ${String(row.delay_reason)}` : ''}</p> : null}
                               </div>
@@ -230,7 +246,7 @@ export default function BarberEntryPage() {
                               <Button
                                 type="button"
                                 disabled={!canConclude || busyKey === `complete:${row.id}`}
-                                onClick={() => runAction(`complete:${row.id}`, () => updateBarberAppointmentStatus({ appointmentId: String(row.id), toStatus: 'completed' }), 'Servico concluido com sucesso.')}
+                                onClick={() => runAction(`complete:${row.id}`, () => updateBarberAppointmentStatus({ appointmentId: String(row.id), toStatus: 'completed' }), 'Serviço concluído com sucesso.')}
                               >
                                 {busyKey === `complete:${row.id}` ? 'Concluindo...' : 'Concluir'}
                               </Button>
@@ -240,33 +256,49 @@ export default function BarberEntryPage() {
                                   variant="outline"
                                   onClick={() => setOpenActionsId((current) => (current === rowId ? null : rowId))}
                                 >
-                                  {showMoreActions ? 'Ocultar acoes' : 'Mais acoes'}
+                                  {showMoreActions ? 'Ocultar ações' : 'Mais ações'}
                                 </Button>
                                 {showMoreActions ? (
-                                  <div className="absolute right-0 bottom-[calc(100%+0.45rem)] z-30 grid w-[min(12rem,calc(100vw-2.5rem))] gap-2 rounded-xl border border-borderc/80 bg-slate-950/95 p-2 shadow-[0_16px_30px_rgba(2,6,23,0.36)]">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={!canCancel}
-                                onClick={() => {
-                                  setOpenActionsId(null);
-                                  setReasonModal({ open: true, row, toStatus: 'canceled', reason: '' });
-                                }}
-                              >
-                                Cancelar
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={!canNoShow}
-                                onClick={() => {
-                                  setOpenActionsId(null);
-                                  setReasonModal({ open: true, row, toStatus: 'no_show', reason: '' });
-                                }}
-                              >
-                                Não compareceu
-                              </Button>
-                            </div>
+                                  <div className="absolute right-0 bottom-[calc(100%+0.45rem)] z-30 grid w-[min(12.5rem,calc(100vw-2.5rem))] gap-2 rounded-xl border border-borderc/80 bg-slate-950/95 p-2 shadow-[0_16px_30px_rgba(2,6,23,0.36)]">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      disabled={!canCancel}
+                                      onClick={() => {
+                                        setOpenActionsId(null);
+                                        setReasonModal({ open: true, row, toStatus: 'canceled', reason: '' });
+                                      }}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      disabled={!canNoShow}
+                                      onClick={() => {
+                                        setOpenActionsId(null);
+                                        setReasonModal({ open: true, row, toStatus: 'no_show', reason: '' });
+                                      }}
+                                    >
+                                      Não compareceu
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setOpenActionsId(null);
+                                        const options = requestableStatusesForRow(row);
+                                        setStatusRequestModal({
+                                          open: true,
+                                          row,
+                                          requestedStatus: options[0] || '',
+                                          reason: ''
+                                        });
+                                      }}
+                                    >
+                                      Alterar status
+                                    </Button>
+                                  </div>
                                 ) : null}
                               </div>
                             </div>
@@ -285,10 +317,10 @@ export default function BarberEntryPage() {
       <Dialog open={reasonModal.open}>
         <DialogContent className="max-w-md border-borderc/80 bg-slate-950">
           <div className="grid gap-3">
-            <h3 className="text-lg font-semibold">{reasonModal.toStatus === 'no_show' ? 'Registrar no-show' : 'Registrar cancelamento'}</h3>
+            <h3 className="text-lg font-semibold">{reasonModal.toStatus === 'no_show' ? 'Registrar não comparecimento' : 'Registrar cancelamento'}</h3>
             <p className="text-sm text-text-secondary">Informe a justificativa para atualizar o status do atendimento.</p>
             <Input
-              placeholder="Ex.: cliente avisou que nao viria"
+              placeholder="Ex.: cliente avisou que não viria"
               value={reasonModal.reason}
               onChange={(e) => setReasonModal((current) => ({ ...current, reason: e.target.value }))}
             />
@@ -303,12 +335,88 @@ export default function BarberEntryPage() {
                   void runAction(
                     `reason:${reasonModal.row.id}`,
                     () => updateBarberAppointmentStatus({ appointmentId: String(reasonModal.row?.id), toStatus: reasonModal.toStatus!, reason }),
-                    reasonModal.toStatus === 'no_show' ? 'No-show registrado.' : 'Cancelamento registrado.'
+                    reasonModal.toStatus === 'no_show' ? 'Não comparecimento registrado.' : 'Cancelamento registrado.'
                   );
                   setReasonModal({ open: false, row: null, toStatus: null, reason: '' });
                 }}
               >
                 Confirmar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={statusRequestModal.open}>
+        <DialogContent className="max-w-lg border-borderc/80 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.14),transparent_48%),linear-gradient(180deg,rgba(8,15,30,0.98),rgba(6,12,24,0.98))]">
+          <div className="grid gap-4">
+            <div className="grid gap-1">
+              <h3 className="text-lg font-semibold">Solicitar alteração de status</h3>
+              <p className="text-sm text-text-secondary">
+                Esta solicitação será enviada para aprovação do admin da barbearia.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-borderc/70 bg-slate-950/50 p-3 text-xs text-text-secondary">
+              <p>Atendimento: <strong className="text-text-primary">{statusRequestModal.row?._displayService || '-'}</strong></p>
+              <p>Cliente: <strong className="text-text-primary">{statusRequestModal.row?._displayClient || '-'}</strong></p>
+              <p>Status atual: <strong className="text-text-primary">{getStatusRequestLabel(String(statusRequestModal.row?.status || ''))}</strong></p>
+            </div>
+
+            <label className="grid gap-1 text-sm text-text-secondary">
+              Novo status desejado
+              <select
+                value={statusRequestModal.requestedStatus}
+                onChange={(e) => setStatusRequestModal((current) => ({ ...current, requestedStatus: e.target.value as StatusRequestModalState['requestedStatus'] }))}
+                className="h-11 rounded-xl border border-borderc/80 bg-slate-900/65 px-3 text-sm text-text-primary outline-none transition-colors focus:border-primary/70"
+              >
+                {requestableStatusesForRow(statusRequestModal.row).map((item) => (
+                  <option key={item} value={item}>{getStatusRequestLabel(item)}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1 text-sm text-text-secondary">
+              Justificativa
+              <Input
+                placeholder="Descreva o motivo da mudança"
+                value={statusRequestModal.reason}
+                onChange={(e) => setStatusRequestModal((current) => ({ ...current, reason: e.target.value }))}
+              />
+            </label>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStatusRequestModal({ open: false, row: null, requestedStatus: '', reason: '' })}
+              >
+                Fechar
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !statusRequestModal.row
+                  || !statusRequestModal.requestedStatus
+                  || !String(statusRequestModal.reason || '').trim()
+                  || busyKey === `status-request:${statusRequestModal.row?.id || ''}`
+                }
+                onClick={() => {
+                  if (!statusRequestModal.row || !statusRequestModal.requestedStatus) return;
+                  const reason = String(statusRequestModal.reason || '').trim();
+                  void runAction(
+                    `status-request:${statusRequestModal.row.id}`,
+                    () => createStatusChangeRequest({
+                      appointmentId: String(statusRequestModal.row?.id),
+                      requestedStatus: statusRequestModal.requestedStatus as 'confirmed' | 'no_show' | 'canceled',
+                      reason
+                    }),
+                    'Solicitação enviada para análise do admin.'
+                  );
+                  setStatusRequestModal({ open: false, row: null, requestedStatus: '', reason: '' });
+                }}
+              >
+                Confirmar solicitação
               </Button>
             </div>
           </div>

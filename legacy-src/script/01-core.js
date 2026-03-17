@@ -85,7 +85,8 @@ const STORAGE_KEYS = {
   clientFavorites: 'barberpro_client_favorites',
   clientProfiles: 'barberpro_client_profiles',
   platformUsers: 'barberpro_platform_users',
-  barbershops: 'barberpro_barbershops'
+  barbershops: 'barberpro_barbershops',
+  statusChangeRequests: 'barberpro_status_change_requests'
 };
 
 const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'in_progress', 'canceled', 'completed', 'no_show'];
@@ -605,6 +606,15 @@ function getBookingStatusLabel(status) {
     no_show: 'Não compareceu'
   };
   return map[status] || status;
+}
+
+function getStatusChangeRequests() {
+  return getJson(STORAGE_KEYS.statusChangeRequests, []).filter((item) => item && item.unit_id === APP_CONFIG.unitId && !item.deleted_at);
+}
+
+function saveStatusChangeRequests(rows) {
+  const keep = getJson(STORAGE_KEYS.statusChangeRequests, []).filter((item) => item.unit_id !== APP_CONFIG.unitId || item.deleted_at);
+  setJson(STORAGE_KEYS.statusChangeRequests, [...rows, ...keep]);
 }
 
 

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { getCurrentUserContext } from '@/lib/auth';
 import { supabaseClient } from '@/lib/supabaseClient';
@@ -246,3 +246,4 @@ export function getOperationalStatusLabel(status: string) {
   if (key === 'canceled' || key === 'cancelled') return 'CANCELADO';
   return String(status || '').toUpperCase();
 }
+

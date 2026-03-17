@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { MrrCards } from '@/components/admin/MrrCards';
 import { OccupancyTable } from '@/components/admin/OccupancyTable';
 import { CardSkeleton, TableSkeleton } from '@/components/common/Skeletons';
@@ -62,6 +63,19 @@ export default function AdminHomePage() {
 
       <h2 className="text-lg font-semibold">Ocupacao por barbeiro</h2>
       {loading ? <TableSkeleton /> : <OccupancyTable data={occupancy} />}
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <article className="rounded-xl border border-borderc bg-slate-950/35 p-3">
+          <p className="font-medium">Solicitacoes de alteracao de status</p>
+          <p className="mt-1 text-sm text-text-secondary">Revise pedidos de barbeiros para corrigir status de atendimentos concluidos ou ja encerrados.</p>
+          <Link
+            href="/admin/requests"
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/60 bg-primary/90 px-4 font-semibold text-zinc-900 transition-all hover:brightness-95"
+          >
+            Abrir solicitacoes
+          </Link>
+        </article>
+      </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
         <article className="rounded-xl border border-borderc bg-slate-950/35 p-3">

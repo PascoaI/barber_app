@@ -1,4 +1,6 @@
-const DEFAULT_UNIT_ID = 'unit_bom_fim';
+// AUTO-GENERATED FILE. Source: legacy-src/script/*.js
+
+﻿const DEFAULT_UNIT_ID = 'unit_bom_fim';
 const DEFAULT_TENANT_ID = 'tenant_barberpro_demo';
 
 const APP_CONFIG = {
@@ -85,7 +87,8 @@ const STORAGE_KEYS = {
   clientFavorites: 'barberpro_client_favorites',
   clientProfiles: 'barberpro_client_profiles',
   platformUsers: 'barberpro_platform_users',
-  barbershops: 'barberpro_barbershops'
+  barbershops: 'barberpro_barbershops',
+  statusChangeRequests: 'barberpro_status_change_requests'
 };
 
 const APPOINTMENT_STATUS = ['awaiting_payment', 'pending', 'confirmed', 'in_progress', 'canceled', 'completed', 'no_show'];
@@ -605,6 +608,15 @@ function getBookingStatusLabel(status) {
     no_show: 'Não compareceu'
   };
   return map[status] || status;
+}
+
+function getStatusChangeRequests() {
+  return getJson(STORAGE_KEYS.statusChangeRequests, []).filter((item) => item && item.unit_id === APP_CONFIG.unitId && !item.deleted_at);
+}
+
+function saveStatusChangeRequests(rows) {
+  const keep = getJson(STORAGE_KEYS.statusChangeRequests, []).filter((item) => item.unit_id !== APP_CONFIG.unitId || item.deleted_at);
+  setJson(STORAGE_KEYS.statusChangeRequests, [...rows, ...keep]);
 }
 
 
@@ -1146,8 +1158,7 @@ function renderMetrics(container, metrics) {
   `;
 }
 
-
-function getLegacyLoginHints() {
+﻿function getLegacyLoginHints() {
   const platformHints = getPlatformUsers()
     .filter((u) => u && u.role !== 'super_admin')
     .map((u) => ({
@@ -2357,6 +2368,145 @@ function initAdminDashboard() {
   setTab('today');
 }
 
+function initAdminStatusRequestsPage() {
+  const root = document.getElementById('admin-status-requests-root');
+  if (!root) return;
+  if (!requireRole(['admin', 'super_admin'], 'login.html')) return;
+
+  const filterButtons = Array.from(document.querySelectorAll('[data-request-filter]'));
+  const counterPending = document.getElementById('admin-request-count-pending');
+  const counterApproved = document.getElementById('admin-request-count-approved');
+  const counterRejected = document.getElementById('admin-request-count-rejected');
+  let currentFilter = 'pending';
+
+  const statusBadgeClass = (status) => {
+    if (status === 'pending') return 'status-awaiting_payment';
+    if (status === 'approved') return 'status-completed';
+    if (status === 'rejected') return 'status-no_show';
+    return '';
+  };
+
+  const render = () => {
+    const allRows = getStatusChangeRequests().sort((a, b) => new Date(b.requested_at || 0) - new Date(a.requested_at || 0));
+    const pending = allRows.filter((row) => row.status === 'pending');
+    const approved = allRows.filter((row) => row.status === 'approved');
+    const rejected = allRows.filter((row) => row.status === 'rejected');
+
+    if (counterPending) counterPending.textContent = String(pending.length);
+    if (counterApproved) counterApproved.textContent = String(approved.length);
+    if (counterRejected) counterRejected.textContent = String(rejected.length);
+
+    filterButtons.forEach((button) => {
+      const active = button.getAttribute('data-request-filter') === currentFilter;
+      button.classList.toggle('button-primary', active);
+      button.classList.toggle('button-secondary', !active);
+    });
+
+    const rows = currentFilter === 'all' ? allRows : allRows.filter((row) => row.status === currentFilter);
+    if (!rows.length) {
+      root.innerHTML = '<article class="schedule-item"><h3>Sem solicitações</h3><p>Nenhum item encontrado para o filtro selecionado.</p></article>';
+      return;
+    }
+
+    root.innerHTML = rows.map((row) => {
+      const id = String(row.id || '');
+      const currentStatus = sanitizeText(getBookingStatusLabel(row.current_status || '-'));
+      const requestedStatus = sanitizeText(getBookingStatusLabel(row.requested_status || '-'));
+      const statusLabel = sanitizeText(getBookingStatusLabel(row.status || '-'));
+      const isPending = row.status === 'pending';
+      return `
+        <article class="barber-appointment-card">
+          <div class="barber-appointment-header">
+            <div class="grid gap-1.5">
+              <p class="barber-appointment-title">Solicitação #${id.slice(0, 8)}</p>
+              <p class="text-xs text-text-secondary">Barbeiro: <strong class="text-text-primary">${sanitizeText(row.barber_name || row.barber_email || '-')}</strong></p>
+              <p class="text-xs text-text-secondary">Cliente: <strong class="text-text-primary">${sanitizeText(row.client_name || row.client_email || '-')}</strong></p>
+              <p class="text-xs text-text-secondary">Solicitado em: <strong class="text-text-primary">${new Date(row.requested_at || 0).toLocaleString('pt-BR')}</strong></p>
+              <p class="text-xs text-text-secondary">Status atual: <strong class="text-text-primary">${currentStatus}</strong></p>
+              <p class="text-xs text-text-secondary">Status solicitado: <strong class="text-primary">${requestedStatus}</strong></p>
+              <p class="text-xs text-text-secondary">Motivo: <strong class="text-text-primary">${sanitizeText(row.reason || 'Sem justificativa.')}</strong></p>
+              ${row.review_note ? `<p class="text-xs text-text-secondary">Nota do admin: <strong class="text-text-primary">${sanitizeText(row.review_note)}</strong></p>` : ''}
+            </div>
+            <div class="flex flex-col items-start gap-2 md:items-end">
+              <span class="barber-badge ${statusBadgeClass(row.status)}">${statusLabel}</span>
+              <span class="barber-badge">AG: ${sanitizeText(String(row.appointment_id || '').slice(0, 8))}</span>
+            </div>
+          </div>
+          ${isPending ? `
+            <div class="barber-appointment-actions">
+              <div class="barber-actions-row">
+                <input class="input" id="request-note-${id}" placeholder="Nota opcional da análise" />
+                <button type="button" class="button button-primary min-h-10 w-full" data-request-approve="${id}">Confirmar</button>
+                <button type="button" class="button button-secondary min-h-10 w-full" data-request-reject="${id}">Rejeitar</button>
+              </div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    root.querySelectorAll('[data-request-approve]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const requestId = button.getAttribute('data-request-approve');
+        if (!requestId) return;
+        const all = getStatusChangeRequests();
+        const idx = all.findIndex((item) => String(item.id) === requestId);
+        if (idx < 0) return;
+        const row = all[idx];
+        const note = sanitizeText(root.querySelector(`#request-note-${requestId}`)?.value || '');
+        const reviewer = getSession();
+        all[idx] = {
+          ...row,
+          status: 'approved',
+          reviewed_by_name: reviewer?.name || reviewer?.email || 'admin',
+          reviewed_at: nowIso(),
+          review_note: note || null,
+          updated_at: nowIso()
+        };
+        saveStatusChangeRequests(all);
+        updateAppointmentStatus(row.appointment_id, row.requested_status, { status_reason: row.reason || null });
+        logAudit('admin_status_change_request_approved', { request_id: requestId, appointment_id: row.appointment_id, requested_status: row.requested_status });
+        await alertAction('Solicitação aprovada e status aplicado no agendamento.');
+        render();
+      });
+    });
+
+    root.querySelectorAll('[data-request-reject]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const requestId = button.getAttribute('data-request-reject');
+        if (!requestId) return;
+        const all = getStatusChangeRequests();
+        const idx = all.findIndex((item) => String(item.id) === requestId);
+        if (idx < 0) return;
+        const row = all[idx];
+        const note = sanitizeText(root.querySelector(`#request-note-${requestId}`)?.value || '');
+        const reviewer = getSession();
+        all[idx] = {
+          ...row,
+          status: 'rejected',
+          reviewed_by_name: reviewer?.name || reviewer?.email || 'admin',
+          reviewed_at: nowIso(),
+          review_note: note || null,
+          updated_at: nowIso()
+        };
+        saveStatusChangeRequests(all);
+        logAudit('admin_status_change_request_rejected', { request_id: requestId, appointment_id: row.appointment_id });
+        await alertAction('Solicitação rejeitada.');
+        render();
+      });
+    });
+  };
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      currentFilter = button.getAttribute('data-request-filter') || 'pending';
+      render();
+    });
+  });
+
+  render();
+}
+
 
 function initClientHomePage() {
   const wrap = document.getElementById('client-branding');
@@ -2850,9 +3000,7 @@ function initSubscriptionsPage() {
   `;
 }
 
-
-
-function initSuperAdminTenantsPage() {
+﻿function initSuperAdminTenantsPage() {
   const root = document.getElementById('tenants-root');
   if (!root) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -3031,8 +3179,7 @@ function initSuperAdminTenantsPage() {
   render();
 }
 
-
-function initSuperAdminBarbershopFormPage() {
+﻿function initSuperAdminBarbershopFormPage() {
   const form = document.getElementById('superadmin-barbershop-form');
   if (!form) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -3253,6 +3400,101 @@ function initBarberHomePage() {
     return sameId || sameEmail;
   });
 
+  const openStatusRequestModal = async (appointmentId) => {
+    const rows = getAppointments();
+    const appointment = rows.find((item) => String(item.id) === String(appointmentId));
+    if (!appointment) {
+      await alertAction('Agendamento não encontrado.');
+      return;
+    }
+
+    const currentStatus = String(appointment.status || '').toLowerCase();
+    const availableStatus = ['confirmed', 'no_show', 'canceled'].filter((status) => status !== currentStatus);
+    if (!availableStatus.length) {
+      await alertAction('Não há status alternativo válido para solicitação.');
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'fixed inset-0 z-[120] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4';
+    backdrop.innerHTML = `
+      <div class="w-full max-w-xl rounded-2xl border border-borderc bg-surface shadow-soft p-5 md:p-6 grid gap-4">
+        <header class="grid gap-1">
+          <p class="text-xs uppercase tracking-[0.22em] text-primary/90 font-semibold">Solicitacao ao admin</p>
+          <h2 class="text-xl font-semibold text-text-primary">Alterar status do atendimento</h2>
+          <p class="text-sm text-text-secondary">Mesmo após concluído, envie uma solicitação para revisão do admin.</p>
+        </header>
+        <div class="grid gap-2 rounded-xl border border-borderc/80 bg-slate-950/35 p-3 text-sm">
+          <p>Cliente: <strong>${sanitizeText(appointment.client_name || '-')}</strong></p>
+          <p>Serviço: <strong>${sanitizeText(appointment.service_name || 'Servico')}</strong></p>
+          <p>Status atual: <strong>${sanitizeText(getBookingStatusLabel(currentStatus))}</strong></p>
+        </div>
+        <label class="grid gap-1 text-sm text-text-secondary">
+          Novo status desejado
+          <select id="status-request-target" class="input">
+            ${availableStatus.map((status) => `<option value="${status}">${sanitizeText(getBookingStatusLabel(status))}</option>`).join('')}
+          </select>
+        </label>
+        <label class="grid gap-1 text-sm text-text-secondary">
+          Justificativa
+          <textarea id="status-request-reason" class="input" rows="3" placeholder="Descreva o motivo da alteração."></textarea>
+        </label>
+        <div class="grid gap-2 md:grid-cols-2">
+          <button type="button" class="button button-secondary" data-request-close>Fechar</button>
+          <button type="button" class="button button-primary" data-request-confirm>Confirmar solicitação</button>
+        </div>
+      </div>
+    `;
+
+    const close = () => backdrop.remove();
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) close();
+    });
+    backdrop.querySelector('[data-request-close]')?.addEventListener('click', close);
+    backdrop.querySelector('[data-request-confirm]')?.addEventListener('click', async () => {
+      const requestedStatus = String(backdrop.querySelector('#status-request-target')?.value || '').trim();
+      const reason = sanitizeText(backdrop.querySelector('#status-request-reason')?.value || '');
+      if (!requestedStatus) {
+        await alertAction('Selecione o novo status desejado.');
+        return;
+      }
+      if (!reason) {
+        await alertAction('Informe a justificativa da solicitação.');
+        return;
+      }
+
+      const requestRows = getStatusChangeRequests();
+      requestRows.unshift({
+        id: `scr_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        unit_id: APP_CONFIG.unitId,
+        appointment_id: appointment.id,
+        barber_id: appointment.barber_id || activeBarber?.id || session?.barberId || null,
+        barber_name: activeBarber?.name || session?.name || session?.email || 'Barbeiro',
+        barber_email: activeBarber?.email || session?.email || '',
+        client_name: appointment.client_name || '-',
+        client_email: appointment.client_email || '',
+        current_status: currentStatus,
+        requested_status: requestedStatus,
+        reason,
+        requested_by_user_id: session?.email || '',
+        requested_at: nowIso(),
+        reviewed_by_name: null,
+        reviewed_at: null,
+        review_note: null,
+        status: 'pending',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+      saveStatusChangeRequests(requestRows);
+      logAudit('barber_status_change_requested', { appointment_id: appointment.id, requested_status: requestedStatus });
+      close();
+      await alertAction('Solicitação enviada para análise do admin.', { title: 'Solicitação criada' });
+    });
+
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('#status-request-target')?.focus();
+  };
+
   const render = () => {
     const baseRows = getAppointments()
       .filter((a) => {
@@ -3332,6 +3574,7 @@ function initBarberHomePage() {
                 <div class="barber-actions-popover hidden" data-barber-more-panel="${a.id}">
                   <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
                   <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>Não compareceu</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-change-status="${a.id}">Alterar status</button>
                 </div>
               </div>
             </div>
@@ -3411,6 +3654,13 @@ function initBarberHomePage() {
         render();
       });
     });
+    agendaRoot.querySelectorAll('[data-barber-change-status]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-barber-change-status');
+        if (!id) return;
+        void openStatusRequestModal(id);
+      });
+    });
 
   };
 
@@ -3453,9 +3703,7 @@ function ensureDbSchemaNote() {
   }
 }
 
-
-
-function initGlobalNavigation() {
+﻿function initGlobalNavigation() {
   const session = getSession();
   const iconSvg = {
     home: '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg></span>',
@@ -3627,8 +3875,7 @@ function initGlobalNavigation() {
   });
 }
 
-
-ensureSeed();
+﻿ensureSeed();
 checkOverduePrepayments();
 autoUpdateAppointmentStatuses();
 applyBrandTheme();
@@ -3647,6 +3894,7 @@ initAdminBarbersPage();
 initBlockedSlotsPage();
 initAdminFinancePage();
 initAdminDashboard();
+initAdminStatusRequestsPage();
 initClientHomePage();
 initClientSubscriptionsPage();
 initClientHistoryPage();
@@ -3661,4 +3909,3 @@ initSuperAdminBarbershopFormPage();
 initAdminFinanceModuleCards();
 initBarberHomePage();
 initGlobalNavigation();
-

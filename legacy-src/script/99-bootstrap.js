@@ -17,6 +17,7 @@ initAdminBarbersPage();
 initBlockedSlotsPage();
 initAdminFinancePage();
 initAdminDashboard();
+initAdminStatusRequestsPage();
 initClientHomePage();
 initClientSubscriptionsPage();
 initClientHistoryPage();

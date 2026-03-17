@@ -1,4 +1,4 @@
-function initSuperAdminBarbershopFormPage() {
+﻿function initSuperAdminBarbershopFormPage() {
   const form = document.getElementById('superadmin-barbershop-form');
   if (!form) return;
   if (!requireRole(['super_admin'], 'super-admin-login.html')) return;
@@ -219,6 +219,101 @@ function initBarberHomePage() {
     return sameId || sameEmail;
   });
 
+  const openStatusRequestModal = async (appointmentId) => {
+    const rows = getAppointments();
+    const appointment = rows.find((item) => String(item.id) === String(appointmentId));
+    if (!appointment) {
+      await alertAction('Agendamento não encontrado.');
+      return;
+    }
+
+    const currentStatus = String(appointment.status || '').toLowerCase();
+    const availableStatus = ['confirmed', 'no_show', 'canceled'].filter((status) => status !== currentStatus);
+    if (!availableStatus.length) {
+      await alertAction('Não há status alternativo válido para solicitação.');
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'fixed inset-0 z-[120] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4';
+    backdrop.innerHTML = `
+      <div class="w-full max-w-xl rounded-2xl border border-borderc bg-surface shadow-soft p-5 md:p-6 grid gap-4">
+        <header class="grid gap-1">
+          <p class="text-xs uppercase tracking-[0.22em] text-primary/90 font-semibold">Solicitacao ao admin</p>
+          <h2 class="text-xl font-semibold text-text-primary">Alterar status do atendimento</h2>
+          <p class="text-sm text-text-secondary">Mesmo após concluído, envie uma solicitação para revisão do admin.</p>
+        </header>
+        <div class="grid gap-2 rounded-xl border border-borderc/80 bg-slate-950/35 p-3 text-sm">
+          <p>Cliente: <strong>${sanitizeText(appointment.client_name || '-')}</strong></p>
+          <p>Serviço: <strong>${sanitizeText(appointment.service_name || 'Servico')}</strong></p>
+          <p>Status atual: <strong>${sanitizeText(getBookingStatusLabel(currentStatus))}</strong></p>
+        </div>
+        <label class="grid gap-1 text-sm text-text-secondary">
+          Novo status desejado
+          <select id="status-request-target" class="input">
+            ${availableStatus.map((status) => `<option value="${status}">${sanitizeText(getBookingStatusLabel(status))}</option>`).join('')}
+          </select>
+        </label>
+        <label class="grid gap-1 text-sm text-text-secondary">
+          Justificativa
+          <textarea id="status-request-reason" class="input" rows="3" placeholder="Descreva o motivo da alteração."></textarea>
+        </label>
+        <div class="grid gap-2 md:grid-cols-2">
+          <button type="button" class="button button-secondary" data-request-close>Fechar</button>
+          <button type="button" class="button button-primary" data-request-confirm>Confirmar solicitação</button>
+        </div>
+      </div>
+    `;
+
+    const close = () => backdrop.remove();
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) close();
+    });
+    backdrop.querySelector('[data-request-close]')?.addEventListener('click', close);
+    backdrop.querySelector('[data-request-confirm]')?.addEventListener('click', async () => {
+      const requestedStatus = String(backdrop.querySelector('#status-request-target')?.value || '').trim();
+      const reason = sanitizeText(backdrop.querySelector('#status-request-reason')?.value || '');
+      if (!requestedStatus) {
+        await alertAction('Selecione o novo status desejado.');
+        return;
+      }
+      if (!reason) {
+        await alertAction('Informe a justificativa da solicitação.');
+        return;
+      }
+
+      const requestRows = getStatusChangeRequests();
+      requestRows.unshift({
+        id: `scr_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        unit_id: APP_CONFIG.unitId,
+        appointment_id: appointment.id,
+        barber_id: appointment.barber_id || activeBarber?.id || session?.barberId || null,
+        barber_name: activeBarber?.name || session?.name || session?.email || 'Barbeiro',
+        barber_email: activeBarber?.email || session?.email || '',
+        client_name: appointment.client_name || '-',
+        client_email: appointment.client_email || '',
+        current_status: currentStatus,
+        requested_status: requestedStatus,
+        reason,
+        requested_by_user_id: session?.email || '',
+        requested_at: nowIso(),
+        reviewed_by_name: null,
+        reviewed_at: null,
+        review_note: null,
+        status: 'pending',
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+      saveStatusChangeRequests(requestRows);
+      logAudit('barber_status_change_requested', { appointment_id: appointment.id, requested_status: requestedStatus });
+      close();
+      await alertAction('Solicitação enviada para análise do admin.', { title: 'Solicitação criada' });
+    });
+
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('#status-request-target')?.focus();
+  };
+
   const render = () => {
     const baseRows = getAppointments()
       .filter((a) => {
@@ -298,6 +393,7 @@ function initBarberHomePage() {
                 <div class="barber-actions-popover hidden" data-barber-more-panel="${a.id}">
                   <button type="button" class="button button-secondary min-h-10 w-full" data-barber-cancel="${a.id}" ${canCancel ? '' : 'disabled'}>Cancelar</button>
                   <button type="button" class="button button-secondary min-h-10 w-full" data-barber-no-show="${a.id}" ${canNoShow ? '' : 'disabled'}>Não compareceu</button>
+                  <button type="button" class="button button-secondary min-h-10 w-full" data-barber-change-status="${a.id}">Alterar status</button>
                 </div>
               </div>
             </div>
@@ -377,6 +473,13 @@ function initBarberHomePage() {
         render();
       });
     });
+    agendaRoot.querySelectorAll('[data-barber-change-status]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-barber-change-status');
+        if (!id) return;
+        void openStatusRequestModal(id);
+      });
+    });
 
   };
 
@@ -418,5 +521,10 @@ function ensureDbSchemaNote() {
     // placeholder para integração backend real / transações
   }
 }
+
+
+
+
+
 
 
