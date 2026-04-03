@@ -6,6 +6,7 @@ export type AppSession = {
   email: string;
   role: 'super_admin' | 'admin' | 'barber' | 'client';
   barbershopId: string | null;
+  tenantId: string | null;
 };
 
 export async function getAppSession(): Promise<AppSession | null> {
@@ -17,7 +18,7 @@ export async function getAppSession(): Promise<AppSession | null> {
   if (!user) return null;
 
   const [{ data: profileRow }, { data: superAdminRow }] = await Promise.all([
-    supabase.from('users').select('id,email,role,barbershop_id').eq('id', user.id).maybeSingle(),
+    supabase.from('users').select('id,email,role,barbershop_id,tenant_id').eq('id', user.id).maybeSingle(),
     supabase.from('super_admins').select('id,email').eq('id', user.id).maybeSingle()
   ]);
 
@@ -26,7 +27,8 @@ export async function getAppSession(): Promise<AppSession | null> {
       userId: user.id,
       email: superAdminRow.email || user.email || '',
       role: 'super_admin',
-      barbershopId: null
+      barbershopId: null,
+      tenantId: null
     };
   }
 
@@ -35,7 +37,8 @@ export async function getAppSession(): Promise<AppSession | null> {
     userId: user.id,
     email: profileRow.email || user.email || '',
     role: profileRow.role,
-    barbershopId: profileRow.barbershop_id || null
+    barbershopId: profileRow.barbershop_id || null,
+    tenantId: (profileRow as any).tenant_id || profileRow.barbershop_id || null
   };
 }
 

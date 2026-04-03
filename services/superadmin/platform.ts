@@ -96,3 +96,21 @@ export async function removePlatformBarbershop(id: string) {
   if (isApiError(result)) return { ok: false as const, message: result.message };
   return { ok: true as const };
 }
+
+export async function listOnboardingRequests() {
+  const res = await fetch('/api/superadmin/onboarding-requests', { cache: 'no-store' });
+  const result = await parseApiResult<{ rows: any[] }>(res);
+  if (isApiError(result)) throw new Error(result.message);
+  return result.data.rows || [];
+}
+
+export async function decideOnboardingRequest(id: string, payload: { decision: 'approve' | 'reject'; password?: string; rejection_reason?: string }) {
+  const res = await fetch(`/api/superadmin/onboarding-requests/${encodeURIComponent(id)}`, withCsrfHeaders({
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }));
+  const result = await parseApiResult<{ ok: boolean }>(res);
+  if (isApiError(result)) return { ok: false as const, message: result.message };
+  return { ok: true as const };
+}
