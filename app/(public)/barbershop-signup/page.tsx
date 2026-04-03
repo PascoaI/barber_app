@@ -32,14 +32,19 @@ export default function BarbershopSignupPage() {
     setFeedback('');
 
     try {
-      const response = await fetch('/api/public/onboarding-requests', withCsrfHeaders({
+      const requestInit = withCsrfHeaders({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
           barbers_count: form.barbers_count ? Number(form.barbers_count) : null
         })
-      }));
+      });
+
+      let response = await fetch('/api/onboarding-requests', requestInit);
+      if ([404, 405].includes(response.status)) {
+        response = await fetch('/api/public/onboarding-requests', requestInit);
+      }
 
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.ok) {
