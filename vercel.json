@@ -1,21 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/cron/appointments-status",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/privacy-process",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/cron/billing-retry",
-      "schedule": "15 */6 * * *"
-    },
-    {
-      "path": "/api/cron/billing-reconcile",
-      "schedule": "45 */6 * * *"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
