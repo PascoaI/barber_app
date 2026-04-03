@@ -5,6 +5,7 @@ type Variant = 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
+  asChild?: boolean;
 };
 
 const variants: Record<Variant, string> = {
@@ -16,14 +17,24 @@ const variants: Record<Variant, string> = {
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = 'default', ...props },
+  { className, variant = 'default', asChild = false, children, ...props },
   ref
 ) {
+  const mergedClassName = cn('inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60', variants[variant], className);
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children as React.ReactElement<any>, {
+      className: cn(mergedClassName, (children as React.ReactElement<any>).props.className)
+    });
+  }
+
   return (
     <button
       ref={ref}
-      className={cn('inline-flex items-center justify-center rounded-xl px-4 min-h-11 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60', variants[variant], className)}
+      className={mergedClassName}
       {...props}
-    />
+    >
+      {children}
+    </button>
   );
 });

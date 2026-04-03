@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KeyRound, Pencil, PlusCircle, Power, Trash2 } from 'lucide-react';
+import { CheckCircle2, KeyRound, Pencil, PlusCircle, Power, Trash2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { SuperAdminShell } from '@/components/superadmin';
 import {
   isSuperAdminSession,
+  decideOnboardingRequest,
+  listOnboardingRequests,
   listPlatformBarbershops,
   removePlatformBarbershop,
   resetPlatformBarbershopPassword,
@@ -39,11 +41,14 @@ export default function SuperAdminBarbershopsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [rows, setRows] = useState<Barbershop[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setRows(await listPlatformBarbershops());
+      const [shops, requestRows] = await Promise.all([listPlatformBarbershops(), listOnboardingRequests()]);
+      setRows(shops);
+      setRequests(requestRows);
     } catch (error: any) {
       toast(error?.message || 'Falha ao carregar barbearias.');
     }
@@ -64,6 +69,13 @@ export default function SuperAdminBarbershopsPage() {
     if (!res.ok) return toast(res.message);
     await load();
     toast('Status atualizado.');
+  };
+
+  const handleDecision = async (requestId: string, decision: 'approve' | 'reject') => {
+    const res = await decideOnboardingRequest(requestId, { decision });
+    if (!res.ok) return toast(res.message);
+    toast(decision === 'approve' ? 'Solicitacao aprovada e tenant criado.' : 'Solicitacao rejeitada.');
+    await load();
   };
 
   const confirmDetails = useMemo(() => {
@@ -125,6 +137,36 @@ export default function SuperAdminBarbershopsPage() {
             </Button>
           </div>
         </div>
+      </section>
+
+      <section className="mb-5 grid gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <strong>Solicitacoes de novas barbearias</strong>
+          <small className="text-text-secondary">{requests.filter((item) => item.status === 'pending').length} pendentes</small>
+        </div>
+        {requests.map((request) => (
+          <article key={request.id} className="grid gap-3 rounded-2xl border border-borderc bg-slate-950/35 p-4 lg:grid-cols-[1.2fr_auto] lg:items-center">
+            <div className="grid gap-1">
+              <strong>{request.barbershop_name}</strong>
+              <small className="text-text-secondary">{request.owner_name} | {request.email} | {request.phone}</small>
+              <small className="text-text-secondary">{request.city}/{request.state} | slug sugerido: {request.requested_slug || 'automatico'}</small>
+              <small className="text-text-secondary">Status: {request.status}</small>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+              <Button type="button" className="w-full gap-2 sm:w-auto" onClick={() => handleDecision(request.id, 'approve')} disabled={request.status !== 'pending'}>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar
+              </Button>
+              <Button type="button" variant="outline" className="w-full gap-2 sm:w-auto" onClick={() => handleDecision(request.id, 'reject')} disabled={request.status !== 'pending'}>
+                <XCircle className="h-3.5 w-3.5" /> Rejeitar
+              </Button>
+            </div>
+          </article>
+        ))}
+        {!requests.length ? (
+          <article className="rounded-2xl border border-borderc bg-slate-950/35 p-5 text-center text-sm text-text-secondary">
+            Nenhuma solicitacao de onboarding encontrada.
+          </article>
+        ) : null}
       </section>
 
       <div className="grid gap-3">

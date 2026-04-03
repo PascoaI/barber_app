@@ -63,6 +63,9 @@ export default function LoginPage() {
             <Button type="button" variant="outline" onClick={() => router.push('/register')}>
               Criar conta
             </Button>
+            <Button type="button" variant="ghost" onClick={() => router.push('/barbershop-signup')}>
+              Cadastrar nova barbearia
+            </Button>
             <p className="text-xs text-text-secondary">
               Ao continuar, voce concorda com os{' '}
               <Link href="/terms" className="underline">Termos de Uso</Link>{' '}

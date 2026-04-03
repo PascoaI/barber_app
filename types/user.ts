@@ -6,6 +6,7 @@ export type User = {
   name?: string | null;
   phone?: string | null;
   role: UserRole;
+  tenant_id?: string | null;
   barbershop_id?: string | null;
   unit_id?: string | null;
   created_at?: string;

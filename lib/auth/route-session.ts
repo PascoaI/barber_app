@@ -5,6 +5,7 @@ export type RouteAppSession = {
   email: string;
   role: 'super_admin' | 'admin' | 'barber' | 'client';
   barbershopId: string | null;
+  tenantId: string | null;
 };
 
 export async function getRouteAppSession(): Promise<RouteAppSession | null> {
@@ -14,7 +15,7 @@ export async function getRouteAppSession(): Promise<RouteAppSession | null> {
   if (!authData.user) return null;
 
   const [{ data: profile }, { data: superAdmin }] = await Promise.all([
-    supabase.from('users').select('id,email,role,barbershop_id').eq('id', authData.user.id).maybeSingle(),
+    supabase.from('users').select('id,email,role,barbershop_id,tenant_id').eq('id', authData.user.id).maybeSingle(),
     supabase.from('super_admins').select('id').eq('id', authData.user.id).maybeSingle()
   ]);
 
@@ -23,7 +24,8 @@ export async function getRouteAppSession(): Promise<RouteAppSession | null> {
       userId: authData.user.id,
       email: authData.user.email || '',
       role: 'super_admin',
-      barbershopId: null
+      barbershopId: null,
+      tenantId: null
     };
   }
 
@@ -32,6 +34,7 @@ export async function getRouteAppSession(): Promise<RouteAppSession | null> {
     userId: authData.user.id,
     email: profile.email || authData.user.email || '',
     role: profile.role,
-    barbershopId: profile.barbershop_id || null
+    barbershopId: profile.barbershop_id || null,
+    tenantId: (profile as any).tenant_id || profile.barbershop_id || null
   };
 }

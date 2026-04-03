@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,10 +11,11 @@ import { withCsrfHeaders } from '@/lib/security/csrf-client';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
+  const [tenantSlug, setTenantSlug] = useState(searchParams.get('tenant') || '');
   const [inviteCode, setInviteCode] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
